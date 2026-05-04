@@ -1,0 +1,21 @@
+# This repository is the workspace/meta repository.
+# It tracks Codex cold-start rules and project documentation only.
+
+# Nested implementation repositories. They have their own Git history/remotes.
+/admin_back_go/
+/admin_front_ts/
+
+# Local scratch/runtime directories.
+/.tmp/
+/.tmp_*/
+
+# OS/editor noise.
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Logs and local secrets.
+*.log
+.env
+.env.*
