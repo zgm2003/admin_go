@@ -92,7 +92,7 @@ live runtime behavior > smoke output > served assets/API > process config > docs
 前端：Vue 3 + TypeScript
 API：/api/admin/v1/...，未来 /api/app/v1/...
 Realtime：WebSocket-only，不新增 SSE
-异步：admin-worker + Asynq + gocron/v2
+异步：admin-worker + Asynq + gocron/v2；队列监控优先用官方 asynqmon 只读 UI
 认证/RBAC：先完成 admin core，再迁移业务
 ```
 

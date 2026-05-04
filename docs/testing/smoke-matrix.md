@@ -27,7 +27,8 @@
 | auth platform read | yes | via basic | `GET /api/admin/v1/auth-platforms/init`, `GET /api/admin/v1/auth-platforms` | no | n/a | 验证 captcha dict 存在 |
 | permission + role RBAC loop | yes | via basic | permissions create/delete, role update/restore, users/init | yes | delete temp permissions; restore role | 临时 DIR/PAGE/BUTTON 必须清掉 |
 | operation log read/delete | no | yes | `GET /api/admin/v1/operation-logs/init`, `GET /api/admin/v1/operation-logs`, `DELETE /api/admin/v1/operation-logs/:id` | yes | delete temp operation log row; delete temp permission | full 先创建临时权限触发 `新增权限` 操作日志，再删除该日志 |
-| queue health | yes | via basic | `auth:login-log:v1` worker path or sync fallback evidence | yes | no cleanup | 当前以 login log 近 5 分钟记录证明 queue/worker 或显式同步策略可用；queue monitor API 迁移后再扩 full smoke |
+| queue health | yes | via basic | `auth:login-log:v1` worker path or sync fallback evidence | yes | no cleanup | 当前以 login log 近 5 分钟记录证明 queue/worker 或显式同步策略可用 |
+| queue monitor read-only | no | planned | `GET /api/admin/v1/queue-monitor`, `GET /api/admin/v1/queue-monitor/failed`, `GET /api/admin/v1/queue-monitor-ui/*` | no | n/a | 后端单元测试已覆盖 JSON 摘要和 asynqmon `ReadOnly=true`；后续 full smoke 只做只读探测，不做 retry/delete/clear |
 | realtime WebSocket connect/heartbeat | yes | via basic | `GET /api/admin/v1/realtime/ws`, `realtime.connected.v1`, `realtime.ping.v1`, `realtime.pong.v1` | local session register/cleanup only | client closes socket | 证明 AuthToken 后的 WebSocket upgrade、项目 envelope、ping/pong 和 bounded session pump 没断；topic 白名单、`REALTIME_ENABLED=false` 503、Publisher local/noop 装配边界走单元/handler 测试，不放 basic smoke；不测 fan-out/AI |
 
 ## Non-smoke gates
@@ -36,6 +37,7 @@
 
 ```powershell
 go test ./internal/platform/taskqueue ./internal/platform/scheduler ./internal/jobs ./internal/bootstrap
+go test ./internal/module/queuemonitor ./internal/platform/taskqueue ./internal/server ./internal/bootstrap
 ```
 
 当前覆盖：
@@ -78,7 +80,6 @@ Release gate 不等于 full smoke；release gate 还要跑 go test/go vet/vue-ts
 ## Next candidates
 
 ```text
-queue monitor read-only
 upload settings read path
 system settings read path
 ```

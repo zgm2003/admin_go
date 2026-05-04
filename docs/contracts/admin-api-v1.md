@@ -601,6 +601,73 @@ delete permission code 是 devTools_operationLog_del。
 DELETE 只走 REST: /api/admin/v1/operation-logs/:id 和 /api/admin/v1/operation-logs body { ids: number[] }。
 ```
 
+## Queue Monitor
+
+状态：partially implemented。当前采用开源优先：官方 Asynq 监控组件 `github.com/hibiken/asynqmon` 提供完整监控 UI；项目只保留轻量只读 JSON 摘要接口。
+
+### Official UI Mount
+
+```text
+GET /api/admin/v1/queue-monitor-ui
+GET /api/admin/v1/queue-monitor-ui/*
+```
+
+规则：
+
+```text
+该路径挂载 asynqmon http.Handler，不包成 {code,data,msg} JSON。
+该路径仍经过 AuthToken，未登录不可访问。
+iframe/new window 无法主动附加 Authorization header，所以该路径的 GET/HEAD 文档请求允许使用现有 `access_token` cookie 完成认证；普通 JSON API 不允许 cookie token fallback，mutating request 也不允许。
+cookie 认证只在该 UI 路径生效，并显式使用后台平台 `admin` 参与 session policy 校验；这不是全局平台默认值，也不是普通 API 的兜底。
+前端 iframe 必须使用 `VITE_GO_API_BASE_URL + /api/admin/v1/queue-monitor-ui` 的绝对 URL；不能用相对路径，否则会命中前端 SPA 路由并显示前端 404。
+Windows 本地开发时，asynqmon 内置静态 handler 会返回 `400 unexpected path prefix`；本项目复制官方 `ui/build` 静态文件并用薄 handler 服务首页和静态资源，`/api` 子路径仍使用官方 asynqmon handler。
+asynqmon 使用 ReadOnly=true；POST/DELETE 这类运行/删除/清空任务操作由 asynqmon 拒绝。
+前端队列监控页只做 iframe/新窗口薄包装，不复制完整任务列表和操作 UI。
+```
+
+### JSON Summary
+
+`GET /api/admin/v1/queue-monitor`
+
+Response `data`：
+
+```ts
+interface QueueMonitorItem {
+  name: string
+  label: string
+  group: 'critical' | 'default' | 'low' | 'custom'
+  waiting: number
+  delayed: number
+  failed: number
+  pending: number
+  active: number
+  scheduled: number
+  retry: number
+  archived: number
+  completed: number
+  processed: number
+  failed_today: number
+  processed_total: number
+  failed_total: number
+  paused: boolean
+  latency_ms: number
+}
+```
+
+`GET /api/admin/v1/queue-monitor/failed`
+
+Query：
+
+```ts
+interface QueueFailedListParams {
+  queue: 'critical' | 'default' | 'low' | string
+  current_page: number
+  page_size: number
+}
+```
+
+规则：JSON 摘要接口只读，不提供 retry/delete/clear。需要完整任务详情时进入 `queue-monitor-ui`。
+
 ## Auth Platform
 
 状态：implemented in Go backend, adapted in Vue frontend。
