@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:executing-plans` to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. Work in the current branch only; do not create a worktree. Commit/push only when the active user goal explicitly asks for it.
 
-**Goal:** Migrate upload configuration management from PHP legacy POST APIs to Go REST + Vue typed APIs, while keeping real upload token/SDK work out of this batch.
+**Goal:** Migrate upload configuration management from PHP legacy POST APIs to Go REST + Vue typed APIs, while keeping real upload token/COS SDK work out of this batch and keeping OSS runtime as an optional extension.
 
 **Architecture:** Backend stays Gin modular monolith. Upload config is one module with three resources: drivers, rules, settings. Shared enum/dict/validate and `platform/secretbox` stay thin and reusable; handler does HTTP only, service owns business rules and transactions, repository owns GORM queries, model owns table mapping.
 
@@ -40,10 +40,11 @@ Excluded:
 
 ```text
 /api/getUploadToken
-COS STS / OSS STS
+COS STS
+OSS STS optional extension
 server-side file upload
 frontend upload widget migration
-COS/OSS SDK dependency installation
+cloud SDK dependency installation
 schema changes
 ```
 
@@ -796,12 +797,13 @@ Backend verification:
 Frontend verification:
 Smoke summary:
 Known remaining risks:
-Next recommended spec: upload runtime/token foundation
+Next recommended spec: COS-first upload runtime/token foundation; OSS optional extension
 ```
 
 ## Implementation Notes
 
 - Do not install COS/OSS SDK in this plan.
+- After this plan, future runtime work may add COS SDK by default; Aliyun OSS SDK remains optional and must not be added to the default dependency set.
 - Do not change database schema in this plan.
 - Do not mark `/api/getUploadToken` as migrated.
 - Do not log or return encrypted secret columns.

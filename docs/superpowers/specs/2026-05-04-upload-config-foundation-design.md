@@ -5,7 +5,7 @@
 
 ## Goal
 
-把旧 PHP 的上传配置管理迁到 Go REST + Vue typed client，但只做**配置地基**：上传驱动、上传规则、启用配置三块先闭环。真实上传 token、COS/OSS SDK 调用、服务端上传、AI/导出产物上传放到下一阶段。
+把旧 PHP 的上传配置管理迁到 Go REST + Vue typed client，但只做**配置地基**：上传驱动、上传规则、启用配置三块先闭环。真实上传 token、COS runtime SDK 调用、服务端上传、AI/导出产物上传放到下一阶段；OSS runtime 只作为可选扩展，不进入默认依赖。
 
 一句话：先把“上传系统的事实源”做干净，再让业务模块依赖它。别把一个高风险上传链路硬塞进 CRUD 里。
 
@@ -13,7 +13,7 @@
 
 ```text
 1. 真问题？是。上传配置现在仍走 PHP legacy 全 POST，后续头像、AI 图片、导出文件、支付对账、Tauri 包都会依赖上传地基。
-2. 更简单做法？有。先迁配置 CRUD 和密钥加密；上传 token / SDK / 真实文件流下一阶段单独做。
+2. 更简单做法？有。先迁配置 CRUD 和密钥加密；上传 token / COS runtime / 真实文件流下一阶段单独做；OSS runtime 不进默认依赖。
 3. 会破坏什么？不能破坏已有真实 COS/OSS 配置、现有前端上传配置页、RBAC 按钮权限、当前可用的上传数据。
 ```
 
@@ -175,7 +175,7 @@ exports, goods_tts, chat_images, chat_files, reconcile_reports, cine_keyframes
 
 ## Open Source / Official Source Review
 
-本阶段不引入 COS/OSS SDK，因为只做配置 CRUD。真实上传阶段再引入 SDK，避免现在把依赖装进来但没有端到端上传验证。
+本阶段不引入任何云 SDK，因为只做配置 CRUD。真实上传阶段默认只允许 COS SDK 进入内置依赖；OSS SDK 保持用户自选安装，避免一直不用的大 SDK 压进前后端。
 
 已确认来源：
 
@@ -189,7 +189,7 @@ exports, goods_tts, chat_images, chat_files, reconcile_reports, cine_keyframes
 本阶段采用 Go stdlib AES-GCM 做 secretbox。
 本阶段不引入 tencentyun/cos-go-sdk-v5。
 本阶段不引入 aliyun OSS SDK。
-下一阶段 upload runtime 再按 COS/OSS token/服务端上传需求选 SDK，并写独立 spec。
+下一阶段 upload runtime 默认只评估/引入 COS SDK；OSS runtime 做 optional extension，不进入默认依赖，并写独立 spec。
 ```
 
 ## Scope
@@ -209,7 +209,7 @@ exports, goods_tts, chat_images, chat_files, reconcile_reports, cine_keyframes
 ### Excluded
 
 - 不做 `/api/getUploadToken`
-- 不做真实 COS STS / OSS STS 临时凭证
+- 不做真实 COS STS 临时凭证；不做 OSS STS optional extension
 - 不做服务端上传文件流
 - 不做前端真实 Upload 组件迁移
 - 不做 SDK 依赖安装
@@ -790,7 +790,7 @@ Do not mark upload config as implemented until Go tests, frontend typecheck/lint
 2. 密钥泄露风险：DTO、operation log、frontend form 都不能返回明文或密文。
 3. 并发启用风险：upload_setting 启用互斥必须事务化，不能靠两条普通 update 碰运气。
 4. 悬空引用风险：driver/rule 被 setting 引用时不应删除，否则配置页看起来正常但上传运行时炸。
-5. 过早 SDK 风险：现在装 COS/OSS SDK 但不做端到端上传，只会制造假完成。
+5. 过早 SDK 风险：现在装云 SDK 但不做端到端上传，只会制造假完成；默认装 OSS SDK 更是把长期不用的大依赖塞进项目。
 ```
 
 ## Next Spec After This
@@ -800,7 +800,8 @@ Do not mark upload config as implemented until Go tests, frontend typecheck/lint
 ```text
 Upload Runtime Foundation:
 /api/admin/v1/upload-token 或按前端上传组件契约命名
-COS STS / OSS STS
+COS STS as built-in default
+OSS STS as optional extension only; user installs optional dependency
 folder whitelist
 object key normalization
 file ext / max size enforcement

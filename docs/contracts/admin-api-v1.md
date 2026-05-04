@@ -48,13 +48,14 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-contract.ps1
 | auth config/captcha/code/login/refresh | `/api/admin/v1/auth/login-config`, `/captcha`, `/send-code`, `/login`, `/refresh` | public |
 | logout | `POST /api/admin/v1/auth/logout` | bearer token |
 | current user bootstrap | `GET /api/admin/v1/users/me`, `GET /api/admin/v1/users/init` | bearer token |
-| read-only admin resources | permissions/auth-platforms/roles/users/operation-logs/system-settings list or init | bearer token |
+| read-only admin resources | permissions/auth-platforms/roles/users/operation-logs/system-settings/upload-drivers/upload-rules/upload-settings list or init | bearer token |
 | permission mutations | permissions create/update/status/delete | bearer token + `permission_permission_*` route permission |
 | role mutations | roles create/update/default/delete | bearer token + `permission_role_*` route permission |
 | auth platform mutations | auth-platforms create/update/status/delete | bearer token + `permission_authPlatform_*` route permission |
 | user mutations | users update/status/batch/delete | bearer token + `user_userManager_*` route permission |
 | operation log delete | operation-logs delete/batch delete | bearer token + `devTools_operationLog_del` route permission |
 | system setting mutations | system-settings create/update/status/delete | bearer token + `system_setting_*` route permission |
+| upload config mutations | upload-drivers/upload-rules/upload-settings create/update/status/delete | bearer token + `system_uploadConfig_*` route permission |
 
 ## Health / Readiness
 
@@ -627,7 +628,7 @@ interface OperationLogListResponse {
 
 ```text
 request_data / response_data 存的是 JSON 字符串摘要，不是 raw 结构体。
-敏感字段会在 Go backend 里遮蔽，至少包括 password/token/captcha/captcha_answer/code。
+敏感字段会在 Go backend 里遮蔽，至少包括 password/token/captcha/captcha_answer/code/secret_id/secret_key/secret_id_enc/secret_key_enc。
 delete permission code 是 devTools_operationLog_del。
 DELETE 只走 REST: /api/admin/v1/operation-logs/:id 和 /api/admin/v1/operation-logs body { ids: number[] }。
 ```
@@ -744,6 +745,345 @@ mutating routes 显式注册 operation log rule。
 `devtools_queue_monitor_queues` 是旧 PHP 队列监控配置项。Go 队列监控已经采用官方 `asynqmon`、Asynq Redis lane 和 `QUEUE_*` env；系统设置 CRUD 不再读取或维护该 key。
 
 迁移时应将该行软删或标记删除，不删除队列监控功能本身。
+
+
+## Upload Config
+
+状态：implemented in Go backend, adapted in Vue frontend。
+
+用途：后台上传配置页的三类事实源：上传驱动、上传规则、启用配置。这里只做配置管理，不做 `/api/getUploadToken`、云 STS、服务端上传或 SDK 接入。配置事实允许 `cos` / `oss` 两种 driver；运行时默认依赖只接受 COS，OSS 是可选扩展。
+
+### Shared Rules
+
+所有接口都在后台命名空间：
+
+```text
+/api/admin/v1
+```
+
+字典来源：
+
+```text
+internal/enum -> internal/dict
+```
+
+敏感字段规则：
+
+```text
+upload_driver list/detail 永远不返回 secret_id、secret_key、secret_id_enc、secret_key_enc。
+写入 secret 只保存 secret_id_enc、secret_key_enc 和 hint。
+operation log 必须 mask secret_id、secret_key、secret_id_enc、secret_key_enc。
+VAULT_KEY 为空时写入 secret 会明确失败，不做假加密。
+```
+
+### Dependency Boundary
+
+```text
+upload config CRUD supports cos/oss records because existing data may contain both.
+upload runtime is not implemented in this section.
+When upload runtime is implemented, default in-repo backend/frontend dependencies may include COS only.
+Aliyun OSS SDK must not be added to default go.mod/package.json.
+If OSS runtime is requested without the optional OSS implementation/dependency, return an explicit unsupported/not-configured error; do not silently fallback to COS, legacy PHP, or fake success.
+```
+
+### Upload Drivers
+
+#### Init
+
+`GET /api/admin/v1/upload-drivers/init`
+
+Response `data.dict`：
+
+```ts
+interface UploadDriverInitDict {
+  upload_driver_arr: Array<{ label: string; value: 'cos' | 'oss' }>
+}
+```
+
+#### List
+
+`GET /api/admin/v1/upload-drivers`
+
+Query：
+
+```ts
+interface UploadDriverListQuery {
+  current_page: number
+  page_size: number
+  driver?: 'cos' | 'oss'
+}
+```
+
+Response `data`：
+
+```ts
+interface UploadDriverListResponse {
+  list: Array<{
+    id: number
+    driver: 'cos' | 'oss'
+    driver_show: string
+    secret_id_hint: string
+    secret_key_hint: string
+    bucket: string
+    region: string
+    role_arn: string | null
+    appid: string | null
+    endpoint: string | null
+    bucket_domain: string | null
+    created_at: string
+    updated_at: string
+  }>
+  page: { page_size: number; current_page: number; total_page: number; total: number }
+}
+```
+
+#### Create / Update
+
+```text
+POST /api/admin/v1/upload-drivers
+PUT  /api/admin/v1/upload-drivers/:id
+```
+
+Create body：
+
+```ts
+type UploadDriverCreateBody =
+  | {
+      driver: 'cos'
+      secret_id: string
+      secret_key: string
+      bucket: string
+      region: string
+      appid: string
+      endpoint?: string
+      bucket_domain?: string
+      role_arn?: string
+    }
+  | {
+      driver: 'oss'
+      secret_id: string
+      secret_key: string
+      bucket: string
+      region: string
+      role_arn: string
+      endpoint?: string
+      bucket_domain?: string
+      appid?: string
+    }
+```
+
+Update body：
+
+```ts
+interface UploadDriverUpdateBody {
+  driver: 'cos' | 'oss'
+  secret_id?: string
+  secret_key?: string
+  bucket: string
+  region: string
+  role_arn?: string
+  appid?: string
+  endpoint?: string
+  bucket_domain?: string
+}
+```
+
+Rules：
+
+```text
+同一 driver + bucket 在 is_del=2 范围内唯一。
+create 时 secret_id/secret_key 必填。
+update 时 secret_id/secret_key 为空或省略表示保留旧密文。
+cos 必须 appid；oss 必须 role_arn。
+被 upload_setting 引用的 driver 不能删除。
+```
+
+#### Delete
+
+```text
+DELETE /api/admin/v1/upload-drivers/:id
+DELETE /api/admin/v1/upload-drivers    body: { ids: number[] }
+```
+
+### Upload Rules
+
+#### Init
+
+`GET /api/admin/v1/upload-rules/init`
+
+Response `data.dict`：
+
+```ts
+interface UploadRuleInitDict {
+  upload_image_ext_arr: Array<{ label: string; value: string }>
+  upload_file_ext_arr: Array<{ label: string; value: string }>
+}
+```
+
+#### List
+
+`GET /api/admin/v1/upload-rules`
+
+Query：
+
+```ts
+interface UploadRuleListQuery {
+  current_page: number
+  page_size: number
+  title?: string
+}
+```
+
+Response `data`：
+
+```ts
+interface UploadRuleListResponse {
+  list: Array<{
+    id: number
+    title: string
+    max_size_mb: number
+    image_exts: string[]
+    file_exts: string[]
+    created_at: string
+    updated_at: string
+  }>
+  page: { page_size: number; current_page: number; total_page: number; total: number }
+}
+```
+
+#### Create / Update
+
+```text
+POST /api/admin/v1/upload-rules
+PUT  /api/admin/v1/upload-rules/:id
+```
+
+Body：
+
+```ts
+interface UploadRuleMutationBody {
+  title: string
+  max_size_mb: number
+  image_exts: string[]
+  file_exts: string[]
+}
+```
+
+Rules：
+
+```text
+title 1..50，is_del=2 范围内唯一。
+max_size_mb 1..10240。
+image_exts/file_exts 必须来自 Go enum，写入前 trim + lower-case + dedupe，并按 enum 顺序归一化。
+image_exts 和 file_exts 不能同时为空。
+被 upload_setting 引用的 rule 不能删除。
+```
+
+#### Delete
+
+```text
+DELETE /api/admin/v1/upload-rules/:id
+DELETE /api/admin/v1/upload-rules    body: { ids: number[] }
+```
+
+### Upload Settings
+
+#### Init
+
+`GET /api/admin/v1/upload-settings/init`
+
+Response `data.dict`：
+
+```ts
+interface UploadSettingInitDict {
+  upload_driver_list: Array<{ label: string; value: number }>
+  upload_rule_list: Array<{ label: string; value: number }>
+  common_status_arr: Array<{ label: string; value: 1 | 2 }>
+}
+```
+
+Rules：
+
+```text
+upload_driver_list label = <driver_show> - <bucket>
+upload_rule_list label = <title>
+common_status_arr 来自 common status dict
+```
+
+#### List
+
+`GET /api/admin/v1/upload-settings`
+
+Query：
+
+```ts
+interface UploadSettingListQuery {
+  current_page: number
+  page_size: number
+  remark?: string
+  status?: 1 | 2
+  driver_id?: number
+  rule_id?: number
+}
+```
+
+Response `data`：
+
+```ts
+interface UploadSettingListResponse {
+  list: Array<{
+    id: number
+    driver_id: number
+    rule_id: number
+    driver_name: string
+    rule_name: string
+    status: 1 | 2
+    status_name: string
+    remark: string
+    created_at: string
+    updated_at: string
+  }>
+  page: { page_size: number; current_page: number; total_page: number; total: number }
+}
+```
+
+#### Create / Update / Status / Delete
+
+```text
+POST   /api/admin/v1/upload-settings
+PUT    /api/admin/v1/upload-settings/:id
+PATCH  /api/admin/v1/upload-settings/:id/status
+DELETE /api/admin/v1/upload-settings/:id
+DELETE /api/admin/v1/upload-settings    body: { ids: number[] }
+```
+
+Mutation body：
+
+```ts
+interface UploadSettingMutationBody {
+  driver_id: number
+  rule_id: number
+  status: 1 | 2
+  remark?: string
+}
+```
+
+Status body：
+
+```ts
+{ status: 1 | 2 }
+```
+
+Rules：
+
+```text
+driver_id/rule_id 必须存在且 is_del=2。
+driver_id + rule_id 在 is_del=2 范围内唯一。
+status=1 时 repository 用单个 DB transaction 执行互斥启用：锁定活跃 setting 行 -> 禁用其他 enabled 行 -> insert/update 当前行为 enabled。
+status=2 只禁用当前项，不自动启用其他项。
+启用中的 setting 不能删除。
+允许系统暂时没有 enabled upload setting；下一阶段 upload token 接口必须显式报未配置，而不是兜底。upload runtime 默认走 COS；OSS runtime 若未安装可选实现，必须显式报不支持或未配置。
+```
 
 
 ## System Logs

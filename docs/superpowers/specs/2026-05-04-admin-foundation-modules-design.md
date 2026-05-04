@@ -17,7 +17,7 @@
 
 ```text
 1. 真问题？是。当前 system setting 和 upload config 仍走 PHP legacy 全 POST，后续业务、上传、导出、AI 资产都会依赖这些能力。
-2. 更简单做法？有。先迁系统设置，再迁上传配置管理；上传 token/真实云 SDK 放到配置稳定后。
+2. 更简单做法？有。先迁系统设置，再迁上传配置管理；上传 token/COS runtime SDK 放到配置稳定后，OSS runtime 只做 optional extension。
 3. 会破坏什么？不能破坏 RBAC、现有页面按钮权限、已有上传配置数据、现有前端表格交互。
 ```
 
@@ -61,7 +61,7 @@
 ### Excluded
 
 - 不做 `/api/getUploadToken` 兼容迁移
-- 不接腾讯云 COS/阿里云 OSS SDK
+- 本批不接任何云 SDK；下一批 runtime 默认只允许 COS SDK 进内置依赖，OSS SDK 只做用户自选安装
 - 不实际上传文件
 - 不做通知任务、导出任务实现
 - 不改表结构
@@ -233,7 +233,7 @@ password
 4. Upload Rules backend + frontend
 5. Upload Settings backend + frontend
 6. Full smoke 增加 disabled temp upload config probe
-7. 下一批再做 upload token + real storage SDK
+7. 下一批再做 COS-first upload token + real storage SDK；OSS 只作为 optional extension
 
 ## Verification Gate
 

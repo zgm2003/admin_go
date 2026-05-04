@@ -4,7 +4,7 @@
 
 **Goal:** Migrate the next admin foundation modules from PHP legacy to Go REST + Vue typed clients: system settings first, then upload drivers/rules/settings as configuration management only. Keep the existing official `asynqmon` queue monitor; only remove the old `devtools_queue_monitor_queues` system-setting row from the new setting contract.
 
-**Architecture:** Keep `admin_back_go` as Gin modular monolith. Each backend module follows `route -> handler -> service -> repository -> model`; enum/dict/validate stay in shared `internal/*`; frontend API uses `request` and `/api/admin/v1` only. Upload token and real cloud SDK are explicitly deferred until upload configuration is verified.
+**Architecture:** Keep `admin_back_go` as Gin modular monolith. Each backend module follows `route -> handler -> service -> repository -> model`; enum/dict/validate stay in shared `internal/*`; frontend API uses `request` and `/api/admin/v1` only. Upload token and real cloud SDK are explicitly deferred until upload configuration is verified; future runtime default dependencies may include COS only, while OSS remains optional/user-installed.
 
 **Tech Stack:** Go 1.21+, Gin, GORM, MySQL, Redis cache where already wired, Element Plus, Vue 3 `<script setup lang="ts">`, TypeScript.
 
@@ -35,7 +35,7 @@ Included:
 Excluded:
 
 - `/api/getUploadToken`
-- actual COS/OSS upload SDK
+- actual upload SDK: COS default, OSS optional extension
 - notification task
 - export task
 - table/schema changes
@@ -325,7 +325,7 @@ Next recommended step:
 After this batch is verified, the next foundation slice should be:
 
 ```text
-upload token + real storage SDK boundary
+COS-first upload token + real storage SDK boundary; OSS optional extension
 ```
 
 Only then should business modules that upload/export generated assets depend on Go upload services.
