@@ -55,6 +55,36 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-contract.ps1
 | user mutations | users update/status/batch/delete | bearer token + `user_userManager_*` route permission |
 | operation log delete | operation-logs delete/batch delete | bearer token + `devTools_operationLog_del` route permission |
 
+## Health / Readiness
+
+状态：implemented。
+
+```text
+GET /health
+GET /ready
+```
+
+`/health` 只证明进程活着，不访问 MySQL/Redis。
+
+`/ready` 返回统一响应，`data.checks` 当前固定包含：
+
+```text
+database
+redis
+token_redis
+queue_redis
+realtime
+```
+
+规则：
+
+```text
+未配置的外部依赖返回 disabled，不算失败。
+配置了的 MySQL/Redis/TokenRedis/QueueRedis 必须 ping 成功，否则 status=not_ready。
+QUEUE_ENABLED=true 但 REDIS_ADDR 为空时 queue_redis=down。
+REALTIME_ENABLED=true 但 REALTIME_PUBLISHER 是未实现值时 realtime=down。
+```
+
 通用错误：
 
 ```text
@@ -601,6 +631,90 @@ delete permission code 是 devTools_operationLog_del。
 DELETE 只走 REST: /api/admin/v1/operation-logs/:id 和 /api/admin/v1/operation-logs body { ids: number[] }。
 ```
 
+
+## System Logs
+
+系统日志是运行时文件日志的只读浏览接口，不等于 `operation-logs`。`operation-logs` 记录后台用户操作审计并落库；`system-logs` 只读取 Go 进程写出的结构化文件日志。
+
+### Init
+
+`GET /api/admin/v1/system-logs/init`
+
+Auth: bearer token.
+
+Response:
+
+```json
+{
+  "dict": {
+    "log_level_arr": [
+      { "label": "DEBUG", "value": "DEBUG" },
+      { "label": "INFO", "value": "INFO" },
+      { "label": "WARNING", "value": "WARNING" },
+      { "label": "ERROR", "value": "ERROR" },
+      { "label": "CRITICAL", "value": "CRITICAL" }
+    ],
+    "log_tail_arr": [
+      { "label": "最近 100 行", "value": 100 },
+      { "label": "最近 300 行", "value": 300 },
+      { "label": "最近 500 行", "value": 500 },
+      { "label": "最近 1000 行", "value": 1000 },
+      { "label": "最近 2000 行", "value": 2000 }
+    ]
+  }
+}
+```
+
+### Files
+
+`GET /api/admin/v1/system-logs/files`
+
+Auth: bearer token + `system_log_files` route permission.
+
+Response:
+
+```json
+{
+  "list": [
+    { "name": "admin-api.log", "size": 1024, "size_human": "1.00 KB", "mtime": "2026-05-04 19:30:00" }
+  ]
+}
+```
+
+Rules:
+
+- Lists only configured extensions, default `.log`.
+- Scans log root and first-level child directories only.
+- Does not expose delete/clear/download in phase one.
+
+### Lines
+
+`GET /api/admin/v1/system-logs/files/:name/lines?tail=500&level=ERROR&keyword=db`
+
+Auth: bearer token + `system_log_content` route permission.
+
+`:name` is URL-escaped. A first-level child file such as `worker/admin-worker.log` must be sent as `worker%2Fadmin-worker.log`.
+
+Response:
+
+```json
+{
+  "filename": "admin-api.log",
+  "total": 1,
+  "lines": [
+    { "number": 42, "level": "ERROR", "content": "ERROR db timeout" }
+  ]
+}
+```
+
+Validation and safety:
+
+- `tail`: 1-2000, capped again by `LOG_MAX_TAIL_LINES`.
+- `level`: one of `DEBUG/INFO/WARNING/ERROR/CRITICAL`.
+- `keyword`: max 200 chars.
+- Rejects absolute paths, `..`, backslash paths, null bytes, unsupported extensions, missing files.
+- Filtering happens after tail; the API does not read an entire huge file just to search.
+
 ## Queue Monitor
 
 状态：partially implemented。当前采用开源优先：官方 Asynq 监控组件 `github.com/hibiken/asynqmon` 提供完整监控 UI；项目只保留轻量只读 JSON 摘要接口。
@@ -666,7 +780,7 @@ interface QueueFailedListParams {
 }
 ```
 
-规则：JSON 摘要接口只读，不提供 retry/delete/clear。需要完整任务详情时进入 `queue-monitor-ui`。
+规则：JSON 摘要接口只读，不提供 retry/delete/clear。配置的 lane 即使 Asynq 尚未创建 Redis queue key，也返回 0 计数 item；Redis 连接、鉴权、协议错误不兜底。需要完整任务详情时进入 `queue-monitor-ui`。
 
 ## Auth Platform
 

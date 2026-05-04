@@ -10,7 +10,7 @@
 | --- | --- | --- | --- | --- |
 | Unit tests | Go service/repository boundary, Vue API/helper/component logic | 每个后端/前端模块改动后 | yes | 默认不依赖真实 MySQL/Redis，除非测试目标就是 repository/runtime integration |
 | Targeted integration | 指定 Go 包、指定 Vue lint/typecheck/vitest | 每个窄切片收口 | yes | 只碰当前切片需要的依赖 |
-| Basic smoke | 登录、captcha、session、users/init、用户管理只读、RBAC 最小闭环、login log queue、WebSocket connect/ping/pong | 每个核心改动后 | yes | 真实 MySQL/Redis |
+| Basic smoke | `/ready` dependency shape、登录、captcha、session、users/init、用户管理只读、RBAC 最小闭环、login log queue、WebSocket connect/ping/pong | 每个核心改动后 | yes | 真实 MySQL/Redis |
 | Full smoke | basic + 较慢核心模块，例如 operation log read/delete | 阶段收口前 | no | 真实 MySQL/Redis |
 | Release gate | 全量后端、前端 build、basic/full smoke、contract check、diff check | 声称稳定前 | no | 真实 MySQL/Redis |
 

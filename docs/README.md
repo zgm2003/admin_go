@@ -32,6 +32,9 @@
 11. docs/contracts/admin-realtime-v1.md
 12. docs/testing/test-strategy.md
 13. docs/testing/smoke-matrix.md
+14. docs/deployment/local.md
+15. docs/deployment/production.md
+16. docs/deployment/distributed-readiness.md
 ```
 
 按任务再读：
@@ -39,6 +42,7 @@
 ```text
 agents/*.md                              # agent 分工
 docs/open-source/*.md                    # 开源调研和取舍
+docs/deployment/*.md                     # 本地、生产、分布式 readiness 运行边界
 docs/superpowers/plans/*.md              # 长计划和阶段任务；历史计划不是运行时真相
 admin_back_go/docs/architecture.md       # Go 后端运行时架构
 admin_back_go/scripts/*.ps1              # smoke/contract 脚本
