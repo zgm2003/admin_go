@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:executing-plans` to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Migrate the next admin foundation modules from PHP legacy to Go REST + Vue typed clients: system settings first, then upload drivers/rules/settings as configuration management only.
+**Goal:** Migrate the next admin foundation modules from PHP legacy to Go REST + Vue typed clients: system settings first, then upload drivers/rules/settings as configuration management only. Keep the existing official `asynqmon` queue monitor; only remove the old `devtools_queue_monitor_queues` system-setting row from the new setting contract.
 
 **Architecture:** Keep `admin_back_go` as Gin modular monolith. Each backend module follows `route -> handler -> service -> repository -> model`; enum/dict/validate stay in shared `internal/*`; frontend API uses `request` and `/api/admin/v1` only. Upload token and real cloud SDK are explicitly deferred until upload configuration is verified.
 
@@ -26,6 +26,7 @@ This plan is **foundation batch 1**, not broad business migration.
 Included:
 
 - `system-settings`
+- legacy queue config cleanup for `devtools_queue_monitor_queues` only; queue monitor itself remains asynqmon-based
 - `upload-drivers`
 - `upload-rules`
 - `upload-settings`
@@ -101,9 +102,11 @@ DELETE /api/admin/v1/system-settings
   - value type validation
   - soft delete only
   - cache invalidation for changed key if setting cache exists
+  - old `devtools_queue_monitor_queues` row is not part of the Go setting contract and must be cleaned up separately
 - [ ] Add operation log metadata for create/update/status/delete.
 - [ ] Add tests for list filter, create duplicate key rejection, type validation, update missing row, status invalidation, delete batch.
 - [ ] Update `docs/contracts/admin-api-v1.md` with system-settings contract.
+- [ ] Document that queue monitor stays on official asynqmon and no longer reads `devtools_queue_monitor_queues` from system settings.
 
 Verification:
 

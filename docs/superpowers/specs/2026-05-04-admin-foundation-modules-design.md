@@ -34,6 +34,8 @@
   - value type：`1=字符串, 2=数字, 3=布尔, 4=JSON`
   - key 查询使用前缀匹配
   - 写入/状态/删除会清理 setting cache
+  - 当前存在菜单页面，所以系统设置 CRUD 必须迁移到 Go，不能留空页或继续走 legacy
+  - `devtools_queue_monitor_queues` 是旧 PHP 队列监控配置；Go 队列监控已经采用官方 `asynqmon` + env/Asynq lane，不再从 `system_settings` 读取这条配置
 - 旧 PHP 上传配置：
   - 表：`upload_driver`, `upload_rule`, `upload_setting`
   - driver 当前枚举：`cos`, `oss`
@@ -52,6 +54,7 @@
 - enum/dict/validate 基建补齐
 - 前端 API 从 `legacyRequest` 迁到 `request`
 - 前端页面保持现有 Element Plus 表格交互，不重做 UI
+- 队列监控页面保持官方 `asynqmon` 薄包装，不在本批重写、不删除
 - operation log route metadata for mutations
 - contract/current-status/smoke matrix docs
 
@@ -118,6 +121,7 @@ Rules:
 - `type=4` 必须是合法 JSON object 或 array。
 - DB 是事实源；Redis cache 只能加速读取，写入、状态、删除必须清理对应 key。
 - 不返回兜底字段，不接受 `setting_key` 作为 create/update 入参。
+- 队列监控不属于系统设置 CRUD：`devtools_queue_monitor_queues` 迁移后应软删或标记删除；Go 队列监控继续使用 `QUEUE_*` env、Asynq Redis lane 和官方 asynqmon UI。
 
 ### Upload Drivers
 

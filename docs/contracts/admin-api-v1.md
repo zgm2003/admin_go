@@ -48,12 +48,13 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-contract.ps1
 | auth config/captcha/code/login/refresh | `/api/admin/v1/auth/login-config`, `/captcha`, `/send-code`, `/login`, `/refresh` | public |
 | logout | `POST /api/admin/v1/auth/logout` | bearer token |
 | current user bootstrap | `GET /api/admin/v1/users/me`, `GET /api/admin/v1/users/init` | bearer token |
-| read-only admin resources | permissions/auth-platforms/roles/users/operation-logs list or init | bearer token |
+| read-only admin resources | permissions/auth-platforms/roles/users/operation-logs/system-settings list or init | bearer token |
 | permission mutations | permissions create/update/status/delete | bearer token + `permission_permission_*` route permission |
 | role mutations | roles create/update/default/delete | bearer token + `permission_role_*` route permission |
 | auth platform mutations | auth-platforms create/update/status/delete | bearer token + `permission_authPlatform_*` route permission |
 | user mutations | users update/status/batch/delete | bearer token + `user_userManager_*` route permission |
 | operation log delete | operation-logs delete/batch delete | bearer token + `devTools_operationLog_del` route permission |
+| system setting mutations | system-settings create/update/status/delete | bearer token + `system_setting_*` route permission |
 
 ## Health / Readiness
 
@@ -630,6 +631,119 @@ request_data / response_data 存的是 JSON 字符串摘要，不是 raw 结构�
 delete permission code 是 devTools_operationLog_del。
 DELETE 只走 REST: /api/admin/v1/operation-logs/:id 和 /api/admin/v1/operation-logs body { ids: number[] }。
 ```
+
+
+## System Settings
+
+状态：implemented in Go backend, adapted in Vue frontend。
+
+用途：后台系统设置菜单页的键值配置 CRUD。该页面存在菜单和按钮权限，所以不能留空页或继续走 legacy；但它不是队列监控配置中心。
+
+### Init
+
+`GET /api/admin/v1/system-settings/init`
+
+Response `data.dict`：
+
+```ts
+interface SystemSettingInitDict {
+  system_setting_value_type_arr: Array<{ label: string; value: 1 | 2 | 3 | 4 }>
+}
+```
+
+字典由 Go `internal/enum` -> `internal/dict` 派生：
+
+```text
+1 字符串
+2 数字
+3 布尔
+4 JSON
+```
+
+### List
+
+`GET /api/admin/v1/system-settings`
+
+Query：
+
+```ts
+interface SystemSettingListQuery {
+  current_page: number
+  page_size: number
+  key?: string      // prefix match
+  status?: 1 | 2
+}
+```
+
+Response `data`：
+
+```ts
+interface SystemSettingListResponse {
+  list: Array<{
+    id: number
+    setting_key: string
+    setting_value: string
+    value_type: 1 | 2 | 3 | 4
+    value_type_name: string
+    remark: string
+    status: 1 | 2
+    status_name: string
+    is_del: 1 | 2
+    created_at: string
+    updated_at: string
+  }>
+  page: { page_size: number; current_page: number; total_page: number; total: number }
+}
+```
+
+### Create / Update / Status / Delete
+
+```text
+POST   /api/admin/v1/system-settings
+PUT    /api/admin/v1/system-settings/:id
+PATCH  /api/admin/v1/system-settings/:id/status
+DELETE /api/admin/v1/system-settings/:id
+DELETE /api/admin/v1/system-settings        body: { ids: number[] }
+```
+
+Create body：
+
+```ts
+interface SystemSettingCreateBody {
+  key: string
+  value: string
+  type: 1 | 2 | 3 | 4
+  remark?: string
+}
+```
+
+Update body：
+
+```ts
+interface SystemSettingUpdateBody {
+  value: string
+  type: 1 | 2 | 3 | 4
+  remark?: string
+}
+```
+
+Rules：
+
+```text
+key 只允许 create；edit 不允许改 key。
+type=2 必须能解析为 number。
+type=3 只接受 0/1/true/false。
+type=4 必须是合法 JSON object 或 array。
+写入、状态、删除都是软变更，并清理对应 Redis cache；key 规则继承 legacy：`sys_setting_raw_` + setting key 中的 `.` 替换为 `_`。
+不接受 setting_key 作为 create/update 入参，不返回 fallback alias。
+mutating routes 显式注册 operation log rule。
+```
+
+### Queue Monitor Config Cleanup
+
+`devtools_queue_monitor_queues` 是旧 PHP 队列监控配置项。Go 队列监控已经采用官方 `asynqmon`、Asynq Redis lane 和 `QUEUE_*` env；系统设置 CRUD 不再读取或维护该 key。
+
+迁移时应将该行软删或标记删除，不删除队列监控功能本身。
 
 
 ## System Logs
