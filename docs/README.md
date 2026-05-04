@@ -39,7 +39,7 @@
 ```text
 agents/*.md                              # agent 分工
 docs/open-source/*.md                    # 开源调研和取舍
-docs/superpowers/plans/*.md              # 长计划和阶段任务
+docs/superpowers/plans/*.md              # 长计划和阶段任务；历史计划不是运行时真相
 admin_back_go/docs/architecture.md       # Go 后端运行时架构
 admin_back_go/scripts/*.ps1              # smoke/contract 脚本
 ```
@@ -76,6 +76,7 @@ docs/migration/current-status.md
 implemented = 已经有代码和验证证据
 partially implemented = 有骨架或部分链路，文档必须写清缺口
 planned = 只计划，不许说成已完成
+历史 plan/spec 里的早期阶段限制只表示当时任务背景；如果和 current-status 冲突，以 current-status + runtime docs 为准。
 ```
 
 文档与运行时冲突时：

@@ -70,18 +70,22 @@ route -> handler -> service -> repository -> model
 
 如果某一层没有真实价值，就不要为了“规范”硬加。
 
-## 当前阶段限制
+## 当前落地状态
 
-这个文件只记录技术选择。它不代表可以立刻初始化 Go 项目。
+这个文件记录技术选择。Go 方向已经落地为 `admin_back_go`，不再停留在“是否初始化 Go 项目”的阶段。
 
-下一步仍然是：
+当前事实看：
 
 ```text
-Phase 1: open-source research
+docs/migration/current-status.md
+admin_back_go/docs/architecture.md
 ```
 
-研究完优秀开源 admin / RBAC / 前端权限模型后，才进入：
+后续原则：
 
 ```text
-Phase 2: minimal Go skeleton
+不重新争论 Java / Go / Python。
+不因为未来分布式就提前拆微服务。
+不因为 AI 业务要接入就把 admin 主后端改成 Python。
+继续用 Go 承接 REST / RBAC / queue / WebSocket 基建，再按窄切片迁业务。
 ```

@@ -1,8 +1,30 @@
 # Step By Step Roadmap
 
+状态更新时间：2026-05-04
+
 ## 目标
 
 从低到高搭建 `E:\admin_go`，每阶段只解决一个真实问题。
+
+## 当前状态
+
+这份 roadmap 是历史推进顺序，不是说项目还停在 Phase 0。
+
+当前真实进度看：
+
+```text
+docs/migration/current-status.md
+docs/contracts/admin-api-v1.md
+docs/contracts/admin-realtime-v1.md
+admin_back_go/docs/architecture.md
+```
+
+规则：
+
+```text
+implemented / partially implemented / planned 以 current-status 为准。
+后续进入 Phase 6 时，一个 legacy PHP 业务模块一个模块迁，不允许大撒网。
+```
 
 ## Phase 0: Agent Framework
 
@@ -21,7 +43,7 @@ docs/architecture/02-agent-framework.md
 ```text
 AI 进入项目后知道谁负责什么
 AI 知道不能闭门造车
-AI 知道 Go 项目还没到初始化阶段
+AI 知道要先读 current-status，再决定当前能做什么
 ```
 
 ## Phase 1: Open-source Research
@@ -130,4 +152,5 @@ API 权限能拦截
 一个阶段没验收，不进入下一阶段。
 一个阶段只解决一个核心问题。
 任何跨阶段改动都要写明原因。
+已经验收过的阶段不靠记忆复述，必须用 current-status、contract、smoke 证据确认。
 ```

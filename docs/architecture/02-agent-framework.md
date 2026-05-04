@@ -62,16 +62,34 @@ Verification
 Next step
 ```
 
-## 当前阶段限制
+## 当前执行规则
 
-当前只允许 Phase 0：agent 框架和规则落地。
+当前项目已经不是 Phase 0 空仓。agent 框架仍然生效，但不能再用早期空仓口径阻止正常开发。
+
+接手任务时先看：
+
+```text
+docs/migration/current-status.md
+docs/contracts/admin-api-v1.md
+docs/contracts/admin-realtime-v1.md
+admin_back_go/docs/architecture.md
+```
+
+允许：
+
+```text
+按契约继续 Go/Vue 窄切片迁移
+修复与运行时不一致的文档
+补测试、smoke、contract gate
+维护 agent 冷启动规则
+```
 
 不允许：
 
 ```text
-初始化 Go module
-选择最终 RBAC 表结构
-改 admin_front_ts 业务代码
-迁移 PHP 业务
-安装一堆未验证依赖
+绕过 current-status 直接猜进度
+绕过 API contract 让前后端互猜字段
+把 legacy PHP 路由风格搬进 Go 新接口
+一次迁一堆业务模块
+安装未调研、未记录取舍、未验证的依赖
 ```

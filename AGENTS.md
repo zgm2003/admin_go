@@ -4,13 +4,25 @@
 
 这是一个 **open-source-first admin rewrite workspace**，不是闭门造车实验场。
 
-当前顺序固定：
+冷启动判断顺序固定：
 
 ```text
-1. 先落地 agent 框架和项目规则
-2. 再调研优秀开源 admin / RBAC / Go backend / frontend 实践
-3. 再选择可证明的架构基线
-4. 最后才初始化 Go 项目和迁移业务
+1. 先读当前状态，不靠聊天记录猜进度
+2. 再读架构、契约、测试文档
+3. 再按 agent 角色接手一个窄切片
+4. 最后才改代码、跑验证、同步文档
+```
+
+历史推进顺序是：
+
+```text
+Phase 0: Agent framework and rules
+Phase 1: Open-source research and architecture decision
+Phase 2: Minimal Go service skeleton
+Phase 3: Database and config baseline
+Phase 4: Auth and RBAC core
+Phase 5: Admin frontend API adaptation
+Phase 6: Legacy PHP feature migration
 ```
 
 ## Linus 三问
@@ -68,19 +80,14 @@
 
 每一步必须能单独解释、单独验证、单独回滚。
 
-推荐阶段：
+推荐阶段和当前口径：
 
 ```text
-Phase 0: Agent framework and rules
-Phase 1: Open-source research and architecture decision
-Phase 2: Minimal Go service skeleton
-Phase 3: Database and config baseline
-Phase 4: Auth and RBAC core
-Phase 5: Admin frontend API adaptation
-Phase 6: Legacy PHP feature migration
+Phase 0-5: 已经有基线实现，具体状态以 docs/migration/current-status.md 为准
+Phase 6: 后续按模块迁移 legacy PHP 业务，每次只迁一个窄切片
 ```
 
-禁止跨阶段偷跑。比如 RBAC 没定，就别写业务模块；Go skeleton 没验证，就别搬 PHP 业务。
+禁止跨阶段偷跑。比如 RBAC 或契约没验明，就别写业务模块；Go skeleton 或 smoke 没验证，就别声称基建完成。
 
 ### 3. Legacy 只提供业务事实，不提供新架构规则
 

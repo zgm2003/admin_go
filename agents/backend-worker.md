@@ -42,7 +42,7 @@ agents/api-contract.md
 禁止 service 依赖 gin.Context
 禁止 repository 写业务决策
 禁止 model 写业务方法
-禁止在 RBAC 未定稿前建权限表
+禁止在契约未定稿前猜字段
 ```
 
 ## 默认调用链
@@ -62,6 +62,14 @@ manual endpoint check if applicable
 architecture boundary check
 ```
 
-## 当前阶段限制
+## 当前执行前置条件
 
-Phase 0 不允许执行本 agent 的实现职责。Go 项目还没到初始化阶段。
+Go 项目已经存在。执行本 agent 前必须确认：
+
+```text
+docs/migration/current-status.md 里该模块不是 planned 冒充 implemented
+docs/contracts/admin-api-v1.md 或 admin-realtime-v1.md 已写清接口
+admin_back_go/docs/architecture.md 没有被本次改动破坏
+```
+
+如果缺契约，先交给 `api-contract`；如果缺架构取舍，先交给 `architect`。

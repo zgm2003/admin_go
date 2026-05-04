@@ -2,7 +2,9 @@
 
 这里记录 Phase 1 的开源调研结果。
 
-当前还没有进入 Go 实现阶段。任何实现前必须先产生研究记录。
+Go 实现阶段已经开始，当前 Go/Vue 迁移状态以 `docs/migration/current-status.md` 为准。
+
+本目录仍然有用：任何新的架构、RBAC、前端权限、WebSocket、队列、存储、AI 集成选型，都必须先在这里或对应 architecture 文档里写清来源、取舍和最小采用方式。
 
 ## Required Research Files
 
@@ -15,7 +17,7 @@
 
 ## Rule
 
-不是 star 多就抄。必须写清楚：
+不是 star 多就抄。新增或改动架构选择时必须写清楚：
 
 ```text
 source
