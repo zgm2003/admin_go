@@ -48,7 +48,8 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-contract.ps1
 | auth config/captcha/code/login/refresh | `/api/admin/v1/auth/login-config`, `/captcha`, `/send-code`, `/login`, `/refresh` | public |
 | logout | `POST /api/admin/v1/auth/logout` | bearer token |
 | current user bootstrap | `GET /api/admin/v1/users/me`, `GET /api/admin/v1/users/init` | bearer token |
-| read-only admin resources | permissions/auth-platforms/roles/users/profile/operation-logs/system-settings/upload-drivers/upload-rules/upload-settings list or init | bearer token |
+| read-only admin resources | permissions/auth-platforms/roles/users/profile/operation-logs/system-settings/upload-drivers/upload-rules/upload-settings/notifications list or init | bearer token |
+| current user notifications | `GET/PATCH/DELETE /api/admin/v1/notifications...` | bearer token; current-user ownership only, no RBAC button permission |
 | permission mutations | permissions create/update/status/delete | bearer token + `permission_permission_*` route permission |
 | role mutations | roles create/update/default/delete | bearer token + `permission_role_*` route permission |
 | auth platform mutations | auth-platforms create/update/status/delete | bearer token + `permission_authPlatform_*` route permission |
@@ -802,6 +803,116 @@ request_data / response_data 存的是 JSON 字符串摘要，不是 raw 结构�
 敏感字段会在 Go backend 里遮蔽，至少包括 password/token/captcha/captcha_answer/code/secret_id/secret_key/secret_id_enc/secret_key_enc。
 delete permission code 是 devTools_operationLog_del。
 DELETE 只走 REST: /api/admin/v1/operation-logs/:id 和 /api/admin/v1/operation-logs body { ids: number[] }。
+```
+
+## Notifications
+
+状态：implemented in Go backend, adapted in Vue frontend for current-user read/list/read/delete basics。
+
+用途：当前登录用户的通知中心和首页通知卡片。该切片只处理用户自己的 `notifications` 读路径和已读/删除动作，不迁移 `notification_task` 发布任务，也不声明 WebSocket 业务推送已经实现。
+
+### Init
+
+`GET /api/admin/v1/notifications/init`
+
+Auth: bearer token.
+
+Response `data.dict`：
+
+```ts
+interface NotificationInitDict {
+  notification_type_arr: Array<{ label: string; value: 1 | 2 | 3 | 4 }>
+  notification_level_arr: Array<{ label: string; value: 1 | 2 }>
+  notification_read_status_arr: Array<{ label: string; value: 1 | 2 }>
+}
+```
+
+字典由 Go `internal/enum` -> `internal/dict` 派生：
+
+```text
+type:  1 普通 / 2 成功 / 3 警告 / 4 错误
+level: 1 普通 / 2 紧急
+read:  1 已读 / 2 未读
+```
+
+### List
+
+`GET /api/admin/v1/notifications`
+
+Query：
+
+```ts
+interface NotificationListQuery {
+  current_page: number
+  page_size: number
+  keyword?: string
+  type?: 1 | 2 | 3 | 4
+  level?: 1 | 2
+  is_read?: 1 | 2
+}
+```
+
+Response `data`：
+
+```ts
+interface NotificationListResponse {
+  list: Array<{
+    id: number
+    title: string
+    content: string
+    type: number
+    type_text: string
+    level: number
+    level_text: string
+    link: string
+    is_read: 1 | 2
+    created_at: string
+  }>
+  page: { page_size: number; current_page: number; total_page: number; total: number }
+}
+```
+
+Rules:
+
+```text
+只返回当前 token 用户自己的通知：user_id = auth_identity.user_id。
+平台范围固定为 session platform + all：platform IN(current_platform, 'all')。
+只读未软删数据：is_del = 2。
+keyword 是 title prefix search，不做全表任意模糊扫描。
+排序固定 id desc。
+```
+
+### Unread count
+
+`GET /api/admin/v1/notifications/unread-count`
+
+Auth: bearer token.
+
+Response:
+
+```ts
+interface NotificationUnreadCountResponse {
+  count: number
+}
+```
+
+### Mark read / Delete
+
+```text
+PATCH  /api/admin/v1/notifications/:id/read
+PATCH  /api/admin/v1/notifications/read      body: { ids: number[] } or { ids: [] } for mark all visible unread notifications
+DELETE /api/admin/v1/notifications/:id
+DELETE /api/admin/v1/notifications           body: { ids: number[] }
+```
+
+Rules:
+
+```text
+所有 write 都必须带 user_id + platform scope + is_del=2 条件，不能修改别人的通知。
+PATCH /read 的空 ids 表示把当前用户、当前 platform 可见的全部未读通知标记已读。
+DELETE 不接受空 ids；删除是软删除 is_del=1。
+这些 current-user routes 不挂 RBAC button permission。
+这些 read/delete 动作当前不写 operation log；如果未来要审计，必须加显式 route metadata，不能靠反射或隐式猜测。
 ```
 
 
