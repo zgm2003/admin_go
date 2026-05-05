@@ -1,6 +1,6 @@
 # Admin Realtime v1 Contract
 
-状态：partially implemented。当前已实现最小 admin WebSocket：认证 upgrade、本机 connection manager、bounded send queue、read/write pump、heartbeat ping/pong、`realtime.connected.v1`、`realtime.ping.v1` / `realtime.pong.v1`、`realtime.subscribe.v1` topic 白名单骨架、local/no-op Publisher 边界、typed config 开关、断开清理。Vue 前端已从旧 PHP WebSocket 切到 Go WebSocket baseline：URL 指向 `/api/admin/v1/realtime/ws`，移除 `/api/admin/WebSocket/bind`，按 versioned envelope 收发。Redis fan-out、业务通知、AI streaming 仍是 planned。
+状态：partially implemented。当前已实现最小 admin WebSocket：认证 upgrade、本机 connection manager、bounded send queue、read/write pump、heartbeat ping/pong、`realtime.connected.v1`、`realtime.ping.v1` / `realtime.pong.v1`、`realtime.subscribe.v1` topic 白名单骨架、local/no-op Publisher 边界、typed config 开关、断开清理。Vue 前端已从旧 PHP WebSocket 切到 Go WebSocket baseline：URL 指向 `/api/admin/v1/realtime/ws`，移除 `/api/admin/WebSocket/bind`，按 versioned envelope 收发。Redis Pub/Sub fan-out 和 `notification.created.v1` 通知任务推送已实现最小闭环；AI streaming 仍是 planned。
 
 ## Protocol
 
@@ -17,7 +17,8 @@ SSE: intentionally not supported
 
 ```text
 REALTIME_ENABLED=true|false
-REALTIME_PUBLISHER=local|noop
+REALTIME_PUBLISHER=local|noop|redis
+REALTIME_REDIS_CHANNEL=admin_go:realtime:publish
 REALTIME_HEARTBEAT_INTERVAL=25s
 REALTIME_SEND_BUFFER=16
 ```
@@ -29,7 +30,7 @@ GET /api/admin/v1/realtime/ws -> HTTP 503
 response body -> { "code": 503, "data": {}, "msg": "Realtime未启用" }
 ```
 
-`REALTIME_PUBLISHER=noop` 不等于关闭 WebSocket；它只表示服务端业务 publication 显式丢弃。当前不支持 `REALTIME_PUBLISHER=redis`，Redis fan-out 仍是 planned。
+`REALTIME_PUBLISHER=noop` 不等于关闭 WebSocket；它只表示服务端业务 publication 显式丢弃。`REALTIME_PUBLISHER=redis` 表示业务 publication 先发 Redis Pub/Sub，再由 `admin-api` 订阅并投递到本进程 WebSocket sessions。
 
 Implementation library：
 
@@ -149,7 +150,7 @@ data 必须是对象；错误也放在 data 内，不发裸字符串。
 
 ### Client: subscribe
 
-状态：partially implemented。当前只允许订阅服务端可从身份直接推导出的基础 topic，不接业务通知，不接 Redis fan-out。
+状态：partially implemented。当前只允许订阅服务端可从身份直接推导出的基础 topic。通知任务推送不依赖客户端自定义 topic；服务端按 `platform + user_id` 定向投递。
 
 ```json
 {
@@ -196,6 +197,52 @@ platform:{current_platform}
     "msg": "无订阅权限"
   }
 }
+```
+
+
+## Notification events
+
+### Server: notification.created.v1
+
+状态：implemented for admin notification task dispatch.
+
+来源：`admin-worker` 处理 `notification:send-task:v1`，成功批量写入 `notifications` 后，best-effort 发布 Redis Pub/Sub realtime publication。`admin-api` 订阅同一个 channel 后按 `platform=admin + user_id` 投递给当前在线 session。
+
+```json
+{
+  "type": "notification.created.v1",
+  "request_id": "notification-task-7-1",
+  "data": {
+    "task_id": 7,
+    "title": "系统通知",
+    "content": "内容",
+    "link": "/notification",
+    "level": "urgent",
+    "notification_type": "warning"
+  }
+}
+```
+
+Payload：
+
+```ts
+interface NotificationCreatedPayload {
+  task_id: number
+  title: string
+  content: string
+  link: string
+  level: 'normal' | 'urgent'
+  notification_type: 'info' | 'success' | 'warning' | 'error'
+}
+```
+
+规则：
+
+```text
+DB notifications row 是真相，WebSocket 只是实时提示。
+WebSocket/Redis 发布失败不回滚通知写库，也不把 notification_task 标失败。
+task.platform=all/admin 时投递 admin WebSocket；task.platform=app 暂不投递，因为 app WebSocket 未实现。
+前端收到事件后可以刷新 REST 通知列表；urgent 级别额外弹出通知。
 ```
 
 ## AI streaming events
@@ -272,19 +319,21 @@ client `realtime.ping.v1` 仍回复业务层 `realtime.pong.v1`
 send queue 满时判定 slow client，关闭连接
 ```
 
-当前 manager 是单进程内存连接表，只服务本节点连接生命周期。它不是分布式 fan-out 真相源；多节点广播后续接 Redis Pub/Sub 或 Redis Streams。
+当前 manager 是单进程内存连接表，只服务本节点连接生命周期。跨进程通知任务推送通过 Redis Pub/Sub 进入各 `admin-api` 节点，再落到本机 manager；需要重放/确认时才考虑 Redis Streams。
 
 ## Publish boundary
 
 状态：partially implemented。
 
-当前后端已有项目内发布边界：
+当前后端已有项目内发布边界和 Redis Pub/Sub fan-out：
 
 ```text
 platform/realtime.Publisher
 platform/realtime.Publication
 platform/realtime.LocalPublisher
 platform/realtime.NoopPublisher
+platform/realtime.RedisPublisher
+platform/realtime.RedisSubscriber
 ```
 
 当前装配由 `bootstrap.newRealtimeStack` 统一选择：
@@ -293,6 +342,7 @@ platform/realtime.NoopPublisher
 REALTIME_ENABLED=false -> NoopPublisher + WebSocket 503
 REALTIME_PUBLISHER=local -> LocalPublisher
 REALTIME_PUBLISHER=noop -> NoopPublisher
+REALTIME_PUBLISHER=redis -> RedisPublisher + RedisSubscriber -> LocalPublisher
 unknown publisher -> NoopPublisher + WebSocket 503，并记录 server log
 ```
 
@@ -300,12 +350,12 @@ unknown publisher -> NoopPublisher + WebSocket 503，并记录 server log
 
 ```text
 业务模块以后只依赖 Publisher 接口，不直接拿 gorilla.Conn / Manager / Redis client
-LocalPublisher 只投递到当前进程 Manager，适合本地单节点 smoke 和早期通知骨架
+LocalPublisher 只投递到当前进程 Manager，适合本地单节点 smoke 和单元测试
 NoopPublisher 只能显式注入，用于 realtime 未启用场景；不能伪装成已推送成功的业务能力
-Redis Pub/Sub / Redis Streams publisher 后续实现时必须保持同一个 Publication 合同
+RedisPublisher 是 admin-worker 到 admin-api 的最小正确跨进程 fan-out；Redis Streams 仍只在需要重放/ack 时再做
 ```
 
-当前 Publication 只包含 `session_key + envelope`，不支持任意业务 topic fan-out；业务 topic fan-out 仍是 planned。
+当前 Publication 支持 `session_key + envelope` 或 `platform + user_id + envelope`。它不支持任意客户端 topic fan-out；业务 topic 权限仍是 planned。
 
 ## Close policy
 

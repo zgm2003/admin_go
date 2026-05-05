@@ -1097,7 +1097,7 @@ scheduler callback 只能 enqueue dispatch-due task，不能扫描 DB 或发通�
 dispatch-due handler claim 到期 pending task，再 enqueue send-task。
 send-task handler 解析目标用户、批量插入 notifications、更新 sent_count/status。
 handler 必须幂等，Asynq 是 at-least-once 语义。
-Redis fan-out / notification.created.v1 分布式业务推送仍未实现；当前以 DB notifications 写入为真相。
+send-task 写入 notifications 后 best-effort 发布 `notification.created.v1`；Redis Pub/Sub 只做实时提示，DB notifications 仍是真相。
 ```
 
 Operation log：

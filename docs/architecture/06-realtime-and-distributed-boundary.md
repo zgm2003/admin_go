@@ -14,7 +14,8 @@ implemented:
   read pump / write pump
   WebSocket ping heartbeat + business realtime.ping.v1 -> realtime.pong.v1
   realtime.subscribe.v1 identity topic whitelist
-  local/no-op Publisher interface boundary
+  local/no-op/redis Publisher interface boundary
+  Redis Pub/Sub fan-out for notification.created.v1
   typed REALTIME_* config and bootstrap Publisher selection
   explicit disabled mode: WebSocket upgrade returns 503
   disconnect cleanup
@@ -22,7 +23,6 @@ implemented:
 
 planned:
   business topic permission checks
-  Redis fan-out
   AI streaming event source
 ```
 
@@ -167,7 +167,7 @@ session:{current_session_id}
 platform:{current_platform}
 ```
 
-这只是连接基础能力，不代表通知业务已经实现。业务 topic 例如 `permission:{permission_code}` 后续必须接 RBAC permission service，再接 Redis fan-out。
+这只是连接基础能力；当前通知任务的 `notification.created.v1` 由服务端按 `platform + user_id` 定向推送，不依赖客户端自造 topic。其他业务 topic 例如 `permission:{permission_code}` 后续必须接 RBAC permission service，再接 fan-out。
 
 ## Current implementation detail
 
@@ -177,7 +177,7 @@ platform:{current_platform}
 platform/realtime.Conn      # gorilla.Conn thin wrapper，不暴露给业务 service
 platform/realtime.Session   # bounded send queue + read/write pump + heartbeat
 platform/realtime.Manager   # 本机 session registry，key = platform:user_id:session_id
-platform/realtime.Publisher # 发布接口，当前 local/no-op，后续 Redis fan-out 保持同一合同
+platform/realtime.Publisher # 发布接口，local/no-op/redis 保持同一合同
 module/realtime.Handler     # Gin upgrade 边界，注册 session，调用 service 处理 envelope
 module/realtime.Service     # connected/ping/pong/subscribe/error 业务 envelope，不依赖 Gin/gorilla
 ```
@@ -217,13 +217,14 @@ handler 里跑 CPU-heavy AI 或报表任务
 
 ## Current publish boundary
 
-当前只落接口边界，不落业务通知：
+当前发布边界已接通知任务最小闭环：
 
 ```text
 Publisher.Publish(ctx, Publication)
-Publication.SessionKey
+Publication.SessionKey or Platform+UserID
 Publication.Envelope
-LocalPublisher -> Manager.Send
+LocalPublisher -> Manager.Send / Manager.SendToUser
+RedisPublisher -> Redis Pub/Sub -> RedisSubscriber -> LocalPublisher
 NoopPublisher -> explicit disabled implementation
 ```
 
@@ -240,19 +241,26 @@ REALTIME_PUBLISHER=local
   -> Publisher = LocalPublisher -> 当前进程 Manager
 
 REALTIME_ENABLED=true
+REALTIME_PUBLISHER=redis
+  -> WebSocket upgrade 可用
+  -> admin-api 启动 RedisSubscriber
+  -> admin-worker 使用 RedisPublisher 跨进程发布 notification.created.v1
+
+REALTIME_ENABLED=true
 REALTIME_PUBLISHER=noop
   -> WebSocket connect/ping/pong 可用
   -> 业务 publication 显式丢弃，用于未接推送或测试边界
 ```
 
-当前只支持：
+当前支持：
 
 ```text
 local
 noop
+redis
 ```
 
-`redis` 不是有效配置值；Redis Pub/Sub / Redis Streams fan-out 仍是 planned，不能用配置名假装已经实现。未知 `REALTIME_PUBLISHER` 会让 WebSocket upgrade 显式关闭并记录 server log，而不是偷偷退回 local。
+`redis` 是 Redis Pub/Sub fan-out，不是 Redis Streams。未知 `REALTIME_PUBLISHER` 会让 WebSocket upgrade 显式关闭并记录 server log，而不是偷偷退回 local。
 
 好品味点在这里：业务模块以后不应该知道当前是本机连接、Redis Pub/Sub 还是 Redis Streams。它只发 `Publication`。分布式实现替换 Publisher，不反向污染业务 module。
 
@@ -269,11 +277,11 @@ noop
 
 第一阶段可以本机 connection manager，但 public contract 不能假设单机。
 
-未来多节点 fan-out：
+当前多进程 fan-out：
 
 ```text
-Redis Pub/Sub      # 简单广播
-Redis Streams      # 需要消费确认/重放时
+Redis Pub/Sub      # notification.created.v1 简单广播，admin-worker -> admin-api
+Redis Streams      # planned，仅在需要消费确认/重放时
 Queue task         # 慢副作用，不做实时 fan-out
 ```
 
