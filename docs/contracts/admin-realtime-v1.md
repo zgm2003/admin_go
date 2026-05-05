@@ -11,6 +11,8 @@ Future app path: GET /api/app/v1/realtime/ws
 SSE: intentionally not supported
 ```
 
+`/api/app/v1/realtime/ws` 是命名空间契约预留，不代表当前已经实现 app WebSocket。app 端后续必须单独定义平台绑定、token 来源、topic 白名单和权限规则，不能直接复用 admin cookie 策略。
+
 配置开关：
 
 ```text
@@ -53,6 +55,15 @@ device-id: <device-id>
 GET /api/admin/v1/realtime/ws
 Cookie: access_token=<access_token>
 ```
+
+本地开发有一个实际坑：cookie 按 host 隔离。前端如果跑在 `http://127.0.0.1:5173`，WebSocket 却连 `ws://localhost:8080/...`，浏览器不会把 `127.0.0.1` 下的 `access_token` cookie 发给 `localhost`。因此前端 realtime client 会把 loopback 目标 host 归一化到当前页面 host：
+
+```text
+http://127.0.0.1:5173 + ws://localhost:8080/api/admin/v1/realtime/ws
+-> ws://127.0.0.1:8080/api/admin/v1/realtime/ws
+```
+
+非 loopback 生产域名不做这种改写。
 
 规则：
 

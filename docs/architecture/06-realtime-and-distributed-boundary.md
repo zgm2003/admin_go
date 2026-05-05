@@ -58,6 +58,8 @@ GET /api/app/v1/realtime/ws    # future app WebSocket upgrade
 
 这些不是 REST CRUD，但仍必须挂在 admin/app scope 下，方便网关、鉴权、分布式部署和后续拆 `cmd/admin-realtime`。
 
+当前只实现 admin WebSocket。app WebSocket 是 planned：路径合理，但不能直接复制 admin 的 cookie fallback；app 要单独处理平台、设备、token 来源和 topic 权限。
+
 ## Process boundary
 
 第一阶段：
@@ -105,6 +107,16 @@ device-id: <device>
 ```
 
 如果浏览器 WebSocket header 限制导致 Authorization 不稳定，再定义一次性 realtime ticket；不要把长期 token 放 query string。
+
+当前浏览器实现先走路径限定 cookie token。因为本地 `localhost` 和 `127.0.0.1` cookie 不互通，前端 realtime client 会对 loopback host 做归一化：当前页面是 `127.0.0.1` 就把 `ws://localhost:8080/...` 改成 `ws://127.0.0.1:8080/...`；当前页面是 `localhost` 就保持/改成 `localhost`。这不是生产网关策略，只是本地 loopback cookie 对齐。
+
+Go API 的 token refresh 也必须走 Go base URL：
+
+```text
+VITE_GO_API_BASE_URL + /api/admin/v1/auth/refresh
+```
+
+不能走 legacy `VITE_SOME_KEY`。如果 refresh 打到旧 PHP，浏览器 CORS 报错只是症状，根因是前端新 API client 的 refresh baseURL 错了。
 
 ## Message envelope
 
