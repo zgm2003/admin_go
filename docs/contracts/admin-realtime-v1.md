@@ -66,6 +66,8 @@ http://127.0.0.1:5173 + ws://localhost:8080/api/admin/v1/realtime/ws
 
 非 loopback 生产域名不做这种改写。
 
+WebSocket upgrade 不走普通 CORS 预检；后端 gorilla/websocket `CheckOrigin` 使用同一份 `CORS_ALLOW_ORIGINS` 显式白名单，并额外允许非浏览器空 Origin 和同 host upgrade。开发时如果前端源是 `http://127.0.0.1:5173`，该 origin 必须出现在 `CORS_ALLOW_ORIGINS`。
+
 规则：
 
 ```text
@@ -207,6 +209,8 @@ platform:{current_platform}
 状态：implemented for admin notification task dispatch.
 
 来源：`admin-worker` 处理 `notification:send-task:v1`，成功批量写入 `notifications` 后，best-effort 发布 Redis Pub/Sub realtime publication。`admin-api` 订阅同一个 channel 后按 `platform=admin + user_id` 投递给当前在线 session。
+
+前端运行时规则：收到 `notification.created.v1` 后必须展示通知并刷新相关通知快照；`data.level` 只决定视觉优先级/原生通知策略，不能把普通通知直接过滤掉。
 
 ```json
 {
