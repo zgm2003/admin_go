@@ -1,6 +1,6 @@
 # Admin Realtime v1 Contract
 
-状态：partially implemented。当前已实现最小 admin WebSocket：认证 upgrade、本机 connection manager、bounded send queue、read/write pump、heartbeat ping/pong、`realtime.connected.v1`、`realtime.ping.v1` / `realtime.pong.v1`、`realtime.subscribe.v1` topic 白名单骨架、local/no-op Publisher 边界、typed config 开关、断开清理。Redis fan-out、业务通知、AI streaming 仍是 planned。
+状态：partially implemented。当前已实现最小 admin WebSocket：认证 upgrade、本机 connection manager、bounded send queue、read/write pump、heartbeat ping/pong、`realtime.connected.v1`、`realtime.ping.v1` / `realtime.pong.v1`、`realtime.subscribe.v1` topic 白名单骨架、local/no-op Publisher 边界、typed config 开关、断开清理。Vue 前端已从旧 PHP WebSocket 切到 Go WebSocket baseline：URL 指向 `/api/admin/v1/realtime/ws`，移除 `/api/admin/WebSocket/bind`，按 versioned envelope 收发。Redis fan-out、业务通知、AI streaming 仍是 planned。
 
 ## Protocol
 
@@ -47,7 +47,23 @@ platform: admin
 device-id: <device-id>
 ```
 
-如果浏览器环境无法稳定传自定义 header，再新增短期 realtime ticket：
+浏览器原生 WebSocket 不能稳定附加自定义 `Authorization` header；当前 Vue runtime 使用**路径限定 cookie token**完成 upgrade 认证：
+
+```text
+GET /api/admin/v1/realtime/ws
+Cookie: access_token=<access_token>
+```
+
+规则：
+
+```text
+cookie token 只在 /api/admin/v1/realtime/ws 这类显式配置的 GET/HEAD path 生效。
+普通 JSON API 不允许 cookie token fallback。
+mutating request 不允许 cookie token fallback。
+从 cookie 取 token 时 platform 固定为 admin，用于 session policy 校验。
+```
+
+如果后续跨域、网关隔离或多端部署导致 cookie WebSocket 不稳定，再新增短期 realtime ticket：
 
 ```text
 POST /api/admin/v1/realtime/tickets
@@ -294,6 +310,7 @@ server shutdown: stop accepting upgrades, send close notice, drain within timeou
 ```text
 GET /api/admin/v1/realtime/sse
 text/event-stream
+access token query string, such as /realtime/ws?access_token=...
 unversioned event type
 client-defined arbitrary topic or subscribing another user/session
 long-running CPU work inside WebSocket handler
