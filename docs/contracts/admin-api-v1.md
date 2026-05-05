@@ -48,7 +48,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-contract.ps1
 | auth config/captcha/code/login/refresh | `/api/admin/v1/auth/login-config`, `/captcha`, `/send-code`, `/login`, `/refresh` | public |
 | logout | `POST /api/admin/v1/auth/logout` | bearer token |
 | current user bootstrap | `GET /api/admin/v1/users/me`, `GET /api/admin/v1/users/init` | bearer token |
-| read-only admin resources | permissions/auth-platforms/roles/users/operation-logs/system-settings/upload-drivers/upload-rules/upload-settings list or init | bearer token |
+| read-only admin resources | permissions/auth-platforms/roles/users/profile/operation-logs/system-settings/upload-drivers/upload-rules/upload-settings list or init | bearer token |
 | permission mutations | permissions create/update/status/delete | bearer token + `permission_permission_*` route permission |
 | role mutations | roles create/update/default/delete | bearer token + `permission_role_*` route permission |
 | auth platform mutations | auth-platforms create/update/status/delete | bearer token + `permission_authPlatform_*` route permission |
@@ -56,6 +56,8 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-contract.ps1
 | operation log delete | operation-logs delete/batch delete | bearer token + `devTools_operationLog_del` route permission |
 | system setting mutations | system-settings create/update/status/delete | bearer token + `system_setting_*` route permission |
 | upload config mutations | upload-drivers/upload-rules/upload-settings create/update/status/delete | bearer token + `system_uploadConfig_*` route permission |
+| upload token create | `POST /api/admin/v1/upload-tokens` | bearer token + `system_uploadToken_create` route permission |
+| current profile update | `PUT /api/admin/v1/profile` | bearer token; operation log only, no user-manager button permission |
 
 ## Health / Readiness
 
@@ -197,6 +199,7 @@ Response example：
 ```text
 密码登录必须通过 slide captcha。
 验证码登录支持 allow_register 控制的自动注册。
+access_token / refresh_token TTL 来自当前 platform 的 auth_platforms.access_ttl / auth_platforms.refresh_ttl；不是 .env。
 登录日志投递 auth:login-log:v1 到 critical queue；队列不可用时按已记录策略同步写库。
 ```
 
@@ -495,6 +498,174 @@ type UserBatchProfileUpdateBody =
 用户删除是 users + user_profiles 软删除。
 ```
 
+## Profile
+
+状态：implemented in Go backend, adapted in Vue frontend for base profile、avatar upload and account security writes。
+
+用途：当前后台用户查看/编辑个人资料；用户管理页跳转可只读查看指定用户资料。头像上传不是服务端转存，仍通过 shared upload client 调用 `POST /api/admin/v1/upload-tokens` 获取 COS 临时凭证。
+
+### Read
+
+```text
+GET /api/admin/v1/profile
+GET /api/admin/v1/users/:id/profile
+```
+
+Auth: bearer token。
+
+Response `data`：
+
+```ts
+interface ProfileResponse {
+  profile: {
+    user_id: number
+    username: string
+    email: string
+    avatar: string
+    phone: string
+    role_id: number
+    role_name: string
+    address_id: number
+    detail_address: string
+    sex: 0 | 1 | 2
+    birthday: string
+    bio: string
+    is_self: 1 | 2
+    has_password: boolean
+  }
+  dict: {
+    auth_address_tree: AddressTreeNode[]
+    sexArr: Array<{ label: '未知' | '男' | '女'; value: 0 | 1 | 2 }>
+    verify_type_arr: Array<{ label: string; value: 'password' | 'code' }>
+  }
+}
+```
+
+规则：
+
+```text
+is_self 只由 token user_id 和目标 user_id 服务端计算。
+GET /profile 等价于读取当前 token 用户。
+GET /users/:id/profile 用于用户管理跳转只读展示，不代表可编辑其他用户个人资料。
+返回字段不提供 legacy address 别名，只提供 address_id。
+```
+
+### Update Current Profile
+
+```text
+PUT /api/admin/v1/profile
+```
+
+Auth: bearer token。OperationLog: `Module=profile`, `Action=update_profile`, `Title=编辑个人资料`。不挂 `user_userManager_edit`，用户编辑自己资料不需要用户管理按钮权限。
+
+Body：
+
+```ts
+interface UpdateProfileBody {
+  username: string
+  avatar?: string
+  sex: 0 | 1 | 2
+  birthday?: string | null
+  address_id: number
+  detail_address?: string
+  bio?: string
+}
+```
+
+错误：
+
+```text
+address alias present / missing address_id -> code 100 / 参数错误
+username empty after trim                  -> code 100 / 用户名不能为空
+invalid sex                                -> code 100 / 无效的性别
+invalid birthday                           -> code 100 / 生日格式错误
+missing user                               -> code 404 / 用户不存在
+```
+
+### Account Security Writes
+
+```text
+PUT /api/admin/v1/profile/security/password
+PUT /api/admin/v1/profile/security/email
+PUT /api/admin/v1/profile/security/phone
+```
+
+Auth: bearer token。当前用户自己的账号安全设置只需要登录态，不挂 `user_userManager_edit`。三条写接口都记录 OperationLog：
+
+```text
+profile_security.update_password -> 修改登录密码
+profile_security.update_email    -> 绑定或换绑邮箱
+profile_security.update_phone     -> 绑定或换绑手机号
+```
+
+Password Body：
+
+```ts
+type UpdatePasswordBody =
+  | {
+      verify_type: 'password'
+      old_password: string
+      new_password: string
+      confirm_password: string
+    }
+  | {
+      verify_type: 'code'
+      account: string
+      code: string
+      new_password: string
+      confirm_password: string
+    }
+```
+
+Email Body：
+
+```ts
+interface UpdateEmailBody {
+  email: string
+  code: string
+}
+```
+
+Phone Body：
+
+```ts
+interface UpdatePhoneBody {
+  phone: string
+  code: string
+}
+```
+
+Response:
+
+```json
+{ "code": 0, "data": {}, "msg": "ok" }
+```
+
+规则：
+
+```text
+verify_type 来自 enum/dict/validate 的 user_verify_type，只允许 password/code。
+验证码继续复用 POST /api/admin/v1/auth/send-code；scene 必须分别是 bind_email、bind_phone、change_password。
+password 验证方式校验当前旧密码。
+code 改密方式要求 account 属于当前用户已绑定的 email 或 phone，再消费 change_password 验证码。
+邮箱/手机号换绑先做格式、重复绑定、当前用户存在性校验，再消费验证码。
+成功消费验证码后删除 Redis code key。
+新 Go 契约不接受 legacy 字段：newpassword、respassword、account_type、address 等。
+```
+
+错误：
+
+```text
+invalid verify_type                         -> code 100 / 参数错误
+password confirm mismatch                   -> code 100 / 两次输入的密码不一致
+wrong old password                          -> code 100 / 旧密码错误
+missing owned code account                  -> code 100 / 请先绑定邮箱或手机号
+invalid or expired verification code        -> code 100 / 验证码错误或已过期
+duplicate email                             -> code 100 / 邮箱已被绑定
+duplicate phone                             -> code 100 / 手机号已被绑定
+missing user                                -> code 404 / 用户不存在
+```
+
 ## Roles
 
 状态：implemented in Go backend, adapted in Vue frontend。
@@ -780,8 +951,8 @@ VAULT_KEY 为空时写入 secret 会明确失败，不做假加密。
 
 ```text
 upload config CRUD supports cos/oss records because existing data may contain both.
-upload runtime is not implemented in this section.
-When upload runtime is implemented, default in-repo backend/frontend dependencies may include COS only.
+upload runtime is implemented separately as COS-first upload token signing.
+Default in-repo backend/frontend dependencies include COS runtime only.
 Aliyun OSS SDK must not be added to default go.mod/package.json.
 If OSS runtime is requested without the optional OSS implementation/dependency, return an explicit unsupported/not-configured error; do not silently fallback to COS, legacy PHP, or fake success.
 ```
@@ -1082,7 +1253,85 @@ driver_id + rule_id 在 is_del=2 范围内唯一。
 status=1 时 repository 用单个 DB transaction 执行互斥启用：锁定活跃 setting 行 -> 禁用其他 enabled 行 -> insert/update 当前行为 enabled。
 status=2 只禁用当前项，不自动启用其他项。
 启用中的 setting 不能删除。
-允许系统暂时没有 enabled upload setting；下一阶段 upload token 接口必须显式报未配置，而不是兜底。upload runtime 默认走 COS；OSS runtime 若未安装可选实现，必须显式报不支持或未配置。
+允许系统暂时没有 enabled upload setting；upload token 接口必须显式报未配置，而不是兜底。upload runtime 默认走 COS；OSS runtime 若未安装可选实现，必须显式报不支持或未配置。
+```
+
+## Upload Runtime Tokens
+
+状态：implemented in Go backend, adapted in shared Vue upload client。
+
+用途：给浏览器直传腾讯云 COS 签发临时凭证和服务端生成的 object key。它不是服务端上传接口，也不是旧 PHP `/api/getUploadToken` 的兼容兜底。
+
+```text
+POST /api/admin/v1/upload-tokens
+```
+
+Auth: bearer token + `system_uploadToken_create` route permission.
+
+Request:
+
+```ts
+interface UploadTokenRequest {
+  folder: 'avatars' | 'images' | 'videos' | 'cover_images' | 'ai_chat_images' | 'releases' | 'tauri_updater' | 'exports' | 'goods_tts' | 'chat_images' | 'chat_files' | 'reconcile_reports' | 'cine_keyframes'
+  file_name: string
+  file_size: number
+  file_kind: 'image' | 'file'
+}
+```
+
+Response `data`:
+
+```ts
+interface UploadTokenResponse {
+  provider: 'cos'
+  bucket: string
+  region: string
+  key: string
+  upload_path: string
+  bucket_domain: string | null
+  credentials: {
+    tmp_secret_id: string
+    tmp_secret_key: string
+    session_token: string
+  }
+  start_time: number
+  expired_time: number
+  rule: {
+    max_size_mb: number
+    image_exts: string[]
+    file_exts: string[]
+  }
+}
+```
+
+Rules:
+
+```text
+Only COS runtime is implemented by default.
+OSS runtime is an optional future extension and must return an explicit unsupported/config error until wired.
+No legacy /api/getUploadToken fallback.
+folder must come from internal/enum.UploadFolders.
+file_name is used only for extension validation and safe display suffix; object key is generated by the server.
+file_size is bytes and must be > 0.
+file_kind=image validates against image_exts; file_kind=file validates against file_exts.
+Generated key format: {folder}/{yyyy}/{mm}/{dd}/{unix_ms}-{randomhex}-{safe_file_name}.
+STS policy is scoped to the generated key resource, not the whole bucket.
+Response never exposes upload_driver secret_id/secret_key plaintext.
+COS_STS_ENABLED=false returns explicit COS temporary credential disabled error.
+Smoke checks token shape only; it never uploads a real file.
+```
+
+Error cases:
+
+```text
+no enabled upload setting             -> code 100 / 未配置有效上传设置
+enabled setting has non-COS driver    -> code 100 / 当前上传驱动未启用 COS runtime
+invalid folder                        -> code 100 / 上传目录不支持
+invalid file size                     -> code 100 / 文件大小不正确 or 文件大小超过限制
+invalid extension                     -> code 100 / 文件类型不支持
+decrypt failure or missing secret     -> code 500 / 上传密钥不可用
+COS_STS_ENABLED=false                 -> code 500 / COS 临时凭证未启用
+COS STS provider failure              -> code 500 / COS 临时凭证签发失败
 ```
 
 
@@ -1242,6 +1491,14 @@ interface QueueFailedListParams {
 
 用途：管理认证平台登录方式、验证码策略、token TTL、会话绑定策略和自动注册策略。
 
+Token TTL 事实源：
+
+```text
+auth_platforms.access_ttl  = access_token 有效期，单位秒
+auth_platforms.refresh_ttl = refresh_token 总有效期，单位秒
+.env 只保存 TOKEN_PEPPER、TOKEN_REDIS_PREFIX、TOKEN_REDIS_DB、TOKEN_SESSION_CACHE_TTL、TOKEN_SINGLE_SESSION_POINTER_TTL 这类运行时基础设施配置
+```
+
 ### Enum / Dict
 
 `GET /api/admin/v1/auth-platforms/init`
@@ -1324,6 +1581,7 @@ Response `data`：
 Body：同 create，但不包含 `code`。
 
 规则：`login_types` 写入前按 `email -> phone -> password` 去重归一化；非法 `captcha_type` 直接拒绝，不写库。
+`access_ttl` / `refresh_ttl` 是登录签发和 refresh 续签 access token 的业务事实源；不允许再用 env TTL 覆盖。
 
 ### Status
 
