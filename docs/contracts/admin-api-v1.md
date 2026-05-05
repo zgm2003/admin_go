@@ -1225,6 +1225,590 @@ mutating routes 显式注册 operation log rule。
 
 迁移时应将该行软删或标记删除，不删除队列监控功能本身。
 
+## Pay Channels
+
+状态：implemented in Go backend, adapted in Vue frontend for pay channel management only。
+
+用途：支付域第一切片，只迁移支付渠道配置管理。真实支付 SDK、充值下单、支付回调、钱包调账、对账执行都不在本接口内。
+
+### Shared Rules
+
+```text
+resource prefix: /api/admin/v1/pay-channels
+table: pay_channel
+dict source: internal/enum/pay.go -> internal/dict
+private key storage: app_private_key -> secretbox -> app_private_key_enc + app_private_key_hint
+```
+
+响应永远不返回：
+
+```text
+app_private_key
+app_private_key_enc
+```
+
+operation log 必须 mask：
+
+```text
+app_private_key
+app_private_key_enc
+```
+
+### Init
+
+`GET /api/admin/v1/pay-channels/page-init`
+
+Response `data.dict`：
+
+```ts
+interface PayChannelInitDict {
+  channel_arr: Array<{ label: string; value: 1 | 2 }>
+  common_status_arr: Array<{ label: string; value: 1 | 2 }>
+  pay_method_arr: Array<{ label: string; value: 'web' | 'h5' | 'app' | 'mini' | 'scan' | 'mp' }>
+}
+```
+
+枚举：
+
+```text
+1 微信支付
+2 支付宝
+
+web  PC网页支付
+h5   H5支付
+app  APP支付
+mini 小程序支付
+scan 扫码支付
+mp   公众号支付
+```
+
+### List
+
+`GET /api/admin/v1/pay-channels`
+
+Query：
+
+```ts
+interface PayChannelListQuery {
+  current_page: number
+  page_size: number
+  name?: string
+  channel?: 1 | 2
+  status?: 1 | 2
+}
+```
+
+Response `data`：
+
+```ts
+interface PayChannelListResponse {
+  list: Array<{
+    id: number
+    name: string
+    channel: 1 | 2
+    channel_name: string
+    supported_methods: string[]
+    supported_methods_text: string
+    mch_id: string
+    app_id: string
+    notify_url: string
+    app_private_key_hint: string
+    public_cert_path: string
+    platform_cert_path: string
+    root_cert_path: string
+    sort: number
+    is_sandbox: 1 | 2
+    is_sandbox_text: string
+    status: 1 | 2
+    status_name: string
+    remark: string
+    created_at: string
+    updated_at: string
+  }>
+  page: { page_size: number; current_page: number; total_page: number; total: number }
+}
+```
+
+### Create / Update / Status / Delete
+
+```text
+POST   /api/admin/v1/pay-channels
+PUT    /api/admin/v1/pay-channels/:id
+PATCH  /api/admin/v1/pay-channels/:id/status
+DELETE /api/admin/v1/pay-channels/:id
+```
+
+Create / update body：
+
+```ts
+interface PayChannelMutationBody {
+  name: string
+  channel: 1 | 2
+  supported_methods: string[]
+  mch_id: string
+  app_id?: string
+  notify_url?: string
+  app_private_key?: string
+  public_cert_path?: string
+  platform_cert_path?: string
+  root_cert_path?: string
+  sort: number
+  is_sandbox: 1 | 2
+  status: 1 | 2
+  remark?: string
+}
+```
+
+Response create:
+
+```ts
+{ id: number }
+```
+
+Rules：
+
+```text
+同一 channel + mch_id + app_id 不能重复。
+wechat 支持 scan,h5,app,mini,mp。
+alipay 支持 web,h5,app,scan,mini。
+supported_methods 写入前去重并按提交顺序保留，非法 method 直接拒绝。
+app_private_key 为空时 update 不覆盖已有密钥。
+DELETE 只支持单个 path id，不接受 body id/ids，不保留 legacy 批量删除契约。
+如果 orders.channel_id 或 pay_transactions.channel_id 引用该渠道，DELETE 必须拒绝，提示禁用而不是删除。
+```
+
+Auth / metadata：
+
+```text
+POST   -> bearer token + pay_channel_add    -> module=pay_channel, action=create,        title=新增支付渠道
+PUT    -> bearer token + pay_channel_edit   -> module=pay_channel, action=update,        title=编辑支付渠道
+PATCH  -> bearer token + pay_channel_status -> module=pay_channel, action=change_status, title=切换支付渠道状态
+DELETE -> bearer token + pay_channel_del    -> module=pay_channel, action=delete,        title=删除支付渠道
+```
+
+## Pay Transactions
+
+状态：implemented in Go backend, frontend migration in progress for read-only pay transaction page.
+
+用途：支付域第二切片，只迁移后台支付流水只读页面。它用于看清订单、用户、渠道、交易状态和渠道返回事实，不发起支付、不重试回调、不改钱包、不跑对账。
+
+### Shared Rules
+
+```text
+resource prefix: /api/admin/v1/pay-transactions
+table: pay_transactions
+joined facts: orders, users, pay_channel
+dict source: internal/enum/pay.go -> internal/dict
+permission code: pay_transaction_list
+operation log: none, all routes are read-only
+```
+
+响应永远不返回支付渠道密钥字段：
+
+```text
+app_private_key
+app_private_key_enc
+```
+
+本切片不实现：
+
+```text
+payment SDK
+recharge/createPay/cancel/query runtime
+payment callback
+wallet mutation
+refund
+reconciliation execution
+```
+
+### Init
+
+`GET /api/admin/v1/pay-transactions/page-init`
+
+Auth：bearer token + `pay_transaction_list`.
+
+Response `data.dict`：
+
+```ts
+interface PayTransactionInitDict {
+  channel_arr: Array<{ label: string; value: 1 | 2 }>
+  txn_status_arr: Array<{ label: string; value: 1 | 2 | 3 | 4 | 5 }>
+}
+```
+
+枚举：
+
+```text
+1 微信支付
+2 支付宝
+
+1 已创建
+2 等待支付
+3 支付成功
+4 支付失败
+5 已关闭
+```
+
+### List
+
+`GET /api/admin/v1/pay-transactions`
+
+Auth：bearer token + `pay_transaction_list`.
+
+Query：
+
+```ts
+interface PayTransactionListQuery {
+  current_page: number
+  page_size: number
+  order_no?: string
+  transaction_no?: string
+  user_id?: number
+  channel?: 1 | 2
+  status?: 1 | 2 | 3 | 4 | 5
+  start_date?: string // yyyy-mm-dd
+  end_date?: string   // yyyy-mm-dd
+}
+```
+
+Response `data`：
+
+```ts
+interface PayTransactionListResponse {
+  list: Array<{
+    id: number
+    transaction_no: string
+    order_no: string
+    user_id: number
+    user_name: string
+    user_email: string
+    attempt_no: number
+    channel_id: number
+    channel: 1 | 2
+    channel_text: string
+    pay_method: string
+    pay_method_text: string
+    amount: number
+    trade_no: string
+    trade_status: string
+    status: 1 | 2 | 3 | 4 | 5
+    status_text: string
+    paid_at: string | null
+    created_at: string
+  }>
+  page: { page_size: number; current_page: number; total_page: number; total: number }
+}
+```
+
+Rules：
+
+```text
+order_no / transaction_no 是精确查询，service 只做 trim。
+user_id / channel / status 由 handler binding 校验，非法值直接 code=100。
+start_date / end_date 只接受 yyyy-mm-dd，repository 展开为当天 00:00:00 到 23:59:59。
+channel/status/pay_method 展示文本由 Go enum/dict 生成，不让前端兜底猜 label。
+```
+
+### Detail
+
+`GET /api/admin/v1/pay-transactions/:id`
+
+Auth：bearer token + `pay_transaction_list`.
+
+Response `data`：
+
+```ts
+interface PayTransactionDetailResponse {
+  transaction: {
+    id: number
+    transaction_no: string
+    order_no: string
+    attempt_no: number
+    channel_id: number
+    channel: 1 | 2
+    channel_text: string
+    pay_method: string
+    pay_method_text: string
+    amount: number
+    trade_no: string
+    trade_status: string
+    status: 1 | 2 | 3 | 4 | 5
+    status_text: string
+    paid_at: string | null
+    closed_at: string | null
+    channel_resp: Record<string, unknown>
+    raw_notify: Record<string, unknown>
+    created_at: string
+  }
+  channel: {
+    id: number
+    name: string
+    channel: 1 | 2
+  } | null
+  order: {
+    id: number
+    order_no: string
+    user_id: number
+    user_name: string
+    user_email: string
+    title: string
+    pay_amount: number
+    pay_status: number
+  } | null
+}
+```
+
+Rules：
+
+```text
+id 必须是正整数。
+不存在返回 code=404 / 支付流水不存在。
+channel_resp/raw_notify 空或非法 JSON 时返回空 object `{}`，不是字符串兜底。
+detail join pay_channel 只返回渠道摘要，不 select 私钥明文或密文字段。
+```
+
+## Pay Orders
+
+状态：implemented in Go backend; Vue admin order client migrated to Go REST for后台订单管理方法。用户侧充值/钱包运行时仍是 legacy，等钱包切片单独迁。
+
+用途：支付域第三切片，只迁移后台“统一订单管理”页面的只读查询和轻写管理动作。它让后台能查看统一订单、状态统计、详情、备注，并在明确边界内做本地关闭订单。
+
+### Shared Rules
+
+```text
+resource prefix: /api/admin/v1/pay-orders
+table: orders, order_items
+joined facts: users, pay_channel, pay_transactions
+dict source: internal/enum/pay.go -> internal/dict
+read permission code: pay_recharge_list
+mutating permission code: pay_order_edit
+operation log: close/remark only
+```
+
+本切片不实现：
+
+```text
+payment SDK
+third-party close/query/refund
+recharge/createPay/cancel/query runtime
+payment callback
+wallet mutation
+fulfillment/reconciliation execution
+```
+
+### Init
+
+`GET /api/admin/v1/pay-orders/page-init`
+
+Auth：bearer token + `pay_recharge_list`.
+
+Response `data.dict`：
+
+```ts
+interface PayOrderInitDict {
+  channel_arr: Array<{ label: string; value: 1 | 2 }>
+  pay_method_arr: Array<{ label: string; value: string }>
+  order_type_arr: Array<{ label: string; value: 1 | 2 | 3 }>
+  pay_status_arr: Array<{ label: string; value: 1 | 2 | 3 | 4 | 5 }>
+  biz_status_arr: Array<{ label: string; value: 1 | 2 | 3 | 4 | 5 | 6 }>
+  recharge_preset_arr: Array<{ label: string; value: number }>
+}
+```
+
+### Status Count
+
+`GET /api/admin/v1/pay-orders/status-count`
+
+Auth：bearer token + `pay_recharge_list`.
+
+Query：
+
+```ts
+interface PayOrderStatusCountQuery {
+  order_no?: string
+  user_id?: number
+}
+```
+
+Response `data`：
+
+```ts
+Array<{
+  label: string
+  value: 1 | 2 | 3 | 4 | 5
+  count: number
+}>
+```
+
+Rules：
+
+```text
+永远按 pay_status enum 顺序返回完整 5 项，没数据时 count=0。
+order_no 精确查询；user_id 必须正整数。
+```
+
+### List
+
+`GET /api/admin/v1/pay-orders`
+
+Auth：bearer token + `pay_recharge_list`.
+
+Query：
+
+```ts
+interface PayOrderListQuery {
+  current_page: number
+  page_size: number
+  order_type?: 1 | 2 | 3
+  pay_status?: 1 | 2 | 3 | 4 | 5
+  order_no?: string
+  user_id?: number
+  start_date?: string // yyyy-mm-dd
+  end_date?: string   // yyyy-mm-dd
+}
+```
+
+Response `data`：
+
+```ts
+interface PayOrderListResponse {
+  list: Array<{
+    id: number
+    order_no: string
+    user_id: number
+    user_name: string
+    user_email: string
+    order_type: number
+    order_type_text: string
+    title: string
+    total_amount: number
+    discount_amount: number
+    pay_amount: number
+    pay_status: number
+    pay_status_text: string
+    biz_status: number
+    biz_status_text: string
+    admin_remark: string
+    pay_time: string | null
+    created_at: string
+  }>
+  page: { page_size: number; current_page: number; total_page: number; total: number }
+}
+```
+
+Rules：
+
+```text
+handler 用 pay_order_type/pay_status validator 拦非法查询值。
+service 只做分页默认值、trim、时间/label 展示归一化。
+order_no 是精确查询；start_date/end_date 展开到当天 00:00:00 / 23:59:59。
+```
+
+### Detail
+
+`GET /api/admin/v1/pay-orders/:id`
+
+Auth：bearer token + `pay_recharge_list`.
+
+Response `data`：
+
+```ts
+interface PayOrderDetailResponse {
+  order: {
+    id: number
+    order_no: string
+    user_id: number
+    user_name: string
+    user_email: string
+    order_type: number
+    order_type_text: string
+    biz_type: string
+    biz_id: number
+    title: string
+    total_amount: number
+    discount_amount: number
+    pay_amount: number
+    pay_status: number
+    pay_status_text: string
+    biz_status: number
+    biz_status_text: string
+    pay_time: string | null
+    expire_time: string | null
+    close_time: string | null
+    close_reason: string
+    biz_done_at: string | null
+    admin_remark: string
+    channel: { id: number; name: string; channel: 1 | 2 } | null
+    pay_method: string
+    extra: Record<string, unknown>
+    success_transaction_id: number
+    created_at: string
+  }
+  items: Array<{ id: number; title: string; price: number; quantity: number; amount: number }>
+}
+```
+
+Rules：
+
+```text
+id 必须是正整数。
+不存在返回 code=404 / 订单不存在。
+extra 空或非法 JSON 时返回空 object `{}`。
+detail join pay_channel 只返回渠道摘要，不 select 私钥字段。
+```
+
+### Remark
+
+`PATCH /api/admin/v1/pay-orders/:id/remark`
+
+Auth：bearer token + `pay_order_edit`.
+
+Operation log：
+
+```text
+module=pay_order action=remark title=备注订单
+```
+
+Body：
+
+```ts
+interface PayOrderRemarkBody {
+  remark: string // required, max 500
+}
+```
+
+Response：`data = {}`.
+
+### Close
+
+`PATCH /api/admin/v1/pay-orders/:id/close`
+
+Auth：bearer token + `pay_order_edit`.
+
+Operation log：
+
+```text
+module=pay_order action=close title=关闭订单
+```
+
+Body：
+
+```ts
+interface PayOrderCloseBody {
+  reason?: string // max 100; empty -> 管理员关闭
+}
+```
+
+Response：`data = {}`.
+
+Rules：
+
+```text
+只允许 pay_status in (PENDING=1, PAYING=2)。
+DB transaction 内更新 orders.pay_status=CLOSED、close_time、close_reason，并关闭最后一条 active pay_transactions。
+这是 Go 第一版 admin local close，不调用第三方 SDK，不查单，不关第三方订单，不改钱包余额。
+```
+
 
 ## Upload Config
 
