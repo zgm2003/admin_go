@@ -58,6 +58,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-contract.ps1
 | system setting mutations | system-settings create/update/status/delete | bearer token + `system_setting_*` route permission |
 | upload config mutations | upload-drivers/upload-rules/upload-settings create/update/status/delete | bearer token + `system_uploadConfig_*` route permission |
 | upload token create | `POST /api/admin/v1/upload-tokens` | bearer token + `system_uploadToken_create` route permission |
+| notification task mutations | notification-tasks create/cancel/delete | bearer token + `system_notificationTask_*` route permission |
 | current profile update | `PUT /api/admin/v1/profile` | bearer token; operation log only, no user-manager button permission |
 
 ## Health / Readiness
@@ -913,6 +914,198 @@ PATCH /read 的空 ids 表示把当前用户、当前 platform 可见的全部�
 DELETE 不接受空 ids；删除是软删除 is_del=1。
 这些 current-user routes 不挂 RBAC button permission。
 这些 read/delete 动作当前不写 operation log；如果未来要审计，必须加显式 route metadata，不能靠反射或隐式猜测。
+```
+
+## Notification Tasks
+
+状态：implemented in Go backend, adapted in Vue frontend。
+
+用途：后台通知发布任务管理。它不是当前用户通知 inbox，而是管理端创建 `notification_task`，由 `admin-worker` 通过 Asynq + gocron/v2 发送到 `notifications`。
+
+### Init
+
+`GET /api/admin/v1/notification-tasks/init`
+
+Auth: bearer token.
+
+Response `data.dict`：
+
+```ts
+interface NotificationTaskInitDict {
+  notification_type_arr: Array<{ label: string; value: 1 | 2 | 3 | 4 }>
+  notification_level_arr: Array<{ label: string; value: 1 | 2 }>
+  notification_target_type_arr: Array<{ label: string; value: 1 | 2 | 3 }>
+  notification_task_status_arr: Array<{ label: string; value: 1 | 2 | 3 | 4 }>
+  platformArr: Array<{ label: string; value: 'all' | 'admin' | 'app' }>
+}
+```
+
+字典由 Go `internal/enum` -> `internal/dict` 派生：
+
+```text
+type:        1 普通 / 2 成功 / 3 警告 / 4 错误
+level:       1 普通 / 2 紧急
+target_type: 1 全部用户 / 2 指定用户 / 3 指定角色
+status:      1 待发送 / 2 发送中 / 3 已完成 / 4 失败
+platform:    all / admin / app，all 必须排第一
+```
+
+### Status count
+
+`GET /api/admin/v1/notification-tasks/status-count?title=`
+
+Auth: bearer token.
+
+Response `data` 按 status enum 顺序返回：
+
+```ts
+Array<{ label: string; value: 1 | 2 | 3 | 4; num: number }>
+```
+
+### List
+
+`GET /api/admin/v1/notification-tasks`
+
+Query：
+
+```ts
+interface NotificationTaskListQuery {
+  current_page: number
+  page_size: number
+  status?: 1 | 2 | 3 | 4
+  title?: string
+}
+```
+
+Response `data`：
+
+```ts
+interface NotificationTaskListResponse {
+  list: Array<{
+    id: number
+    title: string
+    content: string
+    type: 1 | 2 | 3 | 4
+    type_text: string
+    level: 1 | 2
+    level_text: string
+    link: string
+    platform: 'all' | 'admin' | 'app'
+    platform_text: string
+    target_type: 1 | 2 | 3
+    target_type_text: string
+    status: 1 | 2 | 3 | 4
+    status_text: string
+    total_count: number
+    sent_count: number
+    send_at: string | null
+    error_msg: string | null
+    created_at: string
+  }>
+  page: { page_size: number; current_page: number; total_page: number; total: number }
+}
+```
+
+Rules：
+
+```text
+只读 notification_task.is_del=2。
+title 是 prefix search，不做全表任意模糊扫描。
+排序固定 id desc。
+```
+
+### Create
+
+`POST /api/admin/v1/notification-tasks`
+
+Auth: bearer token + `system_notificationTask_add`。
+
+Body：
+
+```ts
+interface NotificationTaskCreateBody {
+  title: string
+  content?: string
+  type?: 1 | 2 | 3 | 4
+  level?: 1 | 2
+  link?: string
+  platform?: 'all' | 'admin' | 'app'
+  target_type: 1 | 2 | 3
+  target_ids?: number[]
+  send_at?: string // YYYY-MM-DD HH:mm:ss; empty = immediate
+}
+```
+
+Response：
+
+```ts
+interface NotificationTaskCreateResponse {
+  id: number
+  queued: boolean
+}
+```
+
+Rules：
+
+```text
+target_type=1 时服务端清空 target_ids。
+target_type=2/3 时 target_ids 必须非空，并按正整数去重排序。
+type 默认 1，level 默认 1，platform 默认 all。
+send_at 空：写 task 后 enqueue notification:send-task:v1，queued=true。
+send_at 非空：只写 pending task，queued=false，等待 scheduler。
+created_by 来自 AuthToken identity.user_id，不接受前端传 created_by。
+DB 写入 + Redis enqueue 当前不是强事务；enqueue 失败会返回明确错误，任务仍留 pending，可由调度器补偿。后续强一致用 outbox。
+```
+
+### Cancel / Delete
+
+```text
+PATCH  /api/admin/v1/notification-tasks/:id/cancel
+DELETE /api/admin/v1/notification-tasks/:id
+```
+
+Auth：
+
+```text
+PATCH cancel: bearer token + system_notificationTask_cancel
+DELETE:       bearer token + system_notificationTask_del
+```
+
+Rules：
+
+```text
+cancel 只允许 pending 任务；实现为软删除 is_del=1。
+delete 是软删除 is_del=1。
+已发送通知不会被撤回；本切片不做通知撤回。
+```
+
+### Queue / scheduler behavior
+
+```text
+task type: notification:dispatch-due:v1
+task type: notification:send-task:v1
+schedule:  notification-task-dispatch-due every 1m
+queue lane: default
+```
+
+边界：
+
+```text
+admin-api 只处理 HTTP，不消费队列，不跑 cron。
+admin-worker 才拥有 Asynq server 和 gocron scheduler。
+scheduler callback 只能 enqueue dispatch-due task，不能扫描 DB 或发通知。
+dispatch-due handler claim 到期 pending task，再 enqueue send-task。
+send-task handler 解析目标用户、批量插入 notifications、更新 sent_count/status。
+handler 必须幂等，Asynq 是 at-least-once 语义。
+Redis fan-out / notification.created.v1 分布式业务推送仍未实现；当前以 DB notifications 写入为真相。
+```
+
+Operation log：
+
+```text
+POST   -> module=notification_task, action=create
+PATCH  -> module=notification_task, action=cancel
+DELETE -> module=notification_task, action=delete
 ```
 
 

@@ -28,6 +28,7 @@
 | account security writes | no | failure probes only | `PUT /api/admin/v1/profile/security/password`, `PUT /api/admin/v1/profile/security/email`, `PUT /api/admin/v1/profile/security/phone` | no successful mutation | n/a | full smoke 只验证错误旧密码/错误邮箱验证码/错误手机号验证码返回 `code=100`，不修改真实测试账号密码、手机号、邮箱 |
 | auth platform read | yes | via basic | `GET /api/admin/v1/auth-platforms/init`, `GET /api/admin/v1/auth-platforms` | no | n/a | 验证 captcha dict 存在 |
 | notifications current-user read | no | yes | `GET /api/admin/v1/notifications/init`, `GET /api/admin/v1/notifications`, `GET /api/admin/v1/notifications/unread-count` | no | n/a | full smoke 只探测字典、分页 shape、未读数 shape；不标记已读/删除真实通知，避免改变测试账号状态 |
+| notification task publish read | no | yes | `GET /api/admin/v1/notification-tasks/init`, `GET /api/admin/v1/notification-tasks/status-count`, `GET /api/admin/v1/notification-tasks` | no | n/a | full smoke 只探测发布任务字典、状态统计、分页 shape；不创建通知任务，避免给测试/真实用户发送垃圾通知 |
 | permission + role RBAC loop | yes | via basic | permissions create/delete, role update/restore, users/init | yes | delete temp permissions; restore role | 临时 DIR/PAGE/BUTTON 必须清掉 |
 | system log read-only | no | yes, lines conditional | `GET /api/admin/v1/system-logs/init`, `GET /api/admin/v1/system-logs/files`, `GET /api/admin/v1/system-logs/files/:name/lines` | no | n/a | full smoke 探测 init/files shape；当文件列表非空时读取第一份日志 tail lines；不做删除/清空/下载日志 |
 | system settings read | no | yes | `GET /api/admin/v1/system-settings/init`, `GET /api/admin/v1/system-settings` | no | n/a | full smoke 只探测 init/list shape；旧 `devtools_queue_monitor_queues` 清理由迁移脚本/人工执行，不在 smoke 里做写库删除 |
@@ -36,6 +37,7 @@
 | upload token shape | no | gated yes | `POST /api/admin/v1/upload-tokens` | token only | n/a | `COS_STS_ENABLED=false` 时 summary 输出 skipped_cos_sts_disabled；启用时只校验 provider/key/credentials shape，永远不上传真实文件 |
 | operation log read/delete | no | yes | `GET /api/admin/v1/operation-logs/init`, `GET /api/admin/v1/operation-logs`, `DELETE /api/admin/v1/operation-logs/:id` | yes | delete temp operation log row; delete temp permission | full 先创建临时权限触发 `新增权限` 操作日志，再删除该日志 |
 | queue health | yes | via basic | `auth:login-log:v1` worker path or sync fallback evidence | yes | no cleanup | 当前以 login log 近 5 分钟记录证明 queue/worker 或显式同步策略可用 |
+| scheduler business dispatch | no | unit tests | `notification-task-dispatch-due` -> `notification:dispatch-due:v1` -> `notification:send-task:v1` | no in smoke | n/a | 调度器不放进 smoke 写路径；用 `go test ./internal/module/notificationtask ./internal/jobs ./internal/bootstrap` 证明 scheduler 只 enqueue，handler 才 claim DB/send |
 | queue monitor read-only | no | yes | `GET /api/admin/v1/queue-monitor`, `GET /api/admin/v1/queue-monitor/failed`, `HEAD /api/admin/v1/queue-monitor-ui` | no | n/a | full smoke 只探测只读 JSON 摘要、失败任务分页 shape 和 asynqmon UI 可访问性，不做 retry/delete/clear |
 | realtime WebSocket connect/heartbeat | yes | via basic | `GET /api/admin/v1/realtime/ws`, `realtime.connected.v1`, `realtime.ping.v1`, `realtime.pong.v1` | local session register/cleanup only | client closes socket | 证明 AuthToken 后的 WebSocket upgrade、项目 envelope、ping/pong 和 bounded session pump 没断；browser cookie auth、topic 白名单、`REALTIME_ENABLED=false` 503、Publisher local/noop、Vue URL/envelope cleanup 走单元/Vitest，不放 basic smoke；不测 fan-out/AI |
 
@@ -53,8 +55,9 @@ go test ./internal/module/queuemonitor ./internal/platform/taskqueue ./internal/
 ```text
 taskqueue.Mux 已注册 handler 可以处理 project task
 未知 task type 必须显式失败，不允许静默吞掉
-jobs.Register 同时注册 system:no-op:v1 和 auth:login-log:v1
+jobs.Register 同时注册 system:no-op:v1、auth:login-log:v1、notification:dispatch-due:v1、notification:send-task:v1
 jobs.RegisterSchedules 只把 schedule trigger 转成 Enqueuer.Enqueue，不直接跑业务
+notification-task-dispatch-due 只 enqueue notification:dispatch-due:v1；dispatch-due handler 才 claim 到期 notification_task 并 enqueue send-task
 admin-worker 可构造 queue server + scheduler；admin-api 只持有 producer，不消费队列
 ```
 
