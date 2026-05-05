@@ -801,6 +801,9 @@ interface OperationLogListResponse {
 
 ```text
 request_data / response_data 存的是 JSON 字符串摘要，不是 raw 结构体。
+request_data 顶层是审计 envelope：method/path/module/action/request_id/client_ip/session_id/platform/latency_ms；真实入参在 `payload` 字段。
+response_data 顶层是审计 envelope：status/success；真实接口响应在 `payload` 字段，业务 data 仍在 `payload.data`。
+前端列表只能展示摘要，详情弹窗必须展示格式化 JSON；不能把 wrapper key 当成入参/出参本体。
 敏感字段会在 Go backend 里遮蔽，至少包括 password/token/captcha/captcha_answer/code/secret_id/secret_key/secret_id_enc/secret_key_enc。
 delete permission code 是 devTools_operationLog_del。
 DELETE 只走 REST: /api/admin/v1/operation-logs/:id 和 /api/admin/v1/operation-logs body { ids: number[] }。
@@ -1644,6 +1647,24 @@ COS STS provider failure              -> code 500 / COS 临时凭证签发失败
 
 系统日志是运行时文件日志的只读浏览接口，不等于 `operation-logs`。`operation-logs` 记录后台用户操作审计并落库；`system-logs` 只读取 Go 进程写出的结构化文件日志。
 
+文件策略：
+
+```text
+admin-api    -> runtime/logs/admin-api.log
+admin-worker -> runtime/logs/admin-worker.log
+```
+
+文件输出使用 lumberjack 轮转，默认：
+
+```text
+LOG_FILE_MAX_SIZE_MB=64
+LOG_FILE_MAX_BACKUPS=7
+LOG_FILE_MAX_AGE_DAYS=14
+LOG_FILE_COMPRESS=true
+```
+
+所以不是一个 `admin-api.log` 无限增长。`LOG_FILE_NAME` 仅保留旧配置入口；实际进程入口会按 `LOG_API_FILE_NAME` / `LOG_WORKER_FILE_NAME` 选择文件名。
+
 ### Init
 
 `GET /api/admin/v1/system-logs/init`
@@ -1684,7 +1705,8 @@ Response:
 ```json
 {
   "list": [
-    { "name": "admin-api.log", "size": 1024, "size_human": "1.00 KB", "mtime": "2026-05-04 19:30:00" }
+    { "name": "admin-api.log", "size": 1024, "size_human": "1.00 KB", "mtime": "2026-05-04 19:30:00" },
+    { "name": "admin-worker.log", "size": 2048, "size_human": "2.00 KB", "mtime": "2026-05-04 19:31:00" }
   ]
 }
 ```
