@@ -34,7 +34,7 @@ POST /api/admin/v1/wallet-adjustments
 
 ## Non-scope
 
-本阶段不迁：
+本后台钱包管理设计阶段不迁；后续 pay runtime slice 已把个人钱包/充值页 current-user runtime 迁到 Go REST：
 
 ```text
 /api/admin/pay/recharge
@@ -58,7 +58,7 @@ POST /api/admin/v1/wallet-adjustments
 对账执行
 ```
 
-当前用户侧首页、个人钱包页、充值页仍使用已有 legacy 用户侧接口。它们属于后续 `app` / current-user wallet slice，不混进后台钱包管理 read-only。
+历史边界：用户侧首页、个人钱包页、充值页不混进后台钱包管理 read-only。当前个人钱包/充值页 admin current-user runtime 已由 `internal/module/payruntime` 承接；未来 app 系统再单独提供 `/api/app/v1/...`。
 
 ## Legacy Route Map
 
@@ -71,7 +71,7 @@ POST /api/admin/UserWallet/transactions -> UserWalletModule::transactions
 POST /api/admin/UserWallet/adjust       -> UserWalletModule::adjust
 ```
 
-Legacy PHP 用户侧钱包查询：
+Legacy PHP 用户侧钱包查询事实来源：
 
 ```text
 POST /api/admin/pay/walletInfo

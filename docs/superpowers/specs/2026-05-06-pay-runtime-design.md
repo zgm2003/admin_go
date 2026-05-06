@@ -547,32 +547,19 @@ raw Authorization/Cookie
 
 ## Frontend impact
 
-当前 `admin_front_ts/src/api/pay/order.ts` 仍有 legacy：
+当前个人钱包/充值页 runtime API 已迁到 Go REST：
 
 ```text
-recharge -> /api/admin/pay/recharge
-createPay -> /api/admin/pay/createPay
-cancelOrder/queryResult/myOrders/walletInfo/walletBills -> legacy
+OrderApi.walletInfo   -> GET /api/admin/v1/wallet/summary
+OrderApi.walletBills  -> GET /api/admin/v1/wallet/bills
+OrderApi.myOrders     -> GET /api/admin/v1/recharge-orders
+OrderApi.queryResult  -> GET /api/admin/v1/recharge-orders/:order_no/result
+OrderApi.cancelOrder  -> PATCH /api/admin/v1/recharge-orders/:order_no/cancel
+OrderApi.recharge     -> POST /api/admin/v1/recharge-orders
+OrderApi.createPay    -> POST /api/admin/v1/recharge-orders/:order_no/pay-attempts
 ```
 
-第一刀只迁：
-
-```text
-OrderApi.recharge -> POST /api/admin/v1/recharge-orders
-OrderApi.createPay -> POST /api/admin/v1/recharge-orders/:order_no/pay-attempts
-```
-
-不迁：
-
-```text
-walletInfo
-walletBills
-myOrders
-queryResult
-cancelOrder
-```
-
-原因：支付运行时先跑通下单/支付/回调；订单列表和钱包账单用户侧查询下一刀再迁，避免一刀太大。
+`orderDetail` 当前页面未使用，不保留 legacy 调用。后台管理页仍走后台资源：`/api/admin/v1/wallets`、`/api/admin/v1/wallet-transactions`、`/api/admin/v1/pay-orders`。
 
 前端 touched code 禁止 `any/as any/Record<string, any>`。当前 `CreatePayResponse.pay_data?: Record<string, unknown>` 可以保留，因为第三方 pay_data 的 meta 是外部边界；消费处必须收窄，不允许 `as any`。
 

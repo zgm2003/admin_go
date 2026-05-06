@@ -645,7 +645,7 @@ createPay: (params: CreatePayParams) => request.post<CreatePayResponse>(`${ADMIN
 }),
 ```
 
-- [ ] Keep `cancelOrder/queryResult/myOrders/walletInfo/walletBills` legacy in this task.
+- [x] Follow-up wallet-page runtime closure migrated `cancelOrder/queryResult/myOrders/walletInfo/walletBills` to Go REST; `src/api/pay/order.ts` no longer imports `legacyRequest`.
 
 - [ ] Do not introduce `any`, `as any`, or `Record<string, any>`.
 

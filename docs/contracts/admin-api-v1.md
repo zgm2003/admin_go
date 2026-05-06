@@ -2022,9 +2022,9 @@ repository 在单个 MySQL transaction 内完成 user existence check、SELECT u
 
 ## Pay Runtime Minimal Closure
 
-状态：partially implemented in Go backend; Vue current-user recharge creation and pay attempt client migrated to Go REST.
+状态：partially implemented in Go backend; Vue current-user wallet/recharge runtime client migrated to Go REST.
 
-用途：支付域第一条真实运行时闭环。当前只做支付宝沙盒充值最小链路：创建充值订单、创建支付宝 web/h5 支付尝试、支付宝异步回调验签、幂等更新订单/流水、充值入账钱包、写入回调审计。
+用途：支付域第一条真实运行时闭环。当前只做支付宝沙盒充值最小链路和个人钱包页运行时读写：读取当前用户钱包摘要/流水/充值单、创建充值订单、查询本地支付结果、取消本人待支付充值单、创建支付宝 web/h5 支付尝试、支付宝异步回调验签、幂等更新订单/流水、充值入账钱包、写入回调审计。
 
 ### Shared Rules
 
@@ -2043,8 +2043,7 @@ operation log metadata: none for current-user recharge runtime and public notify
 WeChat runtime
 refund
 reconciliation execution
-third-party order query/cancel
-user-side myOrders/queryResult/walletInfo/walletBills migration
+third-party payment-platform order query/cancel
 manual sandbox payment automation
 ```
 
@@ -2141,6 +2140,179 @@ transaction_no 由 Redis INCR 生成：T + yyMMddHHmmss + 6-digit sequence。
 channel_resp 保存 SDK raw response；响应只返回前端需要的 mode/content，不返回密钥。
 ```
 
+### Current User Recharge Orders
+
+`GET /api/admin/v1/recharge-orders`
+
+Auth：bearer token only.
+
+Query：
+
+```ts
+interface RechargeOrderListQuery {
+  current_page: number
+  page_size: number // max 50
+}
+```
+
+Response `data`：
+
+```ts
+interface RechargeOrderListResponse {
+  list: Array<{
+    id: number
+    order_no: string
+    title: string
+    pay_amount: number
+    pay_status: number
+    pay_status_text: string
+    biz_status: number
+    biz_status_text: string
+    pay_time: string | null
+    created_at: string
+    expire_time: string | null
+    channel_id: number | null
+    channel_name: string
+    pay_method: string
+    pay_method_text: string
+    transaction_no: string | null
+    transaction_status: number | null
+  }>
+  page: Page
+}
+```
+
+Rules：
+
+```text
+只返回当前 token user 的 recharge orders。
+这是个人钱包页 runtime endpoint，不注册后台按钮权限和 operation log metadata。
+```
+
+### Query Current User Recharge Result
+
+`GET /api/admin/v1/recharge-orders/:order_no/result`
+
+Auth：bearer token only.
+
+Response `data`：
+
+```ts
+interface RechargeOrderResultResponse {
+  order_no: string
+  pay_status: number
+  biz_status: number
+  pay_time: string | null
+  transaction: null | {
+    transaction_no: string
+    status: number
+    trade_no: string
+  }
+}
+```
+
+Rules：
+
+```text
+只查询当前 token user 自己的 recharge order。
+当前是本地 DB 结果查询，不调用第三方支付平台查单。
+```
+
+### Cancel Current User Recharge Order
+
+`PATCH /api/admin/v1/recharge-orders/:order_no/cancel`
+
+Auth：bearer token only.
+
+Body：
+
+```ts
+interface RechargeOrderCancelBody {
+  reason?: string // max 100
+}
+```
+
+Response `data`：`{}`
+
+Rules：
+
+```text
+只允许取消当前 token user 自己的 recharge order。
+只允许 PENDING/PAYING 本地订单；已支付、已关闭、已过期订单拒绝。
+取消只做本地 close：orders.close_time/close_reason + 当前 active pay_transaction close。
+不调用第三方支付平台关单。
+```
+
+### Current User Wallet Summary
+
+`GET /api/admin/v1/wallet/summary`
+
+Auth：bearer token only.
+
+Response `data`：
+
+```ts
+interface WalletSummaryResponse {
+  wallet_exists: 1 | 2
+  balance: number
+  frozen: number
+  total_recharge: number
+  total_consume: number
+  created_at: string
+}
+```
+
+Rules：
+
+```text
+wallet_exists=1 表示当前用户已有钱包行；wallet_exists=2 表示无钱包行并返回 0 值摘要。
+只读当前 token user 的钱包事实，不走后台 pay_wallet_list 权限。
+```
+
+### Current User Wallet Bills
+
+`GET /api/admin/v1/wallet/bills`
+
+Auth：bearer token only.
+
+Query：
+
+```ts
+interface WalletBillsQuery {
+  current_page: number
+  page_size: number // max 50
+}
+```
+
+Response `data`：
+
+```ts
+interface WalletBillsResponse {
+  list: Array<{
+    id: number
+    biz_action_no: string
+    type: number
+    type_text: string
+    available_delta: number
+    frozen_delta: number
+    balance_before: number
+    balance_after: number
+    title: string
+    remark: string
+    order_no: string
+    created_at: string
+  }>
+  page: Page
+}
+```
+
+Rules：
+
+```text
+只返回当前 token user 的 wallet_transactions。
+这是个人钱包页 runtime endpoint，不注册后台按钮权限和 operation log metadata。
+```
+
 ### Alipay Notify
 
 `POST /api/pay/notify/alipay`
@@ -2187,13 +2359,18 @@ Frontend mapping：
 ```text
 OrderApi.recharge   -> request.post(`${ADMIN_API_PREFIX}/recharge-orders`)
 OrderApi.createPay  -> request.post(`${ADMIN_API_PREFIX}/recharge-orders/${order_no}/pay-attempts`)
+OrderApi.myOrders   -> request.get(`${ADMIN_API_PREFIX}/recharge-orders`)
+OrderApi.queryResult -> request.get(`${ADMIN_API_PREFIX}/recharge-orders/${order_no}/result`)
+OrderApi.cancelOrder -> request.patch(`${ADMIN_API_PREFIX}/recharge-orders/${order_no}/cancel`)
+OrderApi.walletInfo -> request.get(`${ADMIN_API_PREFIX}/wallet/summary`)
+OrderApi.walletBills -> request.get(`${ADMIN_API_PREFIX}/wallet/bills`)
 ```
 
 Smoke：
 
 ```text
-full smoke default: only checks enabled Alipay channel cert path fields and private-key non-leak.
-full smoke optional: -EnablePaymentRuntimeProbe creates a real recharge order and pay attempt, then checks pay_data.content shape.
+full smoke default: checks enabled Alipay channel cert path fields/private-key non-leak, plus current-user wallet summary, wallet bills, and recharge order list shape.
+full smoke optional: -EnablePaymentRuntimeProbe creates a real recharge order and pay attempt, checks pay_data.content shape, probes local result, then cancels the smoke order.
 manual sandbox e2e: create recharge order -> create pay attempt -> open pay_data.content -> pay in Alipay sandbox -> verify callback DB effects.
 ```
 
