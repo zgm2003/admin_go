@@ -1809,28 +1809,29 @@ DB transaction 内更新 orders.pay_status=CLOSED、close_time、close_reason，
 这是 Go 第一版 admin local close，不调用第三方 SDK，不查单，不关第三方订单，不改钱包余额。
 ```
 
-## Wallet Admin Read
+## Wallet Admin Read and Adjustment
 
-状态：implemented in Go backend, adapted in Vue frontend for后台钱包 read-only 管理。调账写路径仍是显式 legacy adapter，下一刀单独迁移为 `POST /api/admin/v1/wallet-adjustments`。
+状态：implemented in Go backend, adapted in Vue frontend for 后台钱包 read + 人工调账写路径。
 
-用途：支付域第四切片，只迁移后台“钱包管理”页面的字典、钱包分页和钱包流水分页。它用于查看用户钱包余额和钱包变更事实，不执行调账、不冻结余额、不触发支付 SDK。
+用途：支付域第四切片，迁移后台“钱包管理”页面的字典、钱包分页、钱包流水分页和人工调账。它用于查看用户钱包余额、钱包变更事实，并提供受 RBAC/OperationLog 保护的人工余额修正；不冻结余额、不触发支付 SDK。
 
 ### Shared Rules
 
 ```text
 wallet resource prefix: /api/admin/v1/wallets
 transaction resource prefix: /api/admin/v1/wallet-transactions
+adjustment resource prefix: /api/admin/v1/wallet-adjustments
 tables: user_wallets, wallet_transactions
 joined facts: users
 dict source: internal/enum/pay.go -> internal/dict
 read permission code: pay_wallet_list
-operation log: none, all Go routes in this slice are read-only
+adjust permission code: pay_wallet_adjust
+adjust operation log: module=pay_wallet action=adjust title=钱包调账
 ```
 
 本切片不实现：
 
 ```text
-wallet adjustment
 wallet freeze / unfreeze
 withdrawal
 payment SDK
@@ -1967,28 +1968,56 @@ wallet_transactions 可以为空，空列表是正常结果。
 read-only route 不注册 operation log metadata。
 ```
 
-### Adjustment Boundary
+### Wallet Adjustment Create
 
-当前调账入口仍显式命名为 legacy adapter：
+`POST /api/admin/v1/wallet-adjustments`
+
+Auth：bearer token + `pay_wallet_adjust`.
+
+OperationLog：
 
 ```text
-LegacyWalletAdjustmentApi -> POST /api/admin/UserWallet/adjust
+module=pay_wallet
+action=adjust
+title=钱包调账
 ```
 
-下一刀迁移时必须新建写路径：
+Request body：
 
-```text
-POST /api/admin/v1/wallet-adjustments
+```ts
+interface WalletAdjustmentCreateBody {
+  user_id: number
+  delta: number
+  reason: string
+  idempotency_key: string
+}
 ```
 
-写路径规则：
+Response `data`：
+
+```ts
+interface WalletAdjustmentCreateResponse {
+  transaction_id: number
+  biz_action_no: string
+  balance_before: number
+  balance_after: number
+}
+```
+
+Rules：
 
 ```text
-permission code: pay_wallet_adjust
-operation log: required
-repository transaction: required
-idempotency: required before any retry/queue boundary
-forbidden: PATCH /api/admin/v1/wallets/:user_id/adjust
+user_id 必须 > 0 且用户 is_del=2。
+delta 是 signed cents，不能为 0；正数加余额，负数减余额且不能低于 0。
+reason trim 后必须 1..255 个字符。
+idempotency_key trim 后必须 8..50 字符，只允许 A-Z a-z 0-9 _ - : .；50 是因为 biz_action_no varchar(64)，前缀 WALLET:ADJUST: 占 14。
+biz_action_no = WALLET:ADJUST:{idempotency_key}。
+同 idempotency_key + 同 payload 返回已有 transaction_id，不再次更新余额。
+同 idempotency_key + 不同 payload 返回 code=100，msg=幂等键已被不同请求使用。
+repository 在单个 MySQL transaction 内完成 user existence check、SELECT user_wallets FOR UPDATE、余额更新、wallet_transactions 插入。
+调账只修改 user_wallets.balance/version 和插入 wallet_transactions；不修改 total_recharge、total_consume、frozen。
+前端使用 crypto.randomUUID() 生成 idempotency_key；浏览器不支持时显式报错，不伪随机兜底。
+禁止新增 PATCH /api/admin/v1/wallets/:user_id/adjust 这类 action path。
 ```
 
 
