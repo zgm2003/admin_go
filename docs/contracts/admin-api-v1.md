@@ -57,7 +57,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-contract.ps1
 | operation log delete | operation-logs delete/batch delete | bearer token + `devTools_operationLog_del` route permission |
 | system setting mutations | system-settings create/update/status/delete | bearer token + `system_setting_*` route permission |
 | upload config mutations | upload-drivers/upload-rules/upload-settings create/update/status/delete | bearer token + `system_uploadConfig_*` route permission |
-| upload token create | `POST /api/admin/v1/upload-tokens` | bearer token + `system_uploadToken_create` route permission |
+| upload token create | `POST /api/admin/v1/upload-tokens` | bearer token; current-user upload capability, no RBAC button permission |
 | notification task mutations | notification-tasks create/cancel/delete | bearer token + `system_notificationTask_*` route permission |
 | current profile update | `PUT /api/admin/v1/profile` | bearer token; operation log only, no user-manager button permission |
 
@@ -2724,7 +2724,7 @@ status=2 只禁用当前项，不自动启用其他项。
 POST /api/admin/v1/upload-tokens
 ```
 
-Auth: bearer token + `system_uploadToken_create` route permission.
+Auth: bearer token only. This is a current-user upload capability used by avatar/chat/rich-text/file fields after login; it must not require `system_uploadToken_create` or any other RBAC button permission.
 
 Request:
 
@@ -2776,6 +2776,7 @@ Generated key format: {folder}/{yyyy}/{mm}/{dd}/{unix_ms}-{randomhex}-{safe_file
 STS policy is scoped to the generated key resource, not the whole bucket.
 Response never exposes upload_driver secret_id/secret_key plaintext.
 COS_STS_ENABLED=false returns explicit COS temporary credential disabled error.
+No OperationLog route metadata for upload token create, because the response contains temporary STS credentials. Business modules that persist the uploaded object reference own their own operation log.
 Smoke checks token shape only; it never uploads a real file.
 ```
 
