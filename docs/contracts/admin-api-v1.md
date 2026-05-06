@@ -1809,6 +1809,188 @@ DB transaction 内更新 orders.pay_status=CLOSED、close_time、close_reason，
 这是 Go 第一版 admin local close，不调用第三方 SDK，不查单，不关第三方订单，不改钱包余额。
 ```
 
+## Wallet Admin Read
+
+状态：implemented in Go backend, adapted in Vue frontend for后台钱包 read-only 管理。调账写路径仍是显式 legacy adapter，下一刀单独迁移为 `POST /api/admin/v1/wallet-adjustments`。
+
+用途：支付域第四切片，只迁移后台“钱包管理”页面的字典、钱包分页和钱包流水分页。它用于查看用户钱包余额和钱包变更事实，不执行调账、不冻结余额、不触发支付 SDK。
+
+### Shared Rules
+
+```text
+wallet resource prefix: /api/admin/v1/wallets
+transaction resource prefix: /api/admin/v1/wallet-transactions
+tables: user_wallets, wallet_transactions
+joined facts: users
+dict source: internal/enum/pay.go -> internal/dict
+read permission code: pay_wallet_list
+operation log: none, all Go routes in this slice are read-only
+```
+
+本切片不实现：
+
+```text
+wallet adjustment
+wallet freeze / unfreeze
+withdrawal
+payment SDK
+payment callback
+fulfillment mutation
+reconciliation execution
+```
+
+### Page Init
+
+`GET /api/admin/v1/wallets/page-init`
+
+Auth：bearer token + `pay_wallet_list`.
+
+Response `data.dict`：
+
+```ts
+interface WalletPageInitDict {
+  wallet_type_arr: Array<{ label: string; value: 1 | 2 | 3 }>
+  wallet_source_arr: Array<{ label: string; value: 0 | 1 | 2 }>
+}
+```
+
+枚举：
+
+```text
+wallet_type:
+1 充值入账
+2 消费扣款
+3 系统调账
+
+wallet_source:
+0 未关联
+1 履约
+2 人工
+```
+
+### Wallet List
+
+`GET /api/admin/v1/wallets`
+
+Auth：bearer token + `pay_wallet_list`.
+
+Query：
+
+```ts
+interface WalletListQuery {
+  current_page: number
+  page_size: number
+  user_id?: number
+  start_date?: string // yyyy-mm-dd
+  end_date?: string   // yyyy-mm-dd
+}
+```
+
+Response `data`：
+
+```ts
+interface WalletListResponse {
+  list: Array<{
+    id: number
+    user_id: number
+    user_name: string
+    user_email: string
+    balance: number
+    frozen: number
+    total_recharge: number
+    total_consume: number
+    created_at: string
+  }>
+  page: { page_size: number; current_page: number; total_page: number; total: number }
+}
+```
+
+Rules：
+
+```text
+金额统一是分，不在后端转元。
+user_id 必须是正整数。
+start_date/end_date 只接受 yyyy-mm-dd，repository 展开为当天 00:00:00 到 23:59:59。
+repository 只读 user_wallets，并 left join users 生成展示事实。
+```
+
+### Wallet Transaction List
+
+`GET /api/admin/v1/wallet-transactions`
+
+Auth：bearer token + `pay_wallet_list`.
+
+Query：
+
+```ts
+interface WalletTransactionListQuery {
+  current_page: number
+  page_size: number
+  user_id?: number
+  type?: 1 | 2 | 3
+  start_date?: string // yyyy-mm-dd
+  end_date?: string   // yyyy-mm-dd
+}
+```
+
+Response `data`：
+
+```ts
+interface WalletTransactionListResponse {
+  list: Array<{
+    id: number
+    user_id: number
+    user_name: string
+    user_email: string
+    biz_action_no: string
+    type: 1 | 2 | 3
+    type_text: string
+    available_delta: number
+    frozen_delta: number
+    balance_before: number
+    balance_after: number
+    order_no: string
+    title: string
+    remark: string
+    created_at: string
+  }>
+  page: { page_size: number; current_page: number; total_page: number; total: number }
+}
+```
+
+Rules：
+
+```text
+type 由 handler binding 的 wallet_type validator 拦非法值。
+type_text 由 enum.WalletTypeLabels 生成，不让前端兜底猜 label。
+wallet_transactions 可以为空，空列表是正常结果。
+read-only route 不注册 operation log metadata。
+```
+
+### Adjustment Boundary
+
+当前调账入口仍显式命名为 legacy adapter：
+
+```text
+LegacyWalletAdjustmentApi -> POST /api/admin/UserWallet/adjust
+```
+
+下一刀迁移时必须新建写路径：
+
+```text
+POST /api/admin/v1/wallet-adjustments
+```
+
+写路径规则：
+
+```text
+permission code: pay_wallet_adjust
+operation log: required
+repository transaction: required
+idempotency: required before any retry/queue boundary
+forbidden: PATCH /api/admin/v1/wallets/:user_id/adjust
+```
+
 
 ## Upload Config
 
