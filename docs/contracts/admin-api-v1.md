@@ -3099,7 +3099,7 @@ dict/init 是否写明 enum 来源：internal/enum -> internal/dict。
 
 ## System Cron Tasks
 
-状态：implemented in this slice。系统管理定时任务从 legacy `/api/admin/CronTask/*` 迁到 Go REST。旧 PHP `handler` 字符串只作为展示/来源字段，不作为 Go 运行时执行入口。
+状态：implemented in this slice。系统管理定时任务从 legacy `/api/admin/CronTask/*` 迁到 Go REST。`handler` 不是 Go 运行时执行入口；已接入 Go registry 的任务返回/保存版本化 Asynq task type，未迁 Go 的旧 PHP 字符串只作为 legacy provenance 展示。
 
 ### Runtime rule
 
@@ -3119,6 +3119,13 @@ Asynq task type: notification:dispatch-due:v1
 ```
 
 未迁 Go 的支付/AI/聊天等 legacy handler 不注册假任务；列表返回 `registry_status=missing`。禁用行返回 `disabled`，表达式错误返回 `invalid_cron`。
+
+当前数据迁移：
+
+```text
+database/migrations/20260506_cron_task_go_handler_cleanup.sql
+notification_task_scheduler.handler = notification:dispatch-due:v1
+```
 
 ### Routes
 
@@ -3158,7 +3165,7 @@ interface CronTaskItem {
   description: string
   cron: string
   cron_readable: string
-  handler: string
+  handler: string // registered Go task returns task type; missing legacy rows may show old provenance
   status: number
   status_name: string
   next_run_time: string
@@ -3175,6 +3182,7 @@ interface CronTaskItem {
 
 ```text
 name 是 Go registry key，新增后不允许编辑修改。
+registered 任务的 handler 由 Go registry task type 覆盖，前端不能把 PHP class 当“处理类”展示。
 registry_status 是 Go 根据 DB row + registry + cron 表达式派生；支持筛选，并在服务端筛选后重新分页。
 ```
 
