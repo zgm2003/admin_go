@@ -1057,7 +1057,7 @@ type 默认 1，level 默认 1，platform 默认 all。
 send_at 空：写 task 后 enqueue notification:send-task:v1，queued=true。
 send_at 非空：只写 pending task，queued=false，等待 scheduler。
 created_by 来自 AuthToken identity.user_id，不接受前端传 created_by。
-DB 写入 + Redis enqueue 当前不是强事务；enqueue 失败会返回明确错误，任务仍留 pending。`notification-task-dispatch-due` 会补偿 `send_at IS NULL` 的立即 pending 任务和到期定时任务。后续强一致用 outbox。
+DB 写入 + Redis enqueue 当前不是强事务；enqueue 失败会返回明确错误，任务仍留 pending。`cron_task.name=notification_task_scheduler` 对应的 Go registry 会补偿 `send_at IS NULL` 的立即 pending 任务和到期定时任务。后续强一致用 outbox。
 注意：后台如果有旧的 `admin-worker-smoke.exe` 或未重启 worker，可能不包含 notification:send-task:v1 handler，任务会停在 pending 或进入 Asynq archived。运行真实发布前必须启动当前代码的 `go run ./cmd/admin-worker`。
 ```
 
@@ -1088,7 +1088,7 @@ delete 是软删除 is_del=1。
 ```text
 task type: notification:dispatch-due:v1
 task type: notification:send-task:v1
-schedule:  notification-task-dispatch-due every 1m
+schedule:  cron_task.name=notification_task_scheduler -> notification:dispatch-due:v1
 queue lane: default
 ```
 
@@ -1097,7 +1097,8 @@ queue lane: default
 ```text
 admin-api 只处理 HTTP，不消费队列，不跑 cron。
 admin-worker 才拥有 Asynq server 和 gocron scheduler。
-scheduler callback 只能 enqueue dispatch-due task，不能扫描 DB 或发通知。
+scheduler 由 `cron_task` 表 + Go registry 注册；当前 `notification_task_scheduler` 是第一条真实 Go registry。
+scheduler callback 只能写 `cron_task_log` 并 enqueue dispatch-due task，不能扫描业务 DB 或发通知。
 dispatch-due handler claim 到期 pending task，再 enqueue send-task。
 send-task handler 解析目标用户、批量插入 notifications、更新 sent_count/status。
 handler 必须幂等，Asynq 是 at-least-once 语义。
@@ -3095,3 +3096,86 @@ dict/init 是否写明 enum 来源：internal/enum -> internal/dict。
 是否需要 operation log route metadata；需要就同步 route_meta 和本文。
 是否需要 smoke 覆盖；需要就同步 smoke matrix。
 ```
+
+## System Cron Tasks
+
+状态：implemented in this slice。系统管理定时任务从 legacy `/api/admin/CronTask/*` 迁到 Go REST。旧 PHP `handler` 字符串只作为展示/来源字段，不作为 Go 运行时执行入口。
+
+### Runtime rule
+
+```text
+cron_task DB row = 配置、启用状态、cron 表达式、页面展示
+Go crontask registry = 可执行任务真相源
+admin-worker = scheduler owner
+scheduler callback = 写 cron_task_log + enqueue Asynq task
+queue handler = 真正业务执行
+```
+
+当前 Go registry 只注册：
+
+```text
+name: notification_task_scheduler
+Asynq task type: notification:dispatch-due:v1
+```
+
+未迁 Go 的支付/AI/聊天等 legacy handler 不注册假任务；列表返回 `registry_status=missing`。禁用行返回 `disabled`，表达式错误返回 `invalid_cron`。
+
+### Routes
+
+```text
+GET    /api/admin/v1/cron-tasks/init
+GET    /api/admin/v1/cron-tasks
+POST   /api/admin/v1/cron-tasks
+PUT    /api/admin/v1/cron-tasks/:id
+PATCH  /api/admin/v1/cron-tasks/:id/status
+DELETE /api/admin/v1/cron-tasks/:id
+DELETE /api/admin/v1/cron-tasks
+GET    /api/admin/v1/cron-tasks/:id/logs
+```
+
+Auth/RBAC：
+
+```text
+read/init/list: bearer token
+create: devTools_cronTask_add
+update: devTools_cronTask_edit
+status: devTools_cronTask_status
+delete/batch delete: devTools_cronTask_del
+logs: devTools_cronTask_logs
+```
+
+Mutating routes write explicit OperationLog metadata with module `cron_task` and actions `create/update/change_status/delete/delete_batch`.
+
+### List response item
+
+```ts
+type CronTaskRegistryStatus = 'registered' | 'missing' | 'disabled' | 'invalid_cron'
+
+interface CronTaskItem {
+  id: number
+  name: string
+  title: string
+  description: string
+  cron: string
+  cron_readable: string
+  handler: string
+  status: number
+  status_name: string
+  next_run_time: string
+  registry_status: CronTaskRegistryStatus
+  registry_status_text: string
+  registry_task_type: string
+  registry_description: string
+  created_at: string
+  updated_at: string
+}
+```
+
+规则：
+
+```text
+name 是 Go registry key，新增后不允许编辑修改。
+registry_status 是 Go 根据 DB row + registry + cron 表达式派生；支持筛选，并在服务端筛选后重新分页。
+```
+
+注意：修改 `cron_task` 配置后，已运行的 `admin-worker` 不热重载 schedule；需要重启 worker 或后续引入显式 reload/分布式锁策略。不要在 admin-api handler 里启动 cron。
