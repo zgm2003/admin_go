@@ -1,6 +1,6 @@
 # Admin Smoke Matrix
 
-状态更新时间：2026-05-05
+状态更新时间：2026-05-06
 
 本文是 smoke 覆盖地图，不是接口契约。接口契约看 `docs/contracts/admin-api-v1.md`。
 
@@ -36,6 +36,7 @@
 | upload config write probe | no | gated yes | `POST/DELETE upload-drivers`, `POST/DELETE upload-rules`, `POST/DELETE upload-settings` | yes, only disabled temp rows | delete setting -> rule -> driver | 只有 VAULT_KEY 存在时执行；永远不启用临时 setting，不修改现有 enabled setting；VAULT_KEY 空时 summary 输出 skipped_no_vault_key；不安装/调用 OSS SDK |
 | upload token shape | no | gated yes | `POST /api/admin/v1/upload-tokens` | token only | n/a | `COS_STS_ENABLED=false` 时 summary 输出 skipped_cos_sts_disabled；启用时只校验 provider/key/credentials shape，永远不上传真实文件 |
 | pay channel read | no | yes | `GET /api/admin/v1/pay-channels/page-init`, `GET /api/admin/v1/pay-channels` | no | n/a | full smoke 只探测支付渠道字典、分页 shape、supported_methods 展示字段和私钥不泄漏；不创建/修改真实支付配置，不触发支付 SDK |
+| pay runtime minimal closure | no | default read-only + optional write | default checks enabled Alipay channel cert path fields and private-key non-leak; optional `POST /api/admin/v1/recharge-orders`, `POST /api/admin/v1/recharge-orders/:order_no/pay-attempts` | optional creates pending recharge order + waiting transaction | no automatic payment/callback cleanup; optional probe is explicit only | default full smoke 不创建真实充值单；传 `-EnablePaymentRuntimeProbe` 才发起支付宝 sandbox 支付尝试并校验 `pay_data.content` shape；支付宝付款和 notify 入账是手动 sandbox e2e，不冒充自动 smoke |
 | pay transaction read | no | yes | `GET /api/admin/v1/pay-transactions/page-init`, `GET /api/admin/v1/pay-transactions`, `GET /api/admin/v1/pay-transactions/:id` when row exists | no | n/a | full smoke 只探测支付流水字典、分页 shape、详情 shape、channel_resp/raw_notify JSON object shape 和支付渠道私钥不泄漏；不发起支付、不重试回调、不改钱包、不跑对账 |
 | pay order admin management | no | yes | `GET /api/admin/v1/pay-orders/page-init`, `GET /api/admin/v1/pay-orders/status-count`, `GET /api/admin/v1/pay-orders`, `GET /api/admin/v1/pay-orders/:id` when row exists, `PATCH /api/admin/v1/pay-orders/:id/remark`, conditional `PATCH /api/admin/v1/pay-orders/:id/close` | yes, remark restore; close only when pending/paying row exists | remark restores original value; close is irreversible and therefore skipped unless fixture row is already pending/paying | full smoke 探测后台订单字典、状态统计、分页、详情、备注写入恢复；close 只验证 Go local-close 边界，不调用第三方 SDK、不查单、不改钱包 |
 | wallet admin read + adjustment | no | yes | `GET /api/admin/v1/wallets/page-init`, `GET /api/admin/v1/wallets`, `GET /api/admin/v1/wallet-transactions`, `POST /api/admin/v1/wallet-adjustments` | yes, `+100 / duplicate / -100 restore` when a wallet row exists | final wallet balance equals original; duplicate must return same transaction id | full smoke 探测后台钱包字典、分页、流水分页 shape；如果存在钱包行，执行调账正向、重复幂等、反向恢复，并等待 `钱包调账` 操作日志；不触发支付 SDK |
@@ -80,6 +81,15 @@ powershell -ExecutionPolicy Bypass -File .\scripts\basic-admin-smoke.ps1 `
 powershell -ExecutionPolicy Bypass -File .\scripts\full-admin-smoke.ps1 `
   -Account 15671628271 `
   -Password 123456
+```
+
+Optional payment runtime probe, only when you intentionally want to create a real sandbox recharge order and payment attempt:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\full-admin-smoke.ps1 `
+  -Account 15671628271 `
+  -Password 123456 `
+  -EnablePaymentRuntimeProbe
 ```
 
 ## Rules

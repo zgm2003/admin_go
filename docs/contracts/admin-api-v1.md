@@ -2020,6 +2020,183 @@ repository 在单个 MySQL transaction 内完成 user existence check、SELECT u
 禁止新增 PATCH /api/admin/v1/wallets/:user_id/adjust 这类 action path。
 ```
 
+## Pay Runtime Minimal Closure
+
+状态：partially implemented in Go backend; Vue current-user recharge creation and pay attempt client migrated to Go REST.
+
+用途：支付域第一条真实运行时闭环。当前只做支付宝沙盒充值最小链路：创建充值订单、创建支付宝 web/h5 支付尝试、支付宝异步回调验签、幂等更新订单/流水、充值入账钱包、写入回调审计。
+
+### Shared Rules
+
+```text
+current-user recharge resource: /api/admin/v1/recharge-orders
+public callback resource: /api/pay/notify/alipay
+tables: orders, order_items, pay_transactions, pay_channel, pay_notify_logs, order_fulfillments, user_wallets, wallet_transactions, users
+SDK boundary: github.com/go-pay/gopay only under internal/platform/payment/alipay
+permission metadata: none for current-user recharge runtime; AuthToken only
+operation log metadata: none for current-user recharge runtime and public notify
+```
+
+不实现：
+
+```text
+WeChat runtime
+refund
+reconciliation execution
+third-party order query/cancel
+user-side myOrders/queryResult/walletInfo/walletBills migration
+manual sandbox payment automation
+```
+
+关键边界：
+
+```text
+handler 只解析 HTTP / auth identity / binding，不查 DB/Redis。
+service 不依赖 gin.Context。
+repository transaction 内只做 DB 状态变更，不包第三方支付 SDK 网络 IO。
+public Alipay notify 返回 text/plain raw success/fail，不使用 { code, data, msg } JSON envelope。
+```
+
+### Create Recharge Order
+
+`POST /api/admin/v1/recharge-orders`
+
+Auth：bearer token only.
+
+Body：
+
+```ts
+interface RechargeOrderCreateBody {
+  amount: number      // cents; must be one of recharge_preset_arr values
+  pay_method: 'web' | 'h5'
+  channel_id: number  // active Alipay channel id
+}
+```
+
+Response `data`：
+
+```ts
+interface RechargeOrderCreateResponse {
+  order_id: number
+  order_no: string
+  pay_amount: number
+  expire_time: string
+}
+```
+
+Rules：
+
+```text
+amount 只能来自 enum.RechargePresets。
+当前 runtime 只接受 Alipay web/h5。
+channel_id 必须是 status=1、is_del=2、channel=Alipay 的支付渠道。
+如果用户存在未过期 PENDING/PAYING 充值订单，拒绝新建，避免并发充值订单污染。
+创建 orders + order_items 是一个 MySQL transaction。
+订单号由 Redis INCR 生成：R + yyMMddHHmmss + 6-digit sequence。
+```
+
+### Create Pay Attempt
+
+`POST /api/admin/v1/recharge-orders/:order_no/pay-attempts`
+
+Auth：bearer token only.
+
+Body：
+
+```ts
+interface PayAttemptCreateBody {
+  pay_method?: 'web' | 'h5'
+  return_url?: string
+}
+```
+
+Response `data`：
+
+```ts
+interface PayAttemptCreateResponse {
+  transaction_no: string
+  txn_id: number
+  order_no: string
+  pay_amount: number
+  channel: 2
+  pay_method: 'web' | 'h5'
+  notify_url: string
+  return_url: string
+  pay_data: {
+    mode: 'external'
+    content: string
+  }
+}
+```
+
+Rules：
+
+```text
+用户只能给自己的订单发起支付尝试。
+只允许 PENDING/PAYING 订单。
+Redis lock key: pay_create_txn_{order_no}，防止重复并发创建支付流水。
+DB transaction 内锁订单、关闭最后一条 active pay_transaction、创建新 pay_transaction。
+支付宝 SDK 调用发生在 DB transaction 之后；SDK 失败只标记当前 transaction failed，不回滚已创建流水。
+transaction_no 由 Redis INCR 生成：T + yyMMddHHmmss + 6-digit sequence。
+channel_resp 保存 SDK raw response；响应只返回前端需要的 mode/content，不返回密钥。
+```
+
+### Alipay Notify
+
+`POST /api/pay/notify/alipay`
+
+Auth：public. This path is in `DefaultAuthSkipPaths`.
+
+Request：支付宝表单回调字段。当前 handler 读取 `application/x-www-form-urlencoded` form 和 headers。
+
+Response：
+
+```text
+Content-Type: text/plain; charset=utf-8
+
+success
+```
+
+or
+
+```text
+fail
+```
+
+Rules：
+
+```text
+必须先写 pay_notify_logs pending 审计，再处理验签/状态。
+使用 gopay VerifySignWithCert，不手写 RSA/验签。
+使用 out_trade_no 定位本地 transaction/channel；真正信任发生在验签和 app_id/amount/trade_status 校验之后。
+Redis lock key: pay_notify_{out_trade_no}，防止同一回调并发重复入账。
+成功回调在一个 MySQL transaction 内完成：
+  lock pay_transactions
+  lock orders
+  mark pay transaction success
+  mark order paid + biz success
+  lock/create user_wallets
+  create order_fulfillments with unique idempotency_key
+  create wallet_transactions with unique biz_action_no
+重复成功回调走幂等路径，不重复加钱包余额。
+pay_notify_logs.process_status 最终写 success/failed/ignored。
+```
+
+Frontend mapping：
+
+```text
+OrderApi.recharge   -> request.post(`${ADMIN_API_PREFIX}/recharge-orders`)
+OrderApi.createPay  -> request.post(`${ADMIN_API_PREFIX}/recharge-orders/${order_no}/pay-attempts`)
+```
+
+Smoke：
+
+```text
+full smoke default: only checks enabled Alipay channel cert path fields and private-key non-leak.
+full smoke optional: -EnablePaymentRuntimeProbe creates a real recharge order and pay attempt, then checks pay_data.content shape.
+manual sandbox e2e: create recharge order -> create pay attempt -> open pay_data.content -> pay in Alipay sandbox -> verify callback DB effects.
+```
+
 
 ## Upload Config
 
