@@ -1,6 +1,6 @@
 # Frontend Realtime Go WebSocket Contract Cleanup Design
 
-状态：planned for current slice
+状态：partially implemented
 日期：2026-05-05
 
 ## Linus 三问

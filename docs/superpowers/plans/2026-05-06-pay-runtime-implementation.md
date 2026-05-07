@@ -677,10 +677,10 @@ POST /api/admin/v1/recharge-orders/:order_no/pay-attempts
 POST /api/pay/notify/alipay raw callback
 ```
 
-- [ ] Mark current status as `partially implemented` after code is actually done, not before:
+- [ ] Mark current status as `implemented first version` after code is actually done, not before:
 
 ```text
-pay runtime | partially implemented: Alipay sandbox recharge create/pay-attempt/notify/wallet credit | frontend recharge/createPay adapted | tests... | smoke... | docs... | Alipay only; WeChat and refund out of product scope; no reconcile
+pay runtime | implemented first version: Alipay sandbox recharge create/pay-attempt/notify/wallet credit | frontend recharge/createPay/queryResult/cancel/myOrders/walletInfo/walletBills adapted | tests... | smoke... | docs... | Alipay only; WeChat and refund out of product scope; no reconcile
 ```
 
 - [ ] Smoke additions:

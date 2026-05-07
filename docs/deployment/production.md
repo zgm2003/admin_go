@@ -107,7 +107,7 @@ VERIFY_CODE_DEV_MODE=false
 ```text
 TOKEN_PEPPER 变更会让现有 token 全部失效。
 VERIFY_CODE_DEV_MODE=false 后必须接真实短信/邮件发送器；没接就返回明确配置错误，不要假装发送成功。
-REALTIME_PUBLISHER 目前只支持 local/noop；redis 是 planned，不准上线配置 redis。
+REALTIME_PUBLISHER 支持 local/noop/redis；redis 是 `notification.created.v1` 的跨进程 fan-out 选项，前提是 Redis 正常可用。
 ```
 
 ## 日志和请求 ID

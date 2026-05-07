@@ -620,7 +620,7 @@ Go 引入 gopay，但只在 internal/platform/payment/alipay 内使用。
 充值成功能幂等入账钱包。
 pay_notify_logs 有 pending/success/failed/ignored 审计事实。
 新增 API 写入 docs/contracts/admin-api-v1.md。
-current-status 只能标记 pay runtime partially implemented，不能宣称支付全域完成。
+current-status 可以标记 pay runtime implemented first version，不能宣称支付全域完成。
 full smoke 增加默认安全探针；真实沙盒支付作为 manual e2e 记录。
 ```
 

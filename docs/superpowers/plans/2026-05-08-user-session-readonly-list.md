@@ -14,7 +14,7 @@
 
 状态：implemented and verified on 2026-05-08.
 
-本计划只做 read-only；`docs/migration/current-status.md` 不要写成 fully implemented。
+本计划只做 read-only；`docs/migration/current-status.md` 要写成 read-only implemented，不能把 kick/batchKick 写成已迁 Go。
 
 验证结果：
 
@@ -111,7 +111,7 @@ permission route metadata for kick
 4. Do not add a new framework, cache layer, queue job, or DB migration for this read-only slice.
 5. Do not change the SessionList UI layout.
 6. Do not silently convert kick/batchKick to Go in the same commit.
-7. Do not write current-status as fully implemented; it is read-only / partially implemented.
+7. Do not write current-status as fully implemented; this read-only slice is implemented and kick/batchKick stay legacy.
 ```
 
 Linus check:
@@ -298,7 +298,7 @@ Create later in Task 2: admin_back_go/internal/module/usersession/dto.go
 Create later in Task 2: admin_back_go/internal/module/usersession/service.go
 ```
 
-- [ ] Create `admin_back_go/internal/module/usersession/service_test.go` with tests for status derivation, query normalization, list response, and stats response.
+- [x] Create `admin_back_go/internal/module/usersession/service_test.go` with tests for status derivation, query normalization, list response, and stats response.
 
 Use this concrete test shape:
 
@@ -404,7 +404,7 @@ func TestStatsAlwaysReturnsAdminAndAppKeys(t *testing.T) {
 }
 ```
 
-- [ ] Run the failing test:
+- [x] Run the failing test:
 
 ```powershell
 cd E:\admin_go\admin_back_go
@@ -433,7 +433,7 @@ Create: admin_back_go/internal/module/usersession/repository.go
 Create: admin_back_go/internal/module/usersession/service.go
 ```
 
-- [ ] Create `dto.go` with the exact public DTO surface:
+- [x] Create `dto.go` with the exact public DTO surface:
 
 ```go
 package usersession
@@ -523,7 +523,7 @@ type StatsRow struct {
 }
 ```
 
-- [ ] Create `request.go`:
+- [x] Create `request.go`:
 
 ```go
 package usersession
@@ -537,7 +537,7 @@ type listRequest struct {
 }
 ```
 
-- [ ] Create `repository.go` with a GORM implementation:
+- [x] Create `repository.go` with a GORM implementation:
 
 ```go
 package usersession
@@ -677,7 +677,7 @@ type ListQuery struct {
 
 and repository uses `query.Now` in filter and sort. This avoids a dumb boundary bug around exact expiry time.
 
-- [ ] Create `service.go`:
+- [x] Create `service.go`:
 
 ```go
 package usersession
@@ -878,7 +878,7 @@ func totalPage(total int64, pageSize int) int {
 }
 ```
 
-- [ ] Run module tests:
+- [x] Run module tests:
 
 ```powershell
 cd E:\admin_go\admin_back_go
@@ -903,7 +903,7 @@ Create: admin_back_go/internal/module/usersession/route.go
 Create: admin_back_go/internal/module/usersession/handler_test.go
 ```
 
-- [ ] Create `handler_test.go` before the handler implementation. Cover all three routes and invalid query binding.
+- [x] Create `handler_test.go` before the handler implementation. Cover all three routes and invalid query binding.
 
 Use this concrete fake service shape:
 
@@ -978,7 +978,7 @@ func TestHandlerRoutesUserSessionReadOnlyEndpoints(t *testing.T) {
 }
 ```
 
-- [ ] Run failing handler test:
+- [x] Run failing handler test:
 
 ```powershell
 cd E:\admin_go\admin_back_go
@@ -987,7 +987,7 @@ go test ./internal/module/usersession -run TestHandlerRoutesUserSessionReadOnlyE
 
 Expected: fail because `RegisterRoutes` / handler do not exist.
 
-- [ ] Create `handler.go`:
+- [x] Create `handler.go`:
 
 ```go
 package usersession
@@ -1065,7 +1065,7 @@ func (nilHTTPService) Stats(ctx context.Context) (*StatsResponse, *apperror.Erro
 }
 ```
 
-- [ ] Create `route.go`:
+- [x] Create `route.go`:
 
 ```go
 package usersession
@@ -1087,7 +1087,7 @@ func RegisterRoutes(router *gin.Engine, service HTTPService) {
 }
 ```
 
-- [ ] Run handler tests:
+- [x] Run handler tests:
 
 ```powershell
 cd E:\admin_go\admin_back_go
@@ -1112,7 +1112,7 @@ Modify: admin_back_go/internal/server/router_test.go
 Modify: admin_back_go/internal/bootstrap/app.go
 ```
 
-- [ ] Add `usersession` import and dependency in `server/router.go`.
+- [x] Add `usersession` import and dependency in `server/router.go`.
 
 Expected changes:
 
@@ -1136,7 +1136,7 @@ func NewRouter(deps Dependencies) *gin.Engine {
 
 Place `usersession.RegisterRoutes` near `user.RegisterRoutes`, not in pay/system areas.
 
-- [ ] Add a router test before wiring if there is no existing generic route coverage.
+- [x] Add a router test before wiring if there is no existing generic route coverage.
 
 Append a focused test to `admin_back_go/internal/server/router_test.go` using the existing test helpers in that file. If no helper matches cleanly, use a tiny fake service:
 
@@ -1166,7 +1166,7 @@ GET /api/admin/v1/user-sessions/stats
 
 Expected: all return 200 when AuthToken middleware is skipped or test authenticator passes, following the existing router test style.
 
-- [ ] Wire bootstrap in `admin_back_go/internal/bootstrap/app.go`.
+- [x] Wire bootstrap in `admin_back_go/internal/bootstrap/app.go`.
 
 Expected service creation:
 
@@ -1180,9 +1180,9 @@ Expected router dependency:
 UserSessionService: userSessionService,
 ```
 
-- [ ] Do not add route metadata in `route_meta.go` for the three read-only endpoints. This is deliberate: legacy list/stats had no `@Permission`; this slice is bearer-token only.
+- [x] Do not add route metadata in `route_meta.go` for the three read-only endpoints. This is deliberate: legacy list/stats had no `@Permission`; this slice is bearer-token only.
 
-- [ ] Run backend routing checks:
+- [x] Run backend routing checks:
 
 ```powershell
 cd E:\admin_go\admin_back_go
@@ -1207,13 +1207,13 @@ ok  	admin_back_go/internal/bootstrap
 Modify: docs/contracts/admin-api-v1.md
 ```
 
-- [ ] Add `user-sessions` to the auth/permission summary near users management:
+- [x] Add `user-sessions` to the auth/permission summary near users management:
 
 ```text
 | user session read-only | `GET /api/admin/v1/user-sessions/page-init`, `GET /api/admin/v1/user-sessions`, `GET /api/admin/v1/user-sessions/stats` | bearer token |
 ```
 
-- [ ] Add a `## User Sessions Read-only` section after `## Users Management`.
+- [x] Add a `## User Sessions Read-only` section after `## Users Management`.
 
 Use this exact contract text:
 
@@ -1293,7 +1293,7 @@ interface UserSessionStats {
 ```
 ```
 
-- [ ] Check the contract does not claim kick is Go-backed.
+- [x] Check the contract does not claim kick is Go-backed.
 
 Run:
 
@@ -1322,7 +1322,7 @@ Modify: admin_front_ts/src/views/Main/user/userManager/components/SessionList/in
 Modify: admin_front_ts/tests/shared/user/users-api.test.ts
 ```
 
-- [ ] Update `admin_front_ts/src/types/user.ts`.
+- [x] Update `admin_front_ts/src/types/user.ts`.
 
 Add:
 
@@ -1346,7 +1346,7 @@ export interface UserSessionBatchKickParams
 export type UserSessionListResponse = PaginatedResponse<UserSessionItem>
 ```
 
-- [ ] Update imports in `admin_front_ts/src/api/user/users.ts`:
+- [x] Update imports in `admin_front_ts/src/api/user/users.ts`:
 
 ```ts
 import type {
@@ -1355,7 +1355,7 @@ import type {
 } from '@/types/user'
 ```
 
-- [ ] Change `UserSessionApi` read methods only:
+- [x] Change `UserSessionApi` read methods only:
 
 ```ts
 function normalizeUserSessionListParams(params: UserSessionListParams) {
@@ -1395,7 +1395,7 @@ export const UserSessionApi = {
 }
 ```
 
-- [ ] Update `SessionList/index.vue` so `init` uses the new page-init instead of the broad users page-init:
+- [x] Update `SessionList/index.vue` so `init` uses the new page-init instead of the broad users page-init:
 
 ```ts
 const init = async () => {
@@ -1410,7 +1410,7 @@ const init = async () => {
 
 Do not change the table columns, cards, buttons, CSS, or i18n in this slice.
 
-- [ ] Extend `admin_front_ts/tests/shared/user/users-api.test.ts` with a read-only contract test:
+- [x] Extend `admin_front_ts/tests/shared/user/users-api.test.ts` with a read-only contract test:
 
 ```ts
 it('uses Go REST for user session read-only APIs and keeps kick legacy for now', () => {
@@ -1426,7 +1426,7 @@ it('uses Go REST for user session read-only APIs and keeps kick legacy for now',
 })
 ```
 
-- [ ] Run frontend focused test:
+- [x] Run frontend focused test:
 
 ```powershell
 cd E:\admin_go\admin_front_ts
@@ -1450,7 +1450,7 @@ Modify: admin_back_go/scripts/full-admin-smoke.ps1
 Modify: docs/testing/smoke-matrix.md
 ```
 
-- [ ] Add full-smoke probes after users page-init/list smoke, because UserSession is part of user management but read-only in this slice.
+- [x] Add full-smoke probes after users page-init/list smoke, because UserSession is part of user management but read-only in this slice.
 
 Probe these endpoints with the current login token:
 
@@ -1472,13 +1472,13 @@ stats response has total_active and platform_distribution.admin/app
 
 Do not add kick smoke in this slice.
 
-- [ ] Add a row in `docs/testing/smoke-matrix.md`:
+- [x] Add a row in `docs/testing/smoke-matrix.md`:
 
 ```text
 | user session read-only | no | yes | `GET /api/admin/v1/user-sessions/page-init`, list, stats | read-only | n/a | Proves Go owns session list/stats shape and does not leak token hashes; kick remains legacy until write slice |
 ```
 
-- [ ] Run the smoke only after the backend is running:
+- [x] Run the smoke only after the backend is running:
 
 ```powershell
 cd E:\admin_go\admin_back_go
@@ -1502,15 +1502,15 @@ no token hash leakage assertion fails
 Modify: docs/migration/current-status.md
 ```
 
-- [ ] Add a new current-status row near users management:
+- [x] Add a new current-status row near users management:
 
 ```markdown
-| user session read-only | partially implemented: `GET /api/admin/v1/user-sessions/page-init`, list, and stats read existing `user_sessions` without token hash leakage; kick/batch kick remain legacy until write slice | adapted for read-only list/stats/page-init; kick buttons still call legacy endpoints | `internal/module/usersession`, router/bootstrap tests, frontend users-api Vitest | full smoke read-only probes page-init/list/stats | admin API contract + smoke matrix | no Go kick yet; Redis token deletion/current-session anti-kick/OperationLog are next slice |
+| user session read-only | implemented: `GET /api/admin/v1/user-sessions/page-init`, list, and stats read existing `user_sessions` without token hash leakage; kick/batch kick remain legacy until write slice | adapted for read-only list/stats/page-init; kick buttons still call legacy endpoints | `internal/module/usersession`, router/bootstrap tests, frontend users-api Vitest | full smoke read-only probes page-init/list/stats | admin API contract + smoke matrix | no Go kick yet; Redis token deletion/current-session anti-kick/OperationLog are next slice |
 ```
 
-- [ ] Do not edit the existing `auth login/session` row to imply session management UI is fully migrated.
+- [x] Do not edit the existing `auth login/session` row to imply session management UI is fully migrated.
 
-- [ ] Run a residue check:
+- [x] Run a residue check:
 
 ```powershell
 cd E:\admin_go
@@ -1532,7 +1532,7 @@ docs do not claim Go kick is implemented.
 
 **Files:** no new file changes unless a verification failure points to a concrete bug.
 
-- [ ] Run backend full tests:
+- [x] Run backend full tests:
 
 ```powershell
 cd E:\admin_go\admin_back_go
@@ -1545,7 +1545,7 @@ Expected:
 PASS for all packages
 ```
 
-- [ ] Run frontend focused contract test:
+- [x] Run frontend focused contract test:
 
 ```powershell
 cd E:\admin_go\admin_front_ts
@@ -1558,7 +1558,7 @@ Expected:
 PASS
 ```
 
-- [ ] Run frontend type/build gate if dependencies are healthy:
+- [x] Run frontend type/build gate if dependencies are healthy:
 
 ```powershell
 cd E:\admin_go\admin_front_ts
@@ -1573,7 +1573,7 @@ vue-tsc and vite build succeed
 
 If this fails due to unrelated existing frontend warnings or dependency corruption, capture the exact error and do not hide it.
 
-- [ ] Run full smoke with the Go backend running:
+- [x] Run full smoke with the Go backend running:
 
 ```powershell
 cd E:\admin_go\admin_back_go
@@ -1588,7 +1588,7 @@ no access_token_hash or refresh_token_hash appears in user-session list response
 existing login/users/RBAC smoke remains green
 ```
 
-- [ ] Check git status in both subrepos:
+- [x] Check git status in both subrepos:
 
 ```powershell
 cd E:\admin_go

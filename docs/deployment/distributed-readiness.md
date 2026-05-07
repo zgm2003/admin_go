@@ -46,8 +46,8 @@ QUEUE_REDIS_DB  Asynq queue broker、asynqmon inspector
 未来职责：
 
 ```text
-Redis Pub/Sub 或 Streams 做 realtime fan-out
 scheduler 多副本锁，只有真的多 worker cron 需要时启用
+Redis Streams 只有在需要重放/ack 时再做
 ```
 
 ## Realtime 分布式边界
@@ -62,7 +62,7 @@ platform/realtime.Manager 只保存本进程连接
 未来：
 
 ```text
-business service -> Publisher interface -> Redis fan-out implementation -> each node local Manager
+business service -> Publisher interface -> local/noop/redis publication -> each node local Manager
 ```
 
 禁止：

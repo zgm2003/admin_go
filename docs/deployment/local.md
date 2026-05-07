@@ -105,9 +105,10 @@ REALTIME_SEND_BUFFER=16
 ```text
 local
 noop
+redis
 ```
 
-`redis` fan-out 仍是 planned。把 `REALTIME_PUBLISHER=redis` 写进 env 会让 `/ready` 的 `realtime` check down，并且 WebSocket upgrade 被禁用；这是故意的，避免假装分布式已经实现。
+`redis` fan-out 已实现，主要用于 `notification.created.v1` 的跨进程推送。默认本地 smoke 仍用 `local/noop`；`REALTIME_PUBLISHER=redis` 只有在你确实要测分布式 fan-out 时才启用，别再把它写成 planned。
 
 ## 本地验证
 

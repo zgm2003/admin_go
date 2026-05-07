@@ -530,7 +530,7 @@ interface UserExportResponse {
 
 ## User Sessions Read-only
 
-状态：partially implemented in Go backend, adapted in Vue frontend for `page-init` / `list` / `stats` only。`kick` 和 `batchKick` 仍走 legacy PHP，本阶段不迁 token 删除、当前会话保护和操作日志。
+状态：implemented in Go backend, adapted in Vue frontend for `page-init` / `list` / `stats` only。`kick` 和 `batchKick` 仍走 legacy PHP，本 slice 不迁 token 删除、当前会话保护和操作日志。
 
 用途：后台用户管理页的“登录会话/在线用户”只读列表、筛选字典和在线统计。
 
@@ -2398,7 +2398,7 @@ repository 在单个 MySQL transaction 内完成 user existence check、SELECT u
 
 ## Pay Runtime Minimal Closure
 
-状态：partially implemented in Go backend; Vue current-user wallet/recharge runtime client migrated to Go REST.
+状态：implemented first version in Go backend; Vue current-user wallet/recharge runtime client migrated to Go REST.
 
 用途：支付域第一条真实运行时闭环。当前只做支付宝沙盒充值最小链路和个人钱包页运行时读写：读取当前用户钱包摘要/流水/充值单、创建充值订单、查询本地支付结果、取消本人待支付充值单、创建支付宝 web/h5 支付尝试、支付宝异步回调验签、幂等更新订单/流水、充值入账钱包、写入回调审计。
 

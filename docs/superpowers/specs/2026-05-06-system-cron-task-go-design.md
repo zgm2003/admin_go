@@ -461,7 +461,7 @@ Status wording must be honest:
 
 ```text
 system cron task management: implemented/adapted only after API, frontend, worker registration, and smoke are verified.
-pay/ai/chat cron handlers: planned/not implemented until owning business module migrates.
+pay cron handlers: implemented; ai/chat cron handlers remain planned/not implemented until owning business module migrates.
 ```
 
 ## Rollout / Operational Notes
