@@ -2541,11 +2541,11 @@ manual sandbox e2e: create recharge order -> create pay attempt -> open pay_data
 
 ## Pay Reconcile Tasks
 
-状态：planned, not implemented. 当前 DB 里 `pay_reconcile_daily` 和 `pay_reconcile_execute` 仍是 legacy PHP handler；前端 `src/api/pay/reconcile.ts` 仍是显式 legacy adapter，迁移前不能写成 Go 已完成。
+状态：admin REST implemented, worker runtime partially implemented。管理接口和前端 API 已迁 Go REST；`pay_reconcile_daily -> pay:reconcile-daily:v1` 和 `pay_reconcile_execute -> pay:reconcile-execute:v1` 已接入 Go registry/worker；daily 可按 active pay_channel 幂等创建任务，execute 可扫描 pending、生成本地 CSV 并把平台账单下载未实现明确写成 failed。第三方账单下载、平台账单解析和 success/diff 完整比对还没有完成，不能写成对账闭环。
 
 用途：支付对账任务后台管理和后续 worker 执行入口。REST 管理接口只负责看任务、详情、重试和文件下载；真正下载第三方账单、生成本地账单、比对差异必须走 worker task，不允许在 admin-api handler 里跑长任务。
 
-Planned routes：
+Routes：
 
 ```text
 GET   /api/admin/v1/pay-reconcile-tasks/page-init
@@ -2555,14 +2555,14 @@ PATCH /api/admin/v1/pay-reconcile-tasks/:id/retry
 GET   /api/admin/v1/pay-reconcile-tasks/:id/files/:type
 ```
 
-Planned auth/RBAC：
+Auth/RBAC：
 
 ```text
 read/list/detail/download: bearer token + pay_reconcile_list or existing download permission when present
 retry: bearer token + pay_reconcile_retry after permission is explicitly defined
 ```
 
-Planned response rules：
+Response rules：
 
 ```text
 page-init returns pay_channel_arr, reconcile_status_arr, bill_type_arr.
@@ -3326,9 +3326,18 @@ Asynq task type: pay:close-expired-order:v1
 
 name: pay_sync_pending_transaction
 Asynq task type: pay:sync-pending-transaction:v1
+
+name: pay_reconcile_daily
+Asynq task type: pay:reconcile-daily:v1
+
+name: pay_reconcile_execute
+Asynq task type: pay:reconcile-execute:v1
+
+name: pay_fulfillment_retry
+Asynq task type: pay:fulfillment-retry:v1
 ```
 
-未迁 Go 的 AI/聊天/支付履约/对账等 legacy handler 不注册假任务；列表返回 `registry_status=missing`。禁用行返回 `disabled`，表达式错误返回 `invalid_cron`。
+未迁 Go 的 legacy handler 不注册假任务；列表返回 `registry_status=missing`。禁用行返回 `disabled`，表达式错误返回 `invalid_cron`。WeChat payment runtime is not active: current DB has no active `channel=1` row. Go does not implement `/api/pay/notify/wechat`. If a WeChat channel is later enabled, write a dedicated WeChat runtime spec before coding. Refund runtime is retired/pending-decision: `pay_refunds` count is 0 and `pay_refund_sync` is_del=1. Do not register `pay_refund_sync` until a refund contract exists.
 
 当前数据迁移：
 
@@ -3338,6 +3347,11 @@ notification_task_scheduler.handler = notification:dispatch-due:v1
 database/migrations/20260507_pay_cron_task_go_handler_cleanup.sql
 pay_close_expired_order.handler = pay:close-expired-order:v1
 pay_sync_pending_transaction.handler = pay:sync-pending-transaction:v1
+database/migrations/20260507_pay_reconcile_go_handlers.sql
+pay_reconcile_daily.handler = pay:reconcile-daily:v1
+pay_reconcile_execute.handler = pay:reconcile-execute:v1
+database/migrations/20260507_pay_fulfillment_retry_go_handler.sql
+pay_fulfillment_retry.handler = pay:fulfillment-retry:v1
 ```
 
 ### Routes

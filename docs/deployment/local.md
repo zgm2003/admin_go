@@ -127,3 +127,29 @@ go vet -p=1 ./...
 git diff --check
 powershell -ExecutionPolicy Bypass -File .\scripts\full-admin-smoke.ps1 -Account <account> -Password <password>
 ```
+
+## Payment runtime certs
+
+支付证书属于 Go runtime，不再依赖 `E:/admin/admin_back`。本地首次配置或 PHP teardown 前必须执行：
+
+```powershell
+cd E:\admin_go\admin_back_go
+powershell -ExecutionPolicy Bypass -File .\scripts\migrate-payment-certs.ps1 `
+  -SourceRoot E:/admin/admin_back `
+  -TargetRoot E:/admin_go/admin_back_go
+```
+
+`.env` 必须保持：
+
+```text
+PAYMENT_CERT_BASE_DIR=E:/admin_go/admin_back_go
+LEGACY_ADMIN_BACK_ROOT=
+```
+
+验证只能输出 path/bytes/sha256，不输出证书正文或私钥：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\check-payment-certs.ps1 -DisallowLegacyRoot
+```
+
+`runtime/cert/alipay/*.crt` 是部署文件，已被 `.gitignore` 的 `runtime/` 排除；私钥不落文件，仍只存在于 `pay_channel.app_private_key_enc`。

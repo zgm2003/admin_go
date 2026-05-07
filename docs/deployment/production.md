@@ -149,3 +149,31 @@ AccessLog middleware
 重启 admin-api/admin-worker
 确认 /ready 和 full smoke 的核心链路
 ```
+
+## Payment runtime certs
+
+生产发布不能依赖 legacy PHP 目录。支付证书必须随 Go backend runtime 部署到：
+
+```text
+admin_back_go/runtime/cert/alipay/appPublicCert.crt
+admin_back_go/runtime/cert/alipay/alipayPublicCert.crt
+admin_back_go/runtime/cert/alipay/alipayRootCert.crt
+```
+
+生产 env 必须显式配置：
+
+```text
+PAYMENT_CERT_BASE_DIR=/path/to/admin_back_go
+LEGACY_ADMIN_BACK_ROOT=
+PAYMENT_ALIPAY_TIMEOUT=10s
+PAYMENT_NOTIFY_LOCK_TTL=30s
+PAYMENT_ATTEMPT_LOCK_TTL=30s
+```
+
+发布 gate：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\check-payment-certs.ps1 -DisallowLegacyRoot
+```
+
+该 gate 只允许输出 path/bytes/sha256。不要把证书正文或 `pay_channel.app_private_key_enc` 导出到日志、CI artifact 或 git。
