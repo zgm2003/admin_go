@@ -1389,7 +1389,7 @@ DELETE -> bearer token + pay_channel_del    -> module=pay_channel, action=delete
 
 ## Pay Transactions
 
-状态：implemented in Go backend, frontend migration in progress for read-only pay transaction page.
+状态：implemented in Go backend, adapted in Vue frontend for read-only pay transaction page.
 
 用途：支付域第二切片，只迁移后台支付流水只读页面。它用于看清订单、用户、渠道、交易状态和渠道返回事实，不发起支付、不重试回调、不改钱包、不跑对账。
 
@@ -1507,6 +1507,7 @@ Rules：
 order_no / transaction_no 是精确查询，service 只做 trim。
 user_id / channel / status 由 handler binding 校验，非法值直接 code=100。
 start_date / end_date 只接受 yyyy-mm-dd，repository 展开为当天 00:00:00 到 23:59:59。
+前端日期范围只存在于 pay transaction page composable，提交到 Go API 前必须显式转换成 start_date / end_date；API client 不接受 date 兜底字段。
 channel/status/pay_method 展示文本由 Go enum/dict 生成，不让前端兜底猜 label。
 ```
 
@@ -2038,10 +2039,16 @@ permission metadata: none for current-user recharge runtime; AuthToken only
 operation log metadata: none for current-user recharge runtime and public notify
 ```
 
-不实现：
+明确范围：
 
 ```text
-WeChat runtime
+Alipay runtime only.
+WeChat runtime is out of product scope, not a backlog gap.
+```
+
+本切片不实现：
+
+```text
 refund
 reconciliation execution
 third-party payment-platform order query/cancel
