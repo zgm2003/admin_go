@@ -374,7 +374,7 @@ DELETE /api/admin/v1/permissions               body: { ids: number[] }
 
 ## Users Management
 
-状态：implemented in Go backend, adapted in Vue frontend for list/page-init/edit/batch-edit/delete/status。Export 仍是显式 legacy adapter，等待 Go export-task 模块迁移。
+状态：implemented in Go backend, adapted in Vue frontend for list/page-init/edit/batch-edit/delete/status/export submit。导出任务列表、状态统计、删除和 `user_list` worker runtime 已迁到 Go。
 
 用途：后台用户管理页的字典初始化、列表筛选、安全字段编辑、资料批量修改、状态修改和软删除。
 
@@ -499,6 +499,108 @@ type UserBatchProfileUpdateBody =
 列表查询使用 prefix LIKE，避免默认全模糊扫表。
 用户删除是 users + user_profiles 软删除。
 ```
+
+### Export Submit
+
+```text
+POST /api/admin/v1/users/export
+Permission: user_userManager_export
+OperationLog: module=user action=export title=用户导出
+```
+
+Request：
+
+```ts
+interface UserExportRequest {
+  ids: number[]
+}
+```
+
+Response `data`：
+
+```ts
+interface UserExportResponse {
+  id: number
+  message: string
+}
+```
+
+规则：只接受显式勾选的正整数用户 id；service 去重后只导出未软删除用户。创建 `export_tasks` pending 记录后投递 `export:run:v1` 到 low queue；队列投递失败必须把任务标记 failed，不允许留下永久 pending。
+
+## Export Tasks
+
+状态：implemented in Go backend, adapted in Vue frontend for status-count/list/delete。worker 第一版只支持 `kind=user_list`，生成 `.xlsx` 并上传当前启用的 COS。
+
+用途：当前登录用户查看自己的异步导出任务、按状态统计、软删除导出任务。
+
+### Status Count
+
+`GET /api/admin/v1/export-tasks/status-count`
+
+Query：
+
+```ts
+interface ExportTaskStatusCountQuery {
+  title?: string
+  file_name?: string
+}
+```
+
+Response `data` 固定按 `1,2,3` 返回：
+
+```ts
+type ExportTaskStatusCountResponse = Array<{
+  label: '处理中' | '已完成' | '失败'
+  value: 1 | 2 | 3
+  num: number
+}>
+```
+
+### List
+
+`GET /api/admin/v1/export-tasks`
+
+Query：
+
+```ts
+interface ExportTaskListQuery {
+  current_page?: number
+  page_size?: number
+  status?: 1 | 2 | 3
+  title?: string
+  file_name?: string
+}
+```
+
+Response `data`：
+
+```ts
+interface ExportTaskListResponse {
+  list: Array<{
+    id: number
+    title: string
+    file_name: string | null
+    file_url: string | null
+    file_size_text: string
+    row_count: number | null
+    status: 1 | 2 | 3
+    status_text: '处理中' | '已完成' | '失败'
+    error_msg: string | null
+    expire_at: string | null
+    created_at: string
+  }>
+  page: { page_size: number; current_page: number; total_page: number; total: number }
+}
+```
+
+### Delete
+
+```text
+DELETE /api/admin/v1/export-tasks/:id
+DELETE /api/admin/v1/export-tasks        body: { ids: number[] }
+```
+
+规则：status-count/list/delete 均按当前 token user scoped；查询前软删除过期任务；`title` 和 `file_name` 使用 prefix LIKE；删除只软删 `export_tasks`，不删除 COS 对象。导出 worker 的 queue payload 只放 `task_id/kind/user_id/platform/ids`，不放渲染后的 rows。
 
 ## Profile
 
