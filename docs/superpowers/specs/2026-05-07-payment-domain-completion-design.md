@@ -23,7 +23,7 @@
 支付宝补偿 cron：pay_close_expired_order、pay_sync_pending_transaction 已映射到 Go task type。
 后台支付管理：pay channel、pay transaction read、pay notify log read、pay order admin、wallet admin 已迁 Go。
 PayReconcile admin REST：page-init/list/detail/retry/file routes 已接入 Go；前端 reconcile API 已改用 Go REST request。
-PayReconcile cron/runtime 第一版：pay_reconcile_daily/pay_reconcile_execute 已映射到 Go task type；daily 幂等创建任务，execute 生成本地 CSV 后因平台账单下载未实现明确 failed，不 fake success。
+PayReconcile cron/runtime 第一版：pay_reconcile_daily/pay_reconcile_execute 已映射到 Go task type；daily 幂等创建任务，execute 已实现 Alipay trade bill 下载、UTF-8/GBK CSV/zip 解析、本地/平台/diff CSV 输出；无差异 success，有差异 diff，平台网络/下载/解析失败明确 failed，不 fake success。
 ```
 
 ### DB 运行事实
@@ -51,7 +51,7 @@ pay_refund_sync               handler=app\process\Pay\PayRefundSyncTask        i
 
 ```text
 pay_reconcile_daily          -> pay:reconcile-daily:v1 已注册，daily creation implemented
-pay_reconcile_execute        -> pay:reconcile-execute:v1 已注册，execute first version implemented but platform bill download pending
+pay_reconcile_execute        -> pay:reconcile-execute:v1 已注册，execute first version implemented with Alipay bill download/parser/diff; real sandbox platform availability still manual/special-probe only
 pay_fulfillment_retry        -> pay:fulfillment-retry:v1 已注册，first version implemented；失败履约重试复用钱包入账幂等路径
 WeChat runtime               -> 当前未启用；无 active channel，不实现 notify/wechat
 Refund runtime               -> retired / pending-decision；无退款 contract 前不注册 pay_refund_sync
@@ -179,10 +179,9 @@ files type 只允许 platform/local/diff；没有 URL 明确失败。
 还没完成：
 
 ```text
-没有实现第三方账单下载。
-本地账单 CSV 已可生成到 runtime/reconcile_reports。
-没有实现 diff 文件落地。
-pay_reconcile_daily/pay_reconcile_execute 已接入 Go handler，但 execute 成功/差异闭环仍卡在平台账单下载。
+Alipay 第三方账单下载已接入 Go gateway，平台失败会明确 failed。
+本地账单 CSV、平台账单 CSV、diff CSV 已可生成到 runtime/reconcile_reports。
+success/diff 闭环已有 fake bill 单测覆盖；真实支付宝 sandbox 平台账单下载仍需人工或专门探针验证。
 full smoke 还没有 PayReconcile read-only probe。
 ```
 
@@ -295,14 +294,15 @@ front src/api/pay/reconcile.ts 使用 request + /api/admin/v1/pay-reconcile-task
 
 ### P1b：PayReconcile cron/runtime
 
-状态：partially implemented。
+状态：implemented first version。
 
 ```text
 pay_reconcile_daily registered。
 pay_reconcile_execute registered。
-对账任务 pending -> download -> comparing -> failed 可测试。
+对账任务 pending/failed -> download -> comparing -> success/diff/failed 可测试。
 Daily task 幂等创建已实现。
-Execute task 可生成本地 CSV；平台账单下载未实现时必须 failed，不能 fake success/diff。
+Execute task 可下载 Alipay trade bill、解析 UTF-8/GBK CSV 或 zip、生成 local/platform/diff CSV。
+平台网络、账单不可用或解析失败必须 failed，不能 fake success。
 ```
 
 ### P2：履约失败重试

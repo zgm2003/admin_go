@@ -175,7 +175,7 @@ Purpose: fix stale docs that still say PayReconcile REST/front/cron or fulfillme
 Replace old status paragraphs that claimed PayReconcile admin REST/front/cron was still planned with exact current status:
 
 ```text
-状态：admin REST implemented, worker runtime partially implemented. 管理接口和前端 API 已迁 Go REST；`pay_reconcile_daily` 和 `pay_reconcile_execute` 已注册 Go handler；daily 幂等创建任务，execute 生成本地 CSV，第三方平台账单下载/解析/diff success path 仍未实现，不能 fake success。
+状态：admin REST implemented, worker runtime first version implemented. 管理接口和前端 API 已迁 Go REST；`pay_reconcile_daily` 和 `pay_reconcile_execute` 已注册 Go handler；daily 幂等创建任务，execute 已实现 Alipay trade bill 下载、UTF-8/GBK CSV/zip 解析、本地/平台/diff CSV 输出和 success/diff/failed 状态；平台网络/下载/解析失败不能 fake success。
 ```
 
 Keep routes as implemented routes, not planned routes.
@@ -185,7 +185,7 @@ Keep routes as implemented routes, not planned routes.
 Required wording:
 
 ```text
-pay reconcile admin/runtime | no | planned read-only probe | Go REST page-init/list/detail/retry/file implemented; cron pay_reconcile_daily/pay_reconcile_execute registered to Go task type handlers; execute writes local CSV then fails loudly because platform bill download is not implemented | no by default | n/a | front API no longer uses legacyRequest; smoke still needs read-only probe and cron registry gate
+pay reconcile admin/runtime | no | planned read-only probe | Go REST page-init/list/detail/retry/file implemented; cron pay_reconcile_daily/pay_reconcile_execute registered to Go task type handlers; execute downloads/parses Alipay trade bill, writes local/platform/diff CSV, and marks success/diff/failed explicitly | no by default | n/a | front API no longer uses legacyRequest; smoke still needs read-only probe and cron registry gate; real platform bill download remains outside default smoke
 ```
 
 - [x] Update `docs/migration/current-status.md` only if it lacks a PayReconcile admin REST row.
@@ -193,7 +193,7 @@ pay reconcile admin/runtime | no | planned read-only probe | Go REST page-init/l
 Required row semantics:
 
 ```text
-pay reconcile admin/runtime | partially implemented: REST page-init/list/detail/retry/file plus worker pay:reconcile-daily:v1/pay:reconcile-execute:v1; daily creates tasks; execute local CSV then explicit failed because platform bill download is not implemented | adapted: src/api/pay/reconcile.ts uses Go REST, no legacyRequest | internal/module/payreconcile + frontend Vitest | smoke pending | contract + payment spec/plan | no fake success; platform download/parser/diff success path pending
+pay reconcile admin/runtime | implemented first version: REST page-init/list/detail/retry/file plus worker pay:reconcile-daily:v1/pay:reconcile-execute:v1; daily creates tasks; execute downloads/parses Alipay trade bill, writes local/platform/diff CSV, and marks success/diff/failed explicitly | adapted: src/api/pay/reconcile.ts uses Go REST, no legacyRequest | internal/module/payreconcile + platform alipay + frontend Vitest | smoke pending | contract + payment spec/plan | no fake success; real sandbox bill availability still needs manual/special probe
 ```
 
 - [x] Run docs grep.
@@ -207,7 +207,7 @@ Expected:
 
 ```text
 No stale statement saying PayReconcile admin REST or front API is still legacy.
-It is OK to say platform bill download/parser/diff success path is still pending.
+It is OK to say real sandbox platform bill download is not auto-smoked; do not say fake bill tests prove platform E2E.
 ```
 
 ## Task 2: PayReconcile cron task types and handler wiring
@@ -479,8 +479,8 @@ State transitions include download/comparing/failed or success/diff.
 Acceptable first version:
 
 ```text
-Alipay platform bill download may return explicit ErrPlatformBillDownloadNotImplemented if wrapper method is missing.
-On that error, task status becomes failed and local file metadata can still exist.
+Alipay platform bill download is implemented through the Go payment gateway.
+On platform/network/download/parser error, task status becomes failed.
 Do not mark success without platform bill comparison.
 Do not fake platform_count/platform_amount.
 ```

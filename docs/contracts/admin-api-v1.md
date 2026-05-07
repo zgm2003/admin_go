@@ -2541,7 +2541,7 @@ manual sandbox e2e: create recharge order -> create pay attempt -> open pay_data
 
 ## Pay Reconcile Tasks
 
-状态：admin REST implemented, worker runtime partially implemented。管理接口和前端 API 已迁 Go REST；`pay_reconcile_daily -> pay:reconcile-daily:v1` 和 `pay_reconcile_execute -> pay:reconcile-execute:v1` 已接入 Go registry/worker；daily 可按 active pay_channel 幂等创建任务，execute 可扫描 pending、生成本地 CSV 并把平台账单下载未实现明确写成 failed。第三方账单下载、平台账单解析和 success/diff 完整比对还没有完成，不能写成对账闭环。
+状态：admin REST implemented，worker runtime first version implemented。管理接口和前端 API 已迁 Go REST；`pay_reconcile_daily -> pay:reconcile-daily:v1` 和 `pay_reconcile_execute -> pay:reconcile-execute:v1` 已接入 Go registry/worker；daily 可按 active pay_channel 幂等创建任务，execute 可扫描 pending/failed，调用 Alipay Go gateway 获取 trade bill 下载地址并下载账单内容，解析 UTF-8/GBK CSV 或 zip 账单，写入 local/platform/diff CSV；无差异标 success，有差异标 diff，平台网络/下载/解析失败标 failed，不 fake success。真实支付宝 sandbox 平台账单下载不属于默认自动 smoke。
 
 用途：支付对账任务后台管理和后续 worker 执行入口。REST 管理接口只负责看任务、详情、重试和文件下载；真正下载第三方账单、生成本地账单、比对差异必须走 worker task，不允许在 admin-api handler 里跑长任务。
 
@@ -2572,7 +2572,7 @@ retry only accepts failed tasks and resets status to pending with counters/files
 files type only accepts platform/local/diff and fails if URL/path is empty.
 ```
 
-Cron mapping planned after backend service lands：
+Cron mapping：
 
 ```text
 pay_reconcile_daily   -> pay:reconcile-daily:v1
