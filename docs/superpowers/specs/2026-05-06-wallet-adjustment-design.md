@@ -56,7 +56,7 @@ full smoke 做 +100 / duplicate / -100 恢复
 订单消费扣款
 提现
 冻结/解冻
-退款
+退款（产品范围关闭，不是未来迁移项）
 对账执行
 钱包事件队列
 新建 wallet_adjustments 表

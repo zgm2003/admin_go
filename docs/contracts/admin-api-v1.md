@@ -58,6 +58,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-contract.ps1
 | system setting mutations | system-settings create/update/status/delete | bearer token + `system_setting_*` route permission |
 | upload config mutations | upload-drivers/upload-rules/upload-settings create/update/status/delete | bearer token + `system_uploadConfig_*` route permission |
 | upload token create | `POST /api/admin/v1/upload-tokens` | bearer token; current-user upload capability, no RBAC button permission |
+| chat room first slice | `GET/POST/PATCH/DELETE /api/admin/v1/chat...` | bearer token; current-user chat capability, participant/contact ownership enforced in chat service, no RBAC button permission in this slice |
 | notification task mutations | notification-tasks create/cancel/delete | bearer token + `system_notificationTask_*` route permission |
 | current profile update | `PUT /api/admin/v1/profile` | bearer token; operation log only, no user-manager button permission |
 
@@ -919,6 +920,274 @@ DELETE 不接受空 ids；删除是软删除 is_del=1。
 这些 read/delete 动作当前不写 operation log；如果未来要审计，必须加显式 route metadata，不能靠反射或隐式猜测。
 ```
 
+## Chat Room First Slice
+
+状态：partially implemented in Go backend and Vue frontend。当前只迁第一条私聊最小闭环；旧 PHP `Chat/*` 全 POST 接口只作为业务事实参考，不是新契约。
+
+用途：后台登录用户之间的聊天室。当前 endpoint 全部要求 bearer token，不挂 RBAC button permission；权限真相是当前 token 用户的 confirmed contact / active participant 状态。
+
+### Enum
+
+```text
+conversation.type: 1 private, 2 group
+message.type:      1 text, 2 image, 3 file, 4 system
+participant.role:  1 owner, 2 admin, 3 member
+participant.status:1 active, 2 left, 3 kicked
+contact.status:    1 pending, 2 confirmed
+common is_del:     1 yes, 2 no
+common is_pinned:  1 yes, 2 no
+```
+
+当前第一切片只开放 private conversation 和已存在联系人只读；group/contact mutation/recall/typing/presence 仍是 planned。前端 API 必须显式 reject 未迁功能，不能 fallback 到 `legacyRequest`。
+
+### Conversation list
+
+`GET /api/admin/v1/chat/conversations`
+
+Query：
+
+```ts
+interface ChatConversationListQuery {
+  current_page?: number // default 1
+  page_size?: number    // default 20, max 50
+}
+```
+
+Response `data`：
+
+```ts
+interface ChatConversationListResponse {
+  list: ChatConversationItem[]
+  page: { page_size: number; current_page: number; total_page: number; total: number }
+}
+
+interface ChatConversationItem {
+  id: number
+  type: 1 | 2
+  name: string
+  avatar: string
+  announcement: string
+  owner_id: number
+  last_message_id: number
+  last_message_at: string
+  last_message_preview: string
+  member_count: number
+  unread_count: number
+  is_pinned: 1 | 2
+  created_at: string
+}
+```
+
+Rules：
+
+```text
+只返回当前 token user 的 active participant 会话：chat_participants.user_id = auth_identity.user_id, status=1, is_del=2。
+只返回未软删会话：chat_conversations.is_del=2。
+排序固定置顶优先，再按 last_message_at desc。
+私聊 name/avatar 由对方 user/profile 填充，不要求 chat_conversations.name 存冗余对方名。
+unread_count 由 chat_participants.last_read_message_id 与 chat_messages.id 计算：同会话、未删除、id > last_read_message_id、sender_id != current_user。
+Go 第一版不继续使用旧 PHP Redis `chat:unread:{user_id}` 作为未读真相源；旧 Redis 未读只属于 legacy 运行时。
+```
+
+### Create private conversation
+
+`POST /api/admin/v1/chat/conversations/private`
+
+Body：
+
+```ts
+interface CreatePrivateConversationRequest {
+  user_id: number
+}
+```
+
+Response：
+
+```ts
+interface CreatePrivateConversationResponse {
+  conversation: ChatConversationItem
+}
+```
+
+Rules：
+
+```text
+user_id 必须是存在且未删除的用户，且不能等于当前 token user。
+双方必须已有 confirmed contact：chat_contacts.user_id=current_user_id, contact_user_id=user_id, status=2, is_del=2。
+创建/查找在 repository transaction 内完成；两人的 confirmed contact rows 先 FOR UPDATE，避免并发重复创建。
+已有 active private conversation 时直接返回并恢复当前用户已软删 participant。
+查找已有私聊必须要求双方 participant status=active 且 is_del=2，不能把软删 participant 当成仍可用私聊。
+```
+
+### Delete / pin conversation
+
+```text
+DELETE /api/admin/v1/chat/conversations/:id
+PATCH  /api/admin/v1/chat/conversations/:id/pin
+```
+
+Response：`{}`。
+
+Rules：
+
+```text
+DELETE 只软删除当前用户自己的 participant：chat_participants.is_del=1；不删除 conversation，不影响其他参与者。
+DELETE 没有命中当前用户 active/non-deleted participant 时返回 not found。
+PATCH /pin 只切换当前用户自己的 chat_participants.is_pinned。
+这两个动作当前不写 operation log；后续若要审计必须加显式 route metadata。
+```
+
+### Message list
+
+`GET /api/admin/v1/chat/conversations/:id/messages`
+
+Query：
+
+```ts
+interface ChatMessageListQuery {
+  current_page: number
+  page_size?: number // default 20, max 50
+}
+```
+
+Response：
+
+```ts
+interface ChatMessageListResponse {
+  list: ChatMessageItem[]
+  page: { page_size: number; current_page: number; total_page: number; total: number }
+}
+
+interface ChatUserBrief {
+  id: number
+  username: string
+  avatar: string
+}
+
+interface ChatMessageItem {
+  id: number
+  conversation_id: number
+  sender_id: number
+  type: 1 | 2 | 3 | 4
+  content: string
+  meta_json?: Record<string, unknown>
+  created_at: string
+  sender?: ChatUserBrief
+}
+```
+
+Rules：
+
+```text
+当前 token user 必须是该 conversation 的 active participant，否则返回 forbidden。
+只返回 chat_messages.is_del=2 的消息。
+后端按 id desc 分页返回；现有前端 store 负责反转并插入历史消息前部。
+sender 批量查 users/user_profiles；用户不存在或已删除时 sender 可省略。
+meta_json 只允许 object。前端只能在消费边界按字段类型收窄，不能用 any 吞掉。
+```
+
+### Send message
+
+`POST /api/admin/v1/chat/conversations/:id/messages`
+
+Body：
+
+```ts
+interface SendChatMessageRequest {
+  type: 1 | 2 | 3 | 4
+  content: string
+  meta_json?: Record<string, unknown>
+}
+```
+
+Response：
+
+```ts
+interface SendChatMessageResponse {
+  message: ChatMessageItem
+}
+```
+
+Rules：
+
+```text
+当前 token user 必须是 active participant，否则返回 forbidden。
+content trim 后不能为空，最大 5000 rune。
+消息先写 chat_messages，再更新 chat_conversations.last_message_id/last_message_at/last_message_preview。
+当前 first slice 不把发送和更新 last_message 包进 outbox；WebSocket 发布是 DB 写成功后的 best-effort，不回滚 DB。
+message preview: image=[图片], file=[文件], default=content 前 200 rune。
+发布 realtime event: chat.message.created.v1，target 是该 conversation 的所有 active participants（包含发送者本人，前端按 message id 去重）。
+```
+
+### Mark read
+
+`PATCH /api/admin/v1/chat/conversations/:id/read`
+
+Response：`{}`。
+
+Rules：
+
+```text
+当前 token user 必须是 active participant，否则返回 forbidden。
+读取 chat_conversations.last_message_id；若大于 0，则更新当前用户 participant.last_read_message_id。
+发布 realtime event: chat.read.v1，target 是该 conversation 的所有 active participants。
+unread_count 的下一次列表响应以 last_read_message_id 重新计算，不依赖旧 Redis hash。
+```
+
+### Contact list
+
+`GET /api/admin/v1/chat/contacts`
+
+Response：
+
+```ts
+interface ChatContactListResponse {
+  list: Array<{
+    id: number
+    contact_user_id: number
+    username: string
+    avatar: string
+    status: 1 | 2
+    is_initiator: 1 | 2
+    is_online: boolean
+    created_at: string
+  }>
+}
+```
+
+Rules：
+
+```text
+只返回当前 token user 自己的未软删 contacts：chat_contacts.user_id = current_user_id, is_del=2。
+当前 Go slice 不实现在线状态查询，is_online 固定 false；前端如有在线展示只能作为后续 presence event 能力。
+contact add/confirm/delete 当前未迁移，前端调用必须显式失败，不允许打旧 PHP Chat 接口。
+```
+
+### Legacy mapping and frontend impact
+
+| Legacy PHP API | Go REST first-slice mapping |
+| --- | --- |
+| `POST /api/admin/Chat/conversationList` | `GET /api/admin/v1/chat/conversations` |
+| `POST /api/admin/Chat/createPrivate` | `POST /api/admin/v1/chat/conversations/private` |
+| `POST /api/admin/Chat/deleteConversation` | `DELETE /api/admin/v1/chat/conversations/:id` |
+| `POST /api/admin/Chat/togglePin` | `PATCH /api/admin/v1/chat/conversations/:id/pin` |
+| `POST /api/admin/Chat/messageList` | `GET /api/admin/v1/chat/conversations/:id/messages` |
+| `POST /api/admin/Chat/sendMessage` | `POST /api/admin/v1/chat/conversations/:id/messages` |
+| `POST /api/admin/Chat/markRead` | `PATCH /api/admin/v1/chat/conversations/:id/read` |
+| `POST /api/admin/Chat/contactList` | `GET /api/admin/v1/chat/contacts` |
+| group/contact mutation/recall/typing/online legacy APIs | planned；当前前端 API 层显式 reject 或 no-op，不 fallback legacy |
+
+Frontend rules：
+
+```text
+src/api/chat/index.ts 必须使用 Go `request` + ADMIN_API_PREFIX，不允许 legacyRequest。
+src/store/chat.ts 只注册 `chat.message.created.v1` 和 `chat.read.v1`。
+被触碰 chat API/store/component 文件不能出现 any/as any/Record<string, any>。
+vue-element-plus-x 只能按需导入具体组件；当前 `MessageInput` 使用 `vue-element-plus-x/es/XSender/index.js` 本地子路径导入，不能 app.use(ElementPlusX) 或 main.ts 全量样式。
+Vite 必须把 `vue-element-plus-x` / `x-sender` / `virtua` 拆到独立 `chat-ui` chunk，build:analyze 必须可见。
+消息列表必须继续分页/边界加载；不能一次渲染全量历史。
+```
+
 ## Notification Tasks
 
 状态：implemented in Go backend, adapted in Vue frontend。
@@ -1418,7 +1687,7 @@ payment SDK
 recharge/createPay/cancel/query runtime
 payment callback
 wallet mutation
-refund
+refund feature is intentionally out of product scope, not a backlog gap
 reconciliation execution
 ```
 
@@ -1569,9 +1838,151 @@ channel_resp/raw_notify 空或非法 JSON 时返回空 object `{}`，不是字�
 detail join pay_channel 只返回渠道摘要，不 select 私钥明文或密文字段。
 ```
 
+## Pay Notify Logs
+
+状态：implemented in Go backend, adapted in Vue frontend for read-only callback audit page.
+
+用途：支付回调审计只读页面。它读取 `pay_notify_logs`，用于排查支付宝回调验签、幂等入账和处理失败原因；不重试回调、不补单、不改钱包。
+
+### Shared Rules
+
+```text
+resource prefix: /api/admin/v1/pay-notify-logs
+table: pay_notify_logs
+dict source: internal/enum/pay.go -> internal/dict
+permission code: pay_notify_view
+operation log: none, all routes are read-only
+```
+
+本切片不实现：
+
+```text
+callback retry
+manual payment repair
+wallet mutation
+reconciliation execution
+refund feature is intentionally out of product scope, not a backlog gap
+WeChat runtime is out of product scope, not a backlog gap
+```
+
+### Init
+
+`GET /api/admin/v1/pay-notify-logs/page-init`
+
+Auth：bearer token + `pay_notify_view`.
+
+Response `data.dict`：
+
+```ts
+interface PayNotifyLogInitDict {
+  channel_arr: Array<{ label: string; value: 1 | 2 }>
+  notify_type_arr: Array<{ label: string; value: 1 }>
+  notify_process_status_arr: Array<{ label: string; value: 1 | 2 | 3 | 4 }>
+}
+```
+
+枚举：
+
+```text
+channel: 1 微信支付, 2 支付宝
+notify_type: 1 支付回调
+process_status: 1 待处理, 2 处理成功, 3 处理失败, 4 已忽略
+```
+
+### List
+
+`GET /api/admin/v1/pay-notify-logs`
+
+Auth：bearer token + `pay_notify_view`.
+
+Query：
+
+```ts
+interface PayNotifyLogListQuery {
+  current_page: number
+  page_size: number
+  transaction_no?: string
+  channel?: 1 | 2
+  notify_type?: 1
+  process_status?: 1 | 2 | 3 | 4
+  start_date?: string // yyyy-mm-dd
+  end_date?: string   // yyyy-mm-dd
+}
+```
+
+Response `data`：
+
+```ts
+interface PayNotifyLogListResponse {
+  list: Array<{
+    id: number
+    channel: 1 | 2
+    channel_text: string
+    notify_type: 1
+    notify_type_text: string
+    transaction_no: string
+    trade_no: string
+    process_status: 1 | 2 | 3 | 4
+    process_status_text: string
+    process_msg: string
+    ip: string
+    created_at: string
+  }>
+  page: { page_size: number; current_page: number; total_page: number; total: number }
+}
+```
+
+Rules：
+
+```text
+transaction_no 是精确查询，service 只做 trim。
+channel / notify_type / process_status 由 handler binding 校验，非法值直接 code=100。
+start_date / end_date 只接受 yyyy-mm-dd，repository 展开为当天 00:00:00 到 23:59:59。
+前端日期范围只存在于 pay notify page composable，提交到 Go API 前必须显式转换成 start_date / end_date；API client 不接受 date 兜底字段。
+展示文本由 Go enum/dict 生成，不让前端兜底猜 label。
+```
+
+### Detail
+
+`GET /api/admin/v1/pay-notify-logs/:id`
+
+Auth：bearer token + `pay_notify_view`.
+
+Response `data`：
+
+```ts
+interface PayNotifyLogDetailResponse {
+  log: {
+    id: number
+    channel: 1 | 2
+    channel_text: string
+    notify_type: 1
+    notify_type_text: string
+    transaction_no: string
+    trade_no: string
+    process_status: 1 | 2 | 3 | 4
+    process_status_text: string
+    process_msg: string
+    headers: Record<string, unknown>
+    raw_data: Record<string, unknown>
+    ip: string
+    created_at: string
+    updated_at: string
+  }
+}
+```
+
+Rules：
+
+```text
+id 必须是正整数。
+不存在返回 code=404 / 回调日志不存在。
+headers/raw_data 空或非法 JSON 时返回空 object `{}`，不是字符串兜底。
+```
+
 ## Pay Orders
 
-状态：implemented in Go backend; Vue admin order client migrated to Go REST for后台订单管理方法。用户侧充值/钱包运行时仍是 legacy，等钱包切片单独迁。
+状态：implemented in Go backend; Vue admin order client migrated to Go REST for 后台订单管理方法。
 
 用途：支付域第三切片，只迁移后台“统一订单管理”页面的只读查询和轻写管理动作。它让后台能查看统一订单、状态统计、详情、备注，并在明确边界内做本地关闭订单。
 
@@ -1591,7 +2002,7 @@ operation log: close/remark only
 
 ```text
 payment SDK
-third-party close/query/refund
+third-party close/query runtime
 recharge/createPay/cancel/query runtime
 payment callback
 wallet mutation
@@ -2049,9 +2460,8 @@ WeChat runtime is out of product scope, not a backlog gap.
 本切片不实现：
 
 ```text
-refund
+refund feature is intentionally out of product scope, not a backlog gap
 reconciliation execution
-third-party payment-platform order query/cancel
 manual sandbox payment automation
 ```
 
@@ -2062,6 +2472,9 @@ handler 只解析 HTTP / auth identity / binding，不查 DB/Redis。
 service 不依赖 gin.Context。
 repository transaction 内只做 DB 状态变更，不包第三方支付 SDK 网络 IO。
 public Alipay notify 返回 text/plain raw success/fail，不使用 { code, data, msg } JSON envelope。
+pay_close_expired_order / pay_sync_pending_transaction 通过 Go cron registry + Asynq handler 执行；scheduler callback 只 enqueue，不扫描业务表。
+自动过期关单会先查支付宝，未支付才本地关闭 order/transaction，并 best-effort 调用 Alipay close。
+待支付流水补查只在支付宝确认 TRADE_SUCCESS / TRADE_FINISHED 时调用统一入账路径；未支付保持现状。
 ```
 
 ### Create Recharge Order
@@ -2248,7 +2661,7 @@ Rules：
 只允许取消当前 token user 自己的 recharge order。
 只允许 PENDING/PAYING 本地订单；已支付、已关闭、已过期订单拒绝。
 取消只做本地 close：orders.close_time/close_reason + 当前 active pay_transaction close。
-不调用第三方支付平台关单。
+不调用第三方支付平台关单；第三方 close 只属于自动过期关单 cron 的 best-effort 补偿。
 ```
 
 ### Current User Wallet Summary
@@ -3119,20 +3532,29 @@ scheduler callback = 写 cron_task_log + enqueue Asynq task
 queue handler = 真正业务执行
 ```
 
-当前 Go registry 只注册：
+当前 Go registry 注册：
 
 ```text
 name: notification_task_scheduler
 Asynq task type: notification:dispatch-due:v1
+
+name: pay_close_expired_order
+Asynq task type: pay:close-expired-order:v1
+
+name: pay_sync_pending_transaction
+Asynq task type: pay:sync-pending-transaction:v1
 ```
 
-未迁 Go 的支付/AI/聊天等 legacy handler 不注册假任务；列表返回 `registry_status=missing`。禁用行返回 `disabled`，表达式错误返回 `invalid_cron`。
+未迁 Go 的 AI/聊天/支付履约/对账等 legacy handler 不注册假任务；列表返回 `registry_status=missing`。禁用行返回 `disabled`，表达式错误返回 `invalid_cron`。
 
 当前数据迁移：
 
 ```text
 database/migrations/20260506_cron_task_go_handler_cleanup.sql
 notification_task_scheduler.handler = notification:dispatch-due:v1
+database/migrations/20260507_pay_cron_task_go_handler_cleanup.sql
+pay_close_expired_order.handler = pay:close-expired-order:v1
+pay_sync_pending_transaction.handler = pay:sync-pending-transaction:v1
 ```
 
 ### Routes

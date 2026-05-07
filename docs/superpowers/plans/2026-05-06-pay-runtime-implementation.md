@@ -680,7 +680,7 @@ POST /api/pay/notify/alipay raw callback
 - [ ] Mark current status as `partially implemented` after code is actually done, not before:
 
 ```text
-pay runtime | partially implemented: Alipay sandbox recharge create/pay-attempt/notify/wallet credit | frontend recharge/createPay adapted | tests... | smoke... | docs... | no WeChat/refund/reconcile
+pay runtime | partially implemented: Alipay sandbox recharge create/pay-attempt/notify/wallet credit | frontend recharge/createPay adapted | tests... | smoke... | docs... | Alipay only; WeChat and refund out of product scope; no reconcile
 ```
 
 - [ ] Smoke additions:

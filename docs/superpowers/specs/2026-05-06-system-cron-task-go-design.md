@@ -25,10 +25,10 @@ contract/status/smoke/docs 同步
 ```text
 支付超时关单 Go handler
 支付状态补查 Go handler
-退款补查 Go handler
 对账执行 Go handler
 AI run timeout Go handler
 聊天好友过期清理 Go handler
+支付退款 handler（退款不在产品范围，不是未来迁移目标）
 通用“用户自定义脚本执行”
 动态加载 Go plugin
 根据 DB handler 字符串反射执行代码
@@ -61,7 +61,7 @@ clean_expired_contact_request  app\process\CleanExpiredContactRequestTask
 pay_close_expired_order        app\process\Pay\PayCloseExpiredOrderTask
 pay_sync_pending_transaction   app\process\Pay\PaySyncPendingTransactionTask
 pay_fulfillment_retry          app\process\Pay\PayFulfillmentRetryTask
-pay_refund_sync                app\process\Pay\PayRefundSyncTask
+pay_refund_sync                app\process\Pay\PayRefundSyncTask  # legacy disabled/deleted row; refund is out of product scope
 pay_reconcile_daily            app\process\Pay\PayReconcileDailyTask
 pay_reconcile_execute          app\process\Pay\PayReconcileExecuteTask
 ```

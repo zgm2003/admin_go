@@ -52,7 +52,7 @@ POST /api/admin/v1/wallet-adjustments
 支付 SDK
 支付回调
 钱包入账/扣款 runtime
-退款
+退款（产品范围关闭，不是未来迁移项）
 提现
 冻结/解冻
 对账执行

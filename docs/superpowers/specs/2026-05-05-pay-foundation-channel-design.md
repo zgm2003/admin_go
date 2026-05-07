@@ -141,6 +141,8 @@ user_wallets=1
 wallet_transactions=1
 ```
 
+`pay_refunds` 只是历史表事实；退款产品范围已经关闭，不是未来迁移目标。
+
 支付渠道表名是 `pay_channel`，不是 `pay_channels`。Go model 必须显式 `TableName() string { return "pay_channel" }`。
 
 ## 非目标
