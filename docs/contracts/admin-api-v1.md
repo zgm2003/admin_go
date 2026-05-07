@@ -3188,3 +3188,275 @@ registry_status 是 Go 根据 DB row + registry + cron 表达式派生；支持�
 ```
 
 注意：修改 `cron_task` 配置后，已运行的 `admin-worker` 不热重载 schedule；需要重启 worker 或后续引入显式 reload/分布式锁策略。不要在 admin-api handler 里启动 cron。
+
+## Client Versions
+
+状态：implemented. 业务名称是“客户端版本”；Go REST 使用 `ClientVersionApi`，DB 表统一为 `client_versions`，前端视图目录和 i18n key 使用 `clientVersion`，mutation 权限 code 统一为 `system_clientVersion_*`。旧 Tauri 表名/权限名只允许出现在迁移 SQL 的 source condition 或 legacy PHP 参考说明里，不是新契约。菜单 PAGE route/component/i18n_key 通过 `20260507_client_version_permission_route_cleanup.sql` 迁到 `system/clientVersion`。
+
+### Shared Rules
+
+命名空间：
+
+```text
+/api/admin/v1/client-versions
+```
+
+字典来源：
+
+```text
+internal/enum.ClientPlatform* -> internal/dict.ClientVersionPlatformOptions
+internal/enum.CommonYes/CommonNo -> internal/dict.CommonYesNoOptions
+internal/validate.client_platform + common_yes_no
+```
+
+平台 v1：
+
+```text
+windows-x86_64 -> Windows
+darwin-x86_64  -> macOS
+```
+
+数据规则：
+
+```text
+DB table is client_versions.
+Menu PAGE target is path=/system/clientVersion, component=system/clientVersion, i18n_key=menu.system_clientVersion.
+is_del=2 means active; is_del=1 means soft deleted.
+is_latest=1 means latest; is_latest=2 means normal.
+force_update=1 means force; force_update=2 means normal.
+version + platform + is_del follows existing unique index.
+Exactly one latest row per platform is enforced by service transaction, not by frontend.
+```
+
+### Page Init
+
+```text
+GET /api/admin/v1/client-versions/page-init
+```
+
+Auth：bearer token. No mutating RBAC button permission. No OperationLog metadata.
+
+Response：
+
+```ts
+interface ClientVersionPageInitResponse {
+  dict: {
+    client_version_platform_arr: Array<{ label: string; value: 'windows-x86_64' | 'darwin-x86_64' }>
+    common_yes_no_arr: Array<{ label: string; value: 1 | 2 }>
+  }
+}
+```
+
+### List
+
+```text
+GET /api/admin/v1/client-versions?current_page=1&page_size=20&platform=windows-x86_64
+```
+
+Auth：bearer token. No mutating RBAC button permission. No OperationLog metadata.
+
+Query：
+
+```ts
+interface ClientVersionListQuery {
+  current_page?: number
+  page_size?: number
+  platform?: 'windows-x86_64' | 'darwin-x86_64'
+}
+```
+
+Response：
+
+```ts
+interface ClientVersionItem {
+  id: number
+  version: string
+  notes: string
+  file_url: string
+  signature: string
+  platform: 'windows-x86_64' | 'darwin-x86_64'
+  platform_name: string
+  file_size: number
+  file_size_text: string
+  is_latest: 1 | 2
+  is_latest_name: string
+  force_update: 1 | 2
+  force_update_name: string
+  created_at: string
+  updated_at: string
+}
+
+interface ClientVersionListResponse {
+  list: ClientVersionItem[]
+  page: Page
+}
+```
+
+### Update JSON Preview
+
+```text
+GET /api/admin/v1/client-versions/update-json?platform=windows-x86_64
+```
+
+Auth：bearer token. No mutating RBAC button permission. No OperationLog metadata.
+
+Rules：
+
+```text
+platform empty defaults to windows-x86_64.
+missing latest row returns [] for admin preview compatibility.
+existing latest row returns Tauri static updater JSON shape.
+pub_date uses RFC3339.
+```
+
+Response shape when latest exists：
+
+```ts
+interface ClientVersionManifestPayload {
+  version: string
+  notes: string
+  pub_date: string
+  platforms: Record<'windows-x86_64' | 'darwin-x86_64', {
+    url: string
+    signature: string
+  }>
+}
+```
+
+### Current Check
+
+```text
+GET /api/admin/v1/client-versions/current-check?version=1.0.7&platform=windows-x86_64
+```
+
+Auth：public. This exact path is in `DefaultAuthSkipPaths`.
+
+Query：
+
+```ts
+interface ClientVersionCurrentCheckQuery {
+  version: string
+  platform?: 'windows-x86_64' | 'darwin-x86_64'
+}
+```
+
+Response：
+
+```ts
+interface ClientVersionCurrentCheckResponse {
+  force_update: boolean
+}
+```
+
+Rules：missing version/platform row returns `force_update=false`; this endpoint does not expose download URL or signature.
+
+### Create / Update
+
+```text
+POST /api/admin/v1/client-versions
+PUT  /api/admin/v1/client-versions/:id
+```
+
+Auth/RBAC：
+
+```text
+POST create: system_clientVersion_add
+PUT update:  system_clientVersion_edit
+```
+
+OperationLog：
+
+```text
+module=client_version action=create title=发布客户端版本
+module=client_version action=update title=编辑客户端版本
+```
+
+Body：
+
+```ts
+interface ClientVersionSaveBody {
+  version: string
+  notes?: string
+  file_url: string
+  signature: string
+  platform: 'windows-x86_64' | 'darwin-x86_64'
+  file_size?: number
+  force_update?: 1 | 2 // create may omit and defaults to 2; update requires explicit valid value
+}
+```
+
+Rules：
+
+```text
+create defaults is_latest=2, force_update=2, is_del=2.
+update cannot change platform.
+duplicate active version+platform is rejected.
+if updating the current latest row, service republishes manifest; publish failure returns an explicit error instead of silent success.
+```
+
+### Set Latest / Force Update / Delete
+
+```text
+PATCH  /api/admin/v1/client-versions/:id/latest
+PATCH  /api/admin/v1/client-versions/:id/force-update
+DELETE /api/admin/v1/client-versions/:id
+```
+
+Auth/RBAC：
+
+```text
+PATCH latest:       system_clientVersion_setLatest
+PATCH force-update: system_clientVersion_forceUpdate
+DELETE:             system_clientVersion_del
+```
+
+OperationLog：
+
+```text
+module=client_version action=set_latest title=设为最新版本
+module=client_version action=force_update title=切换强制更新
+module=client_version action=delete title=删除客户端版本
+```
+
+Force update body：
+
+```ts
+interface ClientVersionForceUpdateBody {
+  force_update: 1 | 2
+}
+```
+
+Rules：
+
+```text
+set-latest clears old latest for the same platform and sets selected row latest in one DB transaction, then publishes manifest.
+force-update validates common yes/no; if the row is latest, it republishes manifest.
+delete is soft delete only and rejects current latest version.
+```
+
+### Manifest Publish Boundary
+
+```text
+clientversion.Service -> ManifestPublisher small interface -> ManifestCOSPublisher -> internal/platform/storage/cos.ObjectWriter -> github.com/tencentyun/cos-go-sdk-v5
+```
+
+Rules：
+
+```text
+Only COS server-side manifest publish is implemented in this slice.
+The manifest object key is tauri_updater/{platform}.json.
+Content-Type is application/json; charset=utf-8.
+Enabled upload_setting + upload_driver remains the credential fact source.
+secret_id_enc/secret_key_enc are decrypted only inside publisher and never returned or operation-logged.
+OSS runtime is not silently supported; unsupported driver returns explicit error.
+```
+
+Error cases：
+
+```text
+400 invalid platform / invalid force_update / duplicate version+platform / cannot delete latest / platform cannot be changed
+401 missing or expired token for protected admin routes
+403 missing system_clientVersion_* button permission on mutating routes
+404 client version does not exist
+500 repository failure / manifest publisher not configured / upload config missing / COS publish failure
+```
