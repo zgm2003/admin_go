@@ -249,111 +249,13 @@ task.platform=all/admin 时投递 admin WebSocket；task.platform=app 暂不投�
 前端收到事件后可以刷新 REST 通知列表；urgent 级别额外弹出通知。
 ```
 
-## Chat events
+## Admin chat events
 
-状态：partially implemented for chat first slice。
+状态：removed from current admin scope on 2026-05-07 by product decision.
 
-来源：`internal/module/chat.Service` 在 DB 写入成功后，通过 `platform/realtime.Publisher.Publish(Publication)` 做 best-effort 发布。业务代码不直接持有 gorilla websocket connection、local manager 或 Redis client。
+The active realtime contract no longer defines admin chat message/read/contact/group events because the admin chat module, REST routes, frontend page/store, menu permission, and `chat_*` tables are removed.
 
-投递目标：当前第一版不允许客户端任意订阅 `chat:conversation:*`。服务端按会话 active participants 展开成 `platform + user_id` 定向 publication；`REALTIME_PUBLISHER=redis` 时先进入 Redis Pub/Sub，再由每个 `admin-api` 进程投递本机 session。
-
-### Server: chat.message.created.v1
-
-触发：`POST /api/admin/v1/chat/conversations/:id/messages` 成功写入 `chat_messages` 并更新 `chat_conversations.last_message_*` 后。
-
-```json
-{
-  "type": "chat.message.created.v1",
-  "request_id": "chat-message-77",
-  "data": {
-    "conversation_id": 10,
-    "message": {
-      "id": 77,
-      "conversation_id": 10,
-      "sender_id": 1,
-      "type": 1,
-      "content": "hello",
-      "meta_json": {},
-      "created_at": "2026-05-07 12:00:00",
-      "sender": {
-        "id": 1,
-        "username": "admin",
-        "avatar": ""
-      }
-    }
-  }
-}
-```
-
-Payload：
-
-```ts
-interface ChatMessageCreatedPayload {
-  conversation_id: number
-  message: {
-    id: number
-    conversation_id: number
-    sender_id: number
-    type: 1 | 2 | 3 | 4
-    content: string
-    meta_json?: Record<string, unknown>
-    created_at: string
-    sender?: { id: number; username: string; avatar: string }
-  }
-}
-```
-
-规则：
-
-```text
-DB chat_messages row 是真相，WebSocket 只是实时提示。
-事件投递给所有 active participants，包含发送者本人；前端必须按 message.id 去重。
-WebSocket/Redis 发布失败不回滚消息写库，也不回滚 last_message 更新。
-当前事件不包含 unread_count；前端可本地 +1，必要时刷新 REST conversation list 对齐。
-```
-
-### Server: chat.read.v1
-
-触发：`PATCH /api/admin/v1/chat/conversations/:id/read` 成功更新当前用户 `chat_participants.last_read_message_id` 后。
-
-```json
-{
-  "type": "chat.read.v1",
-  "request_id": "chat-read-10-1",
-  "data": {
-    "conversation_id": 10,
-    "user_id": 1
-  }
-}
-```
-
-Payload：
-
-```ts
-interface ChatReadPayload {
-  conversation_id: number
-  user_id: number
-}
-```
-
-规则：
-
-```text
-read event 表示 user_id 已将该 conversation 的 last_read_message_id 推进到当前 last_message_id。
-事件投递给所有 active participants，包含标记已读者本人；前端收到自己事件应保持幂等。
-unread_count 的真相仍在 REST conversation list，由 last_read_message_id 和 chat_messages 计算。
-```
-
-当前未实现：
-
-```text
-chat.message.recalled.v1
-chat.typing.v1
-chat.presence.updated.v1
-chat.contact.*.v1
-chat.group.*.v1
-client subscribe chat conversation topic
-```
+AI streaming remains a separate planned realtime area below and must not reuse the removed admin chat contract.
 
 ## AI streaming events
 

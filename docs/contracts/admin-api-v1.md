@@ -58,7 +58,6 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-contract.ps1
 | system setting mutations | system-settings create/update/status/delete | bearer token + `system_setting_*` route permission |
 | upload config mutations | upload-drivers/upload-rules/upload-settings create/update/status/delete | bearer token + `system_uploadConfig_*` route permission |
 | upload token create | `POST /api/admin/v1/upload-tokens` | bearer token; current-user upload capability, no RBAC button permission |
-| chat room first slice | `GET/POST/PATCH/DELETE /api/admin/v1/chat...` | bearer token; current-user chat capability, participant/contact ownership enforced in chat service, no RBAC button permission in this slice |
 | notification task mutations | notification-tasks create/cancel/delete | bearer token + `system_notificationTask_*` route permission |
 | current profile update | `PUT /api/admin/v1/profile` | bearer token; operation log only, no user-manager button permission |
 
@@ -920,273 +919,15 @@ DELETE 不接受空 ids；删除是软删除 is_del=1。
 这些 read/delete 动作当前不写 operation log；如果未来要审计，必须加显式 route metadata，不能靠反射或隐式猜测。
 ```
 
-## Chat Room First Slice
+## Admin Chat Room
 
-状态：partially implemented in Go backend and Vue frontend。当前只迁第一条私聊最小闭环；旧 PHP `Chat/*` 全 POST 接口只作为业务事实参考，不是新契约。
+状态：removed from current admin scope on 2026-05-07 by product decision.
 
-用途：后台登录用户之间的聊天室。当前 endpoint 全部要求 bearer token，不挂 RBAC button permission；权限真相是当前 token 用户的 confirmed contact / active participant 状态。
+Active Go API no longer includes `/api/admin/v1/chat...` endpoints. The admin chat frontend page, typed API client, Pinia store, tests, menu i18n, Go module, route registration, and bootstrap wiring are removed.
 
-### Enum
+DB cleanup is destructive and explicit: `admin_back_go/database/migrations/20260507_remove_admin_chat.sql` removes the admin chat permission/menu grants and drops `chat_messages`, `chat_participants`, `chat_contacts`, and `chat_conversations`.
 
-```text
-conversation.type: 1 private, 2 group
-message.type:      1 text, 2 image, 3 file, 4 system
-participant.role:  1 owner, 2 admin, 3 member
-participant.status:1 active, 2 left, 3 kicked
-contact.status:    1 pending, 2 confirmed
-common is_del:     1 yes, 2 no
-common is_pinned:  1 yes, 2 no
-```
-
-当前第一切片只开放 private conversation 和已存在联系人只读；group/contact mutation/recall/typing/presence 仍是 planned。前端 API 必须显式 reject 未迁功能，不能 fallback 到 `legacyRequest`。
-
-### Conversation list
-
-`GET /api/admin/v1/chat/conversations`
-
-Query：
-
-```ts
-interface ChatConversationListQuery {
-  current_page?: number // default 1
-  page_size?: number    // default 20, max 50
-}
-```
-
-Response `data`：
-
-```ts
-interface ChatConversationListResponse {
-  list: ChatConversationItem[]
-  page: { page_size: number; current_page: number; total_page: number; total: number }
-}
-
-interface ChatConversationItem {
-  id: number
-  type: 1 | 2
-  name: string
-  avatar: string
-  announcement: string
-  owner_id: number
-  last_message_id: number
-  last_message_at: string
-  last_message_preview: string
-  member_count: number
-  unread_count: number
-  is_pinned: 1 | 2
-  created_at: string
-}
-```
-
-Rules：
-
-```text
-只返回当前 token user 的 active participant 会话：chat_participants.user_id = auth_identity.user_id, status=1, is_del=2。
-只返回未软删会话：chat_conversations.is_del=2。
-排序固定置顶优先，再按 last_message_at desc。
-私聊 name/avatar 由对方 user/profile 填充，不要求 chat_conversations.name 存冗余对方名。
-unread_count 由 chat_participants.last_read_message_id 与 chat_messages.id 计算：同会话、未删除、id > last_read_message_id、sender_id != current_user。
-Go 第一版不继续使用旧 PHP Redis `chat:unread:{user_id}` 作为未读真相源；旧 Redis 未读只属于 legacy 运行时。
-```
-
-### Create private conversation
-
-`POST /api/admin/v1/chat/conversations/private`
-
-Body：
-
-```ts
-interface CreatePrivateConversationRequest {
-  user_id: number
-}
-```
-
-Response：
-
-```ts
-interface CreatePrivateConversationResponse {
-  conversation: ChatConversationItem
-}
-```
-
-Rules：
-
-```text
-user_id 必须是存在且未删除的用户，且不能等于当前 token user。
-双方必须已有 confirmed contact：chat_contacts.user_id=current_user_id, contact_user_id=user_id, status=2, is_del=2。
-创建/查找在 repository transaction 内完成；两人的 confirmed contact rows 先 FOR UPDATE，避免并发重复创建。
-已有 active private conversation 时直接返回并恢复当前用户已软删 participant。
-查找已有私聊必须要求双方 participant status=active 且 is_del=2，不能把软删 participant 当成仍可用私聊。
-```
-
-### Delete / pin conversation
-
-```text
-DELETE /api/admin/v1/chat/conversations/:id
-PATCH  /api/admin/v1/chat/conversations/:id/pin
-```
-
-Response：`{}`。
-
-Rules：
-
-```text
-DELETE 只软删除当前用户自己的 participant：chat_participants.is_del=1；不删除 conversation，不影响其他参与者。
-DELETE 没有命中当前用户 active/non-deleted participant 时返回 not found。
-PATCH /pin 只切换当前用户自己的 chat_participants.is_pinned。
-这两个动作当前不写 operation log；后续若要审计必须加显式 route metadata。
-```
-
-### Message list
-
-`GET /api/admin/v1/chat/conversations/:id/messages`
-
-Query：
-
-```ts
-interface ChatMessageListQuery {
-  current_page: number
-  page_size?: number // default 20, max 50
-}
-```
-
-Response：
-
-```ts
-interface ChatMessageListResponse {
-  list: ChatMessageItem[]
-  page: { page_size: number; current_page: number; total_page: number; total: number }
-}
-
-interface ChatUserBrief {
-  id: number
-  username: string
-  avatar: string
-}
-
-interface ChatMessageItem {
-  id: number
-  conversation_id: number
-  sender_id: number
-  type: 1 | 2 | 3 | 4
-  content: string
-  meta_json?: Record<string, unknown>
-  created_at: string
-  sender?: ChatUserBrief
-}
-```
-
-Rules：
-
-```text
-当前 token user 必须是该 conversation 的 active participant，否则返回 forbidden。
-只返回 chat_messages.is_del=2 的消息。
-后端按 id desc 分页返回；现有前端 store 负责反转并插入历史消息前部。
-sender 批量查 users/user_profiles；用户不存在或已删除时 sender 可省略。
-meta_json 只允许 object。前端只能在消费边界按字段类型收窄，不能用 any 吞掉。
-```
-
-### Send message
-
-`POST /api/admin/v1/chat/conversations/:id/messages`
-
-Body：
-
-```ts
-interface SendChatMessageRequest {
-  type: 1 | 2 | 3 | 4
-  content: string
-  meta_json?: Record<string, unknown>
-}
-```
-
-Response：
-
-```ts
-interface SendChatMessageResponse {
-  message: ChatMessageItem
-}
-```
-
-Rules：
-
-```text
-当前 token user 必须是 active participant，否则返回 forbidden。
-content trim 后不能为空，最大 5000 rune。
-消息先写 chat_messages，再更新 chat_conversations.last_message_id/last_message_at/last_message_preview。
-当前 first slice 不把发送和更新 last_message 包进 outbox；WebSocket 发布是 DB 写成功后的 best-effort，不回滚 DB。
-message preview: image=[图片], file=[文件], default=content 前 200 rune。
-发布 realtime event: chat.message.created.v1，target 是该 conversation 的所有 active participants（包含发送者本人，前端按 message id 去重）。
-```
-
-### Mark read
-
-`PATCH /api/admin/v1/chat/conversations/:id/read`
-
-Response：`{}`。
-
-Rules：
-
-```text
-当前 token user 必须是 active participant，否则返回 forbidden。
-读取 chat_conversations.last_message_id；若大于 0，则更新当前用户 participant.last_read_message_id。
-发布 realtime event: chat.read.v1，target 是该 conversation 的所有 active participants。
-unread_count 的下一次列表响应以 last_read_message_id 重新计算，不依赖旧 Redis hash。
-```
-
-### Contact list
-
-`GET /api/admin/v1/chat/contacts`
-
-Response：
-
-```ts
-interface ChatContactListResponse {
-  list: Array<{
-    id: number
-    contact_user_id: number
-    username: string
-    avatar: string
-    status: 1 | 2
-    is_initiator: 1 | 2
-    is_online: boolean
-    created_at: string
-  }>
-}
-```
-
-Rules：
-
-```text
-只返回当前 token user 自己的未软删 contacts：chat_contacts.user_id = current_user_id, is_del=2。
-当前 Go slice 不实现在线状态查询，is_online 固定 false；前端如有在线展示只能作为后续 presence event 能力。
-contact add/confirm/delete 当前未迁移，前端调用必须显式失败，不允许打旧 PHP Chat 接口。
-```
-
-### Legacy mapping and frontend impact
-
-| Legacy PHP API | Go REST first-slice mapping |
-| --- | --- |
-| `POST /api/admin/Chat/conversationList` | `GET /api/admin/v1/chat/conversations` |
-| `POST /api/admin/Chat/createPrivate` | `POST /api/admin/v1/chat/conversations/private` |
-| `POST /api/admin/Chat/deleteConversation` | `DELETE /api/admin/v1/chat/conversations/:id` |
-| `POST /api/admin/Chat/togglePin` | `PATCH /api/admin/v1/chat/conversations/:id/pin` |
-| `POST /api/admin/Chat/messageList` | `GET /api/admin/v1/chat/conversations/:id/messages` |
-| `POST /api/admin/Chat/sendMessage` | `POST /api/admin/v1/chat/conversations/:id/messages` |
-| `POST /api/admin/Chat/markRead` | `PATCH /api/admin/v1/chat/conversations/:id/read` |
-| `POST /api/admin/Chat/contactList` | `GET /api/admin/v1/chat/contacts` |
-| group/contact mutation/recall/typing/online legacy APIs | planned；当前前端 API 层显式 reject 或 no-op，不 fallback legacy |
-
-Frontend rules：
-
-```text
-src/api/chat/index.ts 必须使用 Go `request` + ADMIN_API_PREFIX，不允许 legacyRequest。
-src/store/chat.ts 只注册 `chat.message.created.v1` 和 `chat.read.v1`。
-被触碰 chat API/store/component 文件不能出现 any/as any/Record<string, any>。
-vue-element-plus-x 只能按需导入具体组件；当前 `MessageInput` 使用 `vue-element-plus-x/es/XSender/index.js` 本地子路径导入，不能 app.use(ElementPlusX) 或 main.ts 全量样式。
-Vite 必须把 `vue-element-plus-x` / `x-sender` / `virtua` 拆到独立 `chat-ui` chunk，build:analyze 必须可见。
-消息列表必须继续分页/边界加载；不能一次渲染全量历史。
-```
+AI chat is a separate AI module and remains active under `admin_front_ts/src/views/Main/ai/chat`, `admin_front_ts/src/api/ai/chat.ts`, and the `ai_chat_images` upload folder.
 
 ## Notification Tasks
 
@@ -1687,7 +1428,7 @@ payment SDK
 recharge/createPay/cancel/query runtime
 payment callback
 wallet mutation
-refund feature is intentionally out of product scope, not a backlog gap
+refund runtime is retired/pending-decision unless a refund spec enables it
 reconciliation execution
 ```
 
@@ -1861,8 +1602,8 @@ callback retry
 manual payment repair
 wallet mutation
 reconciliation execution
-refund feature is intentionally out of product scope, not a backlog gap
-WeChat runtime is out of product scope, not a backlog gap
+refund runtime is retired/pending-decision unless a refund spec enables it
+WeChat runtime is not active; Go does not implement `/api/pay/notify/wechat` unless a dedicated WeChat spec enables it
 ```
 
 ### Init
@@ -2446,6 +2187,8 @@ current-user recharge resource: /api/admin/v1/recharge-orders
 public callback resource: /api/pay/notify/alipay
 tables: orders, order_items, pay_transactions, pay_channel, pay_notify_logs, order_fulfillments, user_wallets, wallet_transactions, users
 SDK boundary: github.com/go-pay/gopay only under internal/platform/payment/alipay
+cert ownership: Alipay cert files are deployment/runtime artifacts under admin_back_go/runtime/cert/alipay
+cert env: PAYMENT_CERT_BASE_DIR must point at the Go backend root; LEGACY_ADMIN_BACK_ROOT must stay empty before PHP teardown
 permission metadata: none for current-user recharge runtime; AuthToken only
 operation log metadata: none for current-user recharge runtime and public notify
 ```
@@ -2454,13 +2197,13 @@ operation log metadata: none for current-user recharge runtime and public notify
 
 ```text
 Alipay runtime only.
-WeChat runtime is out of product scope, not a backlog gap.
+WeChat runtime is not active; Go does not implement `/api/pay/notify/wechat` unless a dedicated WeChat spec enables it.
 ```
 
 本切片不实现：
 
 ```text
-refund feature is intentionally out of product scope, not a backlog gap
+refund runtime is retired/pending-decision unless a refund spec enables it
 reconciliation execution
 manual sandbox payment automation
 ```
@@ -2790,11 +2533,51 @@ OrderApi.walletBills -> request.get(`${ADMIN_API_PREFIX}/wallet/bills`)
 Smoke：
 
 ```text
+cert gate: scripts/check-payment-certs.ps1 -DisallowLegacyRoot must pass with paths under admin_back_go/runtime/cert/alipay.
 full smoke default: checks enabled Alipay channel cert path fields/private-key non-leak, plus current-user wallet summary, wallet bills, and recharge order list shape.
 full smoke optional: -EnablePaymentRuntimeProbe creates a real recharge order and pay attempt, checks pay_data.content shape, probes local result, then cancels the smoke order.
 manual sandbox e2e: create recharge order -> create pay attempt -> open pay_data.content -> pay in Alipay sandbox -> verify callback DB effects.
 ```
 
+## Pay Reconcile Tasks
+
+状态：planned, not implemented. 当前 DB 里 `pay_reconcile_daily` 和 `pay_reconcile_execute` 仍是 legacy PHP handler；前端 `src/api/pay/reconcile.ts` 仍是显式 legacy adapter，迁移前不能写成 Go 已完成。
+
+用途：支付对账任务后台管理和后续 worker 执行入口。REST 管理接口只负责看任务、详情、重试和文件下载；真正下载第三方账单、生成本地账单、比对差异必须走 worker task，不允许在 admin-api handler 里跑长任务。
+
+Planned routes：
+
+```text
+GET   /api/admin/v1/pay-reconcile-tasks/page-init
+GET   /api/admin/v1/pay-reconcile-tasks
+GET   /api/admin/v1/pay-reconcile-tasks/:id
+PATCH /api/admin/v1/pay-reconcile-tasks/:id/retry
+GET   /api/admin/v1/pay-reconcile-tasks/:id/files/:type
+```
+
+Planned auth/RBAC：
+
+```text
+read/list/detail/download: bearer token + pay_reconcile_list or existing download permission when present
+retry: bearer token + pay_reconcile_retry after permission is explicitly defined
+```
+
+Planned response rules：
+
+```text
+page-init returns pay_channel_arr, reconcile_status_arr, bill_type_arr.
+list supports channel, status, start_date, end_date.
+detail returns task facts and file URLs, never reads file body inline.
+retry only accepts failed tasks and resets status to pending with counters/files/error cleared.
+files type only accepts platform/local/diff and fails if URL/path is empty.
+```
+
+Cron mapping planned after backend service lands：
+
+```text
+pay_reconcile_daily   -> pay:reconcile-daily:v1
+pay_reconcile_execute -> pay:reconcile-execute:v1
+```
 
 ## Upload Config
 
@@ -3144,13 +2927,13 @@ status=2 只禁用当前项，不自动启用其他项。
 POST /api/admin/v1/upload-tokens
 ```
 
-Auth: bearer token only. This is a current-user upload capability used by avatar/chat/rich-text/file fields after login; it must not require `system_uploadToken_create` or any other RBAC button permission.
+Auth: bearer token only. This is a current-user upload capability used by avatar/AI chat/rich-text/file fields after login; it must not require `system_uploadToken_create` or any other RBAC button permission.
 
 Request:
 
 ```ts
 interface UploadTokenRequest {
-  folder: 'avatars' | 'images' | 'videos' | 'cover_images' | 'ai_chat_images' | 'releases' | 'tauri_updater' | 'exports' | 'goods_tts' | 'chat_images' | 'chat_files' | 'reconcile_reports' | 'cine_keyframes'
+  folder: 'avatars' | 'images' | 'videos' | 'cover_images' | 'ai_chat_images' | 'releases' | 'tauri_updater' | 'exports' | 'goods_tts' | 'reconcile_reports' | 'cine_keyframes'
   file_name: string
   file_size: number
   file_kind: 'image' | 'file'
