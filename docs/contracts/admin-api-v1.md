@@ -49,6 +49,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-contract.ps1
 | logout | `POST /api/admin/v1/auth/logout` | bearer token |
 | current user bootstrap | `GET /api/admin/v1/users/me`, `GET /api/admin/v1/users/init` | bearer token |
 | read-only admin resources | permissions/auth-platforms/roles/users/profile/operation-logs/system-settings/upload-drivers/upload-rules/upload-settings/notifications list or init | bearer token |
+| user session read-only | `GET /api/admin/v1/user-sessions/page-init`, `GET /api/admin/v1/user-sessions`, `GET /api/admin/v1/user-sessions/stats` | bearer token; no RBAC button permission in this read-only slice |
 | current user notifications | `GET/PATCH/DELETE /api/admin/v1/notifications...` | bearer token; current-user ownership only, no RBAC button permission |
 | permission mutations | permissions create/update/status/delete | bearer token + `permission_permission_*` route permission |
 | role mutations | roles create/update/default/delete | bearer token + `permission_role_*` route permission |
@@ -526,6 +527,125 @@ interface UserExportResponse {
 ```
 
 规则：只接受显式勾选的正整数用户 id；service 去重后只导出未软删除用户。创建 `export_tasks` pending 记录后投递 `export:run:v1` 到 low queue；队列投递失败必须把任务标记 failed，不允许留下永久 pending。
+
+## User Sessions Read-only
+
+状态：partially implemented in Go backend, adapted in Vue frontend for `page-init` / `list` / `stats` only。`kick` 和 `batchKick` 仍走 legacy PHP，本阶段不迁 token 删除、当前会话保护和操作日志。
+
+用途：后台用户管理页的“登录会话/在线用户”只读列表、筛选字典和在线统计。
+
+Auth：
+
+```text
+Bearer token only.
+No extra route permission in this read-only slice.
+No OperationLog.
+```
+
+### Page Init
+
+`GET /api/admin/v1/user-sessions/page-init`
+
+Response `data.dict`：
+
+```ts
+interface UserSessionPageInitResponse {
+  dict: {
+    platformArr: Array<{ label: string; value: 'admin' | 'app' }>
+    statusArr: Array<{ label: string; value: 'active' | 'expired' | 'revoked' }>
+  }
+}
+```
+
+### List
+
+`GET /api/admin/v1/user-sessions`
+
+Query：
+
+```ts
+interface UserSessionListQuery {
+  current_page: number
+  page_size: number
+  username?: string
+  platform?: 'admin' | 'app'
+  status?: 'active' | 'expired' | 'revoked'
+}
+```
+
+Response `data`：
+
+```ts
+interface UserSessionListResponse {
+  list: Array<{
+    id: number
+    user_id: number
+    username: string
+    platform: string
+    platform_name: string
+    device_id: string
+    ip: string
+    ua: string
+    last_seen_at: string
+    created_at: string
+    expires_at: string
+    refresh_expires_at: string
+    revoked_at: string | null
+    status: 'active' | 'expired' | 'revoked'
+  }>
+  page: { page_size: number; current_page: number; total_page: number; total: number }
+}
+```
+
+Rules：
+
+```text
+source table: user_sessions LEFT JOIN users
+is_del = 2
+username filter: users.username LIKE '<username>%'
+platform filter: exact admin/app only when provided
+active: revoked_at IS NULL AND refresh_expires_at > now
+expired: revoked_at IS NULL AND refresh_expires_at <= now
+revoked: revoked_at IS NOT NULL
+sort: active -> expired -> revoked, then last_seen_at DESC
+page_size default: 20
+page_size max: enum.PageSizeMax
+current_page default: 1
+response must not include access_token_hash or refresh_token_hash
+```
+
+### Stats
+
+`GET /api/admin/v1/user-sessions/stats`
+
+Response `data`：
+
+```ts
+interface UserSessionStatsResponse {
+  total_active: number
+  platform_distribution: Record<string, number> & {
+    admin: number
+    app: number
+  }
+}
+```
+
+Rules：
+
+```text
+active stats use refresh_expires_at, not access expires_at.
+Always include admin and app keys even when count is zero.
+No cache in this Go slice; correctness beats stale legacy stats.
+```
+
+### Legacy Mutations
+
+```text
+POST /api/admin/UserSession/kick       remains legacy PHP
+POST /api/admin/UserSession/batchKick  remains legacy PHP
+```
+
+不要把 legacy POST action path 伪装成 Go REST。下一刀如果迁下线动作，必须单独处理 Redis token 删除、当前会话保护、按钮权限和 OperationLog。
 
 ## Export Tasks
 
