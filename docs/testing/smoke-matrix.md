@@ -23,6 +23,7 @@
 | slide captcha login | yes | via basic + full own login | `GET /api/admin/v1/auth/captcha`, `POST /api/admin/v1/auth/login` | login session | logout | 自动读取本次 challenge 的 Redis 答案，不绕过验证码 |
 | login log queue | yes | via basic | `users_login_log` recent count | yes | no cleanup | 证明 auth queue/worker 或同步兜底路径可用 |
 | users bootstrap | yes | via basic | `GET /api/admin/v1/users/me`, `GET /api/admin/v1/users/init` | no | n/a | 验证 router/buttonCodes；client version route 必须返回 `/system/clientVersion` + `system/clientVersion` |
+| AI goods/cine prune gate | yes | via basic | `GET /api/admin/v1/users/init` menu/router payload | no | n/a | users/init must not return `/ai/goods` or `/ai/cine`; retained AI entries `/ai/models` and `/ai/chat` must still be present for authorized roles. Migration intentionally does not clear Redis/operator-side caches. |
 | users management read | yes | via basic | `GET /api/admin/v1/users/page-init`, `GET /api/admin/v1/users` | no | n/a | 验证用户管理页 Go REST read path |
 | user session read-only | no | yes | `GET /api/admin/v1/user-sessions/page-init`, `GET /api/admin/v1/user-sessions?current_page=1&page_size=10`, `GET /api/admin/v1/user-sessions/stats` | no | n/a | 只验证会话页 Go REST 只读链路、分页/字典/统计 shape 和 token hash 不泄漏；kick/batchKick 仍是 legacy |
 | export tasks read | no | yes | `GET /api/admin/v1/export-tasks/status-count`, `GET /api/admin/v1/export-tasks?current_page=1&page_size=20` | no | n/a | full smoke 只探测当前用户导出任务状态统计和分页 shape；不触发真实导出、不等待 worker、不上传 COS |

@@ -1151,6 +1151,16 @@ DB cleanup is destructive and explicit: `admin_back_go/database/migrations/20260
 
 AI chat is a separate AI module and remains active under `admin_front_ts/src/views/Main/ai/chat`, `admin_front_ts/src/api/ai/chat.ts`, and the `ai_chat_images` upload folder.
 
+## AI Core Migration Preparation
+
+状态：prune implemented on 2026-05-08; core AI Go REST migration is still planned.
+
+AI goods/cine are removed product modules. Active AI Go contracts must not define `/api/admin/v1/ai-goods`, `/api/admin/v1/ai-cine`, `/api/admin/Goods`, or `/api/admin/Cine` adapters.
+
+DB cleanup is destructive for module-owned tables: `admin_back_go/database/migrations/20260508_remove_ai_goods_cine_modules.sql` drops `goods`, `cine_projects`, and `cine_assets`, removes `/ai/goods` and `/ai/cine` menu permissions/grants, and soft-deletes retired scene selectors and tools so AI conversation/run/message history stays readable.
+
+Retained AI core migration starts from models/tools/prompts/agents/knowledge/chat/runs after the prune migration is applied. Existing retained frontend clients under `admin_front_ts/src/api/ai/*` remain legacy-backed until each narrow Go slice has its own contract, implementation, tests, and smoke evidence.
+
 ## Notification Tasks
 
 状态：implemented in Go backend, adapted in Vue frontend。
@@ -3155,7 +3165,7 @@ Request:
 
 ```ts
 interface UploadTokenRequest {
-  folder: 'avatars' | 'images' | 'videos' | 'cover_images' | 'ai_chat_images' | 'releases' | 'tauri_updater' | 'exports' | 'goods_tts' | 'reconcile_reports' | 'cine_keyframes'
+  folder: 'avatars' | 'images' | 'videos' | 'cover_images' | 'ai_chat_images' | 'releases' | 'tauri_updater' | 'exports' | 'reconcile_reports'
   file_name: string
   file_size: number
   file_kind: 'image' | 'file'
