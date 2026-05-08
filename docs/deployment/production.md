@@ -176,4 +176,16 @@ PAYMENT_ATTEMPT_LOCK_TTL=30s
 powershell -ExecutionPolicy Bypass -File .\scripts\check-payment-certs.ps1 -DisallowLegacyRoot
 ```
 
-该 gate 只允许输出 path/bytes/sha256。不要把证书正文或 `pay_channel.app_private_key_enc` 导出到日志、CI artifact 或 git。
+该 gate 只允许输出 path/bytes/sha256。不要把证书正文、私钥明文或 `payment_channel_configs.private_key_enc` 导出到日志、CI artifact 或 git。
+
+生产运行事实源固定为新 payment 域：
+
+```text
+payment_channels
+payment_channel_configs.private_key_enc
+payment_channel_configs.app_cert_path
+payment_channel_configs.alipay_cert_path
+payment_channel_configs.alipay_root_cert_path
+```
+
+不要回退读取旧渠道表。

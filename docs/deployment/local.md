@@ -153,4 +153,15 @@ LEGACY_ADMIN_BACK_ROOT=
 powershell -ExecutionPolicy Bypass -File .\scripts\check-payment-certs.ps1 -DisallowLegacyRoot
 ```
 
-`runtime/cert/alipay/*.crt` 是部署文件，已被 `.gitignore` 的 `runtime/` 排除；私钥不落文件，仍只存在于 `pay_channel.app_private_key_enc`。
+`runtime/cert/alipay/*.crt` 是部署文件，已被 `.gitignore` 的 `runtime/` 排除；支付运行事实源是 `payment_channels` 与 `payment_channel_configs`。
+
+证书和私钥字段只读这些新 payment 域字段：
+
+```text
+payment_channel_configs.private_key_enc
+payment_channel_configs.app_cert_path
+payment_channel_configs.alipay_cert_path
+payment_channel_configs.alipay_root_cert_path
+```
+
+私钥不落文件，不再读取旧 pay channel 私钥字段。

@@ -343,7 +343,7 @@ Cancel：
 }
 ```
 
-当前 Go deterministic fallback provider 会生成 `收到：{content}`；只有显式接入真实 provider 并配置凭证后，才允许把 AI provider E2E 标成通过。
+当前 Go runtime 必须通过 `internal/platform/ai.Engine` 产生 AI 响应；生产环境没有启用的 app/engine 时必须显式失败。只有配置了真实 sidecar/provider 凭证并跑通 smoke 后，才允许把 AI provider E2E 标成通过。
 
 ## Implemented lifecycle
 

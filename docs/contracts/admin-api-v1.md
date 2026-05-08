@@ -63,9 +63,9 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-contract.ps1
 | upload token create | `POST /api/admin/v1/upload-tokens` | bearer token; current-user upload capability, no RBAC button permission |
 | notification task mutations | notification-tasks create/cancel/delete | bearer token + `system_notificationTask_*` route permission |
 | current profile update | `PUT /api/admin/v1/profile` | bearer token; operation log only, no user-manager button permission |
-| AI config management | ai-models/ai-tools/ai-prompts mutations | bearer token; currently auth-only for AI config write routes unless a DB permission seed exists; explicit OperationLog metadata is registered |
-| AI agent / knowledge management | ai-agents and ai-knowledge-bases read/write routes | bearer token; currently auth-only for this migration slice unless DB permission seed exists; explicit OperationLog metadata is registered for writes |
-| AI chat runtime current-user | ai-conversations/ai-messages/ai-chat current-user write routes and ai-runs read monitor | bearer token; current-user ownership where applicable, no RBAC button permission yet; explicit OperationLog metadata is registered for write/chat routes |
+| AI sidecar provider/app/map management | ai-engine-connections/ai-apps/ai-app-bindings/ai-knowledge-maps/ai-knowledge-documents/ai-tool-maps write routes | bearer token; mutation routes use explicit `ai_engine_*`, `ai_app_*`, `ai_knowledge_map_*`, `ai_tool_map_*` route permissions and OperationLog metadata; secret fields are write-only/masked |
+| AI sidecar runtime current-user | ai-conversations/ai-messages/ai-chat current-user write routes and ai-runs read monitor | bearer token; current-user ownership where applicable; chat requires an enabled local AI app + engine connection and must fail explicitly when not configured |
+| Retired AI legacy routes | legacy model/tool/prompt/agent/knowledge-base routes | not mounted in active Go runtime; only backup/rollback SQL, historical specs, or negative router tests may mention exact old route strings |
 
 ## Health / Readiness
 
@@ -1333,134 +1333,76 @@ DB cleanup is destructive and explicit: `admin_back_go/database/migrations/20260
 
 AI chat is a separate AI module and remains active under `admin_front_ts/src/views/Main/ai/chat`, `admin_front_ts/src/api/ai/chat.ts`, and the `ai_chat_images` upload folder.
 
-## AI Core Migration Preparation
+## AI Core Dify Sidecar Rebuild
 
-状态：prune implemented on 2026-05-08; AI config P1, AI agent/knowledge management, and AI chat/runtime/runs first slice are implemented on 2026-05-08. Advanced RAG/vector sidecar and real provider E2E remain separate credential-gated future work.
+状态：implemented in current working tree for the admin_go sidecar surface; live Dify provider E2E remains credential-gated.
 
-AI goods/cine are removed product modules. Active AI Go contracts must not define Go REST resources for removed goods/cine modules or carry old PHP goods/cine adapters.
+本节替代旧的 `AI Core P1 Config Migration`、`AI Agent / Knowledge Management` 和旧知识库契约。旧 `ai_models` / `ai_tools` / `ai_prompts` / `ai_agents` / `ai_knowledge_bases` 产品面已经不是 active runtime contract。Dify 是 AI engine sidecar，不是 admin 后台。
 
-DB cleanup is destructive for module-owned tables: `admin_back_go/database/migrations/20260508_remove_ai_goods_cine_modules.sql` drops `goods`, `cine_projects`, and `cine_assets`, removes `/ai/goods` and `/ai/cine` menu permissions/grants, and soft-deletes retired scene selectors and tools so AI conversation/run/message history stays readable.
-
-Retained AI core migration now has Go REST clients under `admin_front_ts/src/api/ai/*` for config, agents, knowledge, conversations, messages, runs, and chat runtime. Active Go contracts must not introduce old PHP `Ai*` action-path adapters.
-
-## AI Core P1 Config Migration
-
-状态：implemented on 2026-05-08.
-
-This P1 slice owns only AI config facts: `ai_models`, `ai_tools`, `ai_prompts`. Agents, knowledge, chat runtime, runs, and response envelopes are documented in the following AI sections. Vector RAG/sidecar orchestration is still not part of this slice.
-
-### Models
-
-`GET /api/admin/v1/ai-models/page-init`
-`GET /api/admin/v1/ai-models`
-`POST /api/admin/v1/ai-models`
-`PUT /api/admin/v1/ai-models/:id`
-`PATCH /api/admin/v1/ai-models/:id/status`
-`DELETE /api/admin/v1/ai-models/:id`
-
-Rules:
-
-- table: `ai_models`
-- driver dict comes from Go enum/dict
-- `api_key` is write-only, encrypted with secretbox into `api_key_enc`
-- responses never return `api_key` or `api_key_enc`
-- blank `api_key` on update leaves the stored secret unchanged
-- delete is single-id soft delete only
-
-### Tools
-
-`GET /api/admin/v1/ai-tools/page-init`
-`GET /api/admin/v1/ai-tools`
-`POST /api/admin/v1/ai-tools`
-`PUT /api/admin/v1/ai-tools/:id`
-`PATCH /api/admin/v1/ai-tools/:id/status`
-`DELETE /api/admin/v1/ai-tools/:id`
-`GET /api/admin/v1/ai-tools/agent-options?agent_id=<id>`
-`PUT /api/admin/v1/ai-tools/agent-bindings/:agent_id`
-
-Rules:
-
-- table: `ai_tools`
-- binding table: `ai_assistant_tools`
-- executor config and schema are JSON objects
-- retired `cine_generate_keyframe` is never returned as an active agent option
-- delete must reject active bindings
-
-### Prompts
-
-`GET /api/admin/v1/ai-prompts`
-`GET /api/admin/v1/ai-prompts/:id`
-`POST /api/admin/v1/ai-prompts`
-`PUT /api/admin/v1/ai-prompts/:id`
-`DELETE /api/admin/v1/ai-prompts/:id`
-`PATCH /api/admin/v1/ai-prompts/:id/favorite`
-`POST /api/admin/v1/ai-prompts/:id/use`
-
-Rules:
-
-- canonical table: `ai_prompts`
-- old `ai_prompt` table is retained for now and is not dropped in P1
-- tags and variables are always normalized to JSON arrays in responses
-- `use` only increments `use_count` and returns `content`
-- ownership is current-user scoped
-
-## AI Agent / Knowledge Management
-
-状态：implemented in Go backend, adapted in Vue frontend on 2026-05-08.
-
-用途：迁移 AI 智能体和知识库管理页，不复活已删除的 goods/cine 产品模块，不把旧 PHP AiAgents/AiKnowledgeBases action path 搬进 Go。
-
-### Agents
+Hard boundaries:
 
 ```text
-GET    /api/admin/v1/ai-agents/page-init
-GET    /api/admin/v1/ai-agents
-POST   /api/admin/v1/ai-agents
-PUT    /api/admin/v1/ai-agents/:id
-PATCH  /api/admin/v1/ai-agents/:id/status
-DELETE /api/admin/v1/ai-agents/:id
+Vue -> admin_go REST/WebSocket only; Vue never calls Dify directly.
+Dify API keys stay server-side, encrypted at write boundary and masked in DTOs.
+internal/module/* does not import Dify/OpenAI/Eino clients; engine calls go through internal/platform/ai.
+admin_go keeps users, RBAC, menus, operation logs, REST contracts, WebSocket envelopes, and local MySQL mirrors.
+Dify owns model/workflow/RAG/tool internals for this first production slice.
+```
+
+Retired active endpoints and menu routes are the old model/tool/prompt/agent/knowledge-base REST resources and their old model/agent/prompt Vue menu entries. Active contract docs intentionally do not keep the exact old strings; those exact strings may appear only in backup/rollback SQL, historical superpowers docs, or negative router tests that assert the routes are not installed.
+
+## AI Engine Connections
+
+状态：implemented.
+
+```text
+GET    /api/admin/v1/ai-engine-connections/page-init
+GET    /api/admin/v1/ai-engine-connections
+POST   /api/admin/v1/ai-engine-connections
+PUT    /api/admin/v1/ai-engine-connections/:id
+PATCH  /api/admin/v1/ai-engine-connections/:id/status
+POST   /api/admin/v1/ai-engine-connections/:id/test
+DELETE /api/admin/v1/ai-engine-connections/:id
 ```
 
 Rules:
 
-- table: `ai_agents`
-- binding tables: `ai_assistant_tools`, `ai_assistant_knowledge`
-- page-init returns mode/capability/status options plus active model/knowledge/scenes
-- retired goods/cine scenes are excluded from active selectors
-- write routes have explicit OperationLog metadata with module `ai_agent`
-- no RBAC button rule is bound until the DB permission seed exists; auth still applies
+- table: `ai_engine_connections`
+- `engine_type` first slice supports `dify`; future values such as `eino`, `direct`, or `ragflow` must still implement `internal/platform/ai.Engine`
+- `base_url`, `workspace_id`, health fields, timeout, and masked key facts are local admin_go control data
+- plaintext service API key is write-only and encrypted into `api_key_enc`; responses, OperationLog payloads, smoke output, and frontend storage must never expose plaintext or encrypted secret blobs
+- delete is soft delete and must reject active dependent apps/maps when that would create orphan runtime config
 
-### Knowledge bases
+## AI Apps
+
+状态：implemented.
 
 ```text
-GET    /api/admin/v1/ai-knowledge-bases/page-init
-GET    /api/admin/v1/ai-knowledge-bases
-GET    /api/admin/v1/ai-knowledge-bases/:id
-POST   /api/admin/v1/ai-knowledge-bases
-PUT    /api/admin/v1/ai-knowledge-bases/:id
-PATCH  /api/admin/v1/ai-knowledge-bases/:id/status
-DELETE /api/admin/v1/ai-knowledge-bases/:id
-GET    /api/admin/v1/ai-knowledge-bases/:id/documents
-POST   /api/admin/v1/ai-knowledge-bases/:id/documents
-GET    /api/admin/v1/ai-knowledge-bases/:id/documents/:document_id
-PUT    /api/admin/v1/ai-knowledge-bases/:id/documents/:document_id
-DELETE /api/admin/v1/ai-knowledge-bases/:id/documents/:document_id
-GET    /api/admin/v1/ai-knowledge-bases/:id/chunks
-POST   /api/admin/v1/ai-knowledge-bases/:id/documents/:document_id/reindex
-POST   /api/admin/v1/ai-knowledge-bases/:id/retrieval-test
+GET    /api/admin/v1/ai-apps/page-init
+GET    /api/admin/v1/ai-apps
+GET    /api/admin/v1/ai-apps/options
+GET    /api/admin/v1/ai-apps/:id
+POST   /api/admin/v1/ai-apps
+PUT    /api/admin/v1/ai-apps/:id
+PATCH  /api/admin/v1/ai-apps/:id/status
+POST   /api/admin/v1/ai-apps/:id/test
+DELETE /api/admin/v1/ai-apps/:id
+GET    /api/admin/v1/ai-apps/:id/bindings
+POST   /api/admin/v1/ai-apps/:id/bindings
+DELETE /api/admin/v1/ai-app-bindings/:id
 ```
 
 Rules:
 
-- tables: `ai_knowledge_bases`, `ai_knowledge_documents`, `ai_knowledge_chunks`
-- document ingest uses deterministic MySQL chunks for this admin slice
-- retrieval-test is a deterministic keyword/database probe, not vector search
-- write routes have explicit OperationLog metadata with module `ai_knowledge` / `ai_knowledge_document`
-- no vector DB, embedding sidecar, or external RAG provider is implied by this section
+- tables: `ai_apps`, `ai_app_bindings`
+- local app is the admin_go “智能体” entry; it maps to a Dify chat app/workflow through `engine_app_id` and encrypted `engine_app_api_key_enc`
+- `GET /ai-apps/options` feeds chat/runtime selectors and returns only enabled app id/name/code facts
+- app bindings connect an app to local scope such as user, role, scene, platform, or menu; Dify does not own admin_go RBAC
+- `agent_id` / `agent_name` may remain only as short-lived legacy JSON aliases that map to `app_id` / `app_name`; they must not drive new DB queries or new Vue state
 
 ## AI Conversations
 
-状态：implemented in Go backend, adapted in Vue frontend on 2026-05-08.
+状态：implemented.
 
 ```text
 GET    /api/admin/v1/ai-conversations
@@ -1474,14 +1416,14 @@ DELETE /api/admin/v1/ai-conversations/:id
 Rules:
 
 - table: `ai_conversations`
+- canonical relationship is `app_id -> ai_apps.id`; active code must not join `ai_agents`
 - current-user scoped: detail/update/status/delete reject conversations owned by another user
-- list supports `current_page`, `page_size`, `status`, `agent_id`, and `title`
-- status accepts `1` enabled and `2` disabled
-- write routes OperationLog: `ai_conversation/create|update|change_status|delete`
+- `engine_conversation_id` mirrors the sidecar conversation id when Dify returns one
+- list filters use app/status/title/page inputs; legacy `agent_id` filter is accepted only as alias to app during the transition
 
 ## AI Messages
 
-状态：implemented in Go backend, adapted in Vue frontend on 2026-05-08.
+状态：implemented.
 
 ```text
 GET    /api/admin/v1/ai-conversations/:id/messages
@@ -1494,14 +1436,34 @@ DELETE /api/admin/v1/ai-messages
 Rules:
 
 - table: `ai_messages`
-- message actions are current-user scoped through the owning conversation
-- edit content deletes later messages in the same conversation branch so stale assistant replies do not survive an edited user prompt
-- feedback writes into message metadata
-- write routes OperationLog: `ai_message/edit_content|feedback|delete|delete_batch`
+- message ownership is checked through the owning conversation and current user
+- `engine_message_id` mirrors the sidecar message id
+- editing a user message deletes later branch messages so stale assistant replies do not survive a changed prompt
+- feedback writes local metadata and must not call Dify directly from the Vue page
+
+## AI Chat Runtime
+
+状态：implemented for sidecar boundary; disabled-baseline smoke is required; live Dify E2E is optional and credential-gated.
+
+```text
+POST /api/admin/v1/ai-chat/runs
+GET  /api/admin/v1/ai-chat/runs/:run_id/events
+POST /api/admin/v1/ai-chat/messages
+POST /api/admin/v1/ai-chat/runs/:run_id/cancel
+```
+
+Runtime rules:
+
+- `POST /ai-chat/runs` creates or reuses the local conversation, stores the user message, creates `ai_runs`, and executes through `internal/platform/ai.Engine`
+- with no enabled AI app/engine connection, the API returns explicit business failure such as `code=100` and `请先配置 AI 应用和 Dify 连接`; production must not fake a successful provider answer
+- with Dify credentials, `DifyEngine` maps local input to Dify Service API (`query`, `inputs`, `user`, `response_mode`, `conversation_id`, files as needed) and mirrors `task_id`, `message_id`, `conversation_id`, answer deltas, and usage metadata
+- `GET /events` is REST catch-up/replay from `ai_run_events`; it is not SSE and must not return `text/event-stream`
+- browser realtime remains admin_go WebSocket `ai.response.start.v1`, `ai.response.delta.v1`, `ai.response.completed.v1`, `ai.response.failed.v1`, and `ai.response.cancel.v1`; Dify SSE is never exposed directly to Vue
+- cancel first marks local cancel request, then calls the engine stop boundary; a failed Dify stop call must be visible in run error/raw status, not silently reported as success
 
 ## AI Runs Monitor
 
-状态：implemented in Go backend, adapted in Vue frontend on 2026-05-08.
+状态：implemented.
 
 ```text
 GET /api/admin/v1/ai-runs/page-init
@@ -1515,35 +1477,63 @@ GET /api/admin/v1/ai-runs/stats/by-user
 
 Rules:
 
-- read-only monitor over `ai_runs` and `ai_run_steps`
-- run status: `1 running`, `2 success`, `3 fail`, `4 canceled`
+- tables: `ai_runs`, `ai_run_events`, `ai_usage_daily`
+- monitor source is app/engine centric: `ai_runs.app_id`, `ai_runs.engine_connection_id`, `ai_apps.name`, `ai_engine_connections.name/type`, and `ai_run_events.seq/event_type/payload_json`
+- status is string-based runtime state (`pending`, `running`, `success`, `failed`, `canceled`, `timeout`), not old tinyint magic
 - stats are backend aggregates; frontend must not compute success rate from a partial page
-- these read routes are bearer-token protected but have no RBAC button rule or OperationLog metadata in this slice
+- these read routes are bearer-token protected and must not expose prompt secrets, encrypted API keys, or raw sidecar credentials
 
-## AI Chat Runtime
+## AI Knowledge Maps
 
-状态：implemented first Go slice on 2026-05-08.
+状态：implemented first sidecar mapping slice.
 
 ```text
-POST /api/admin/v1/ai-chat/runs
-GET  /api/admin/v1/ai-chat/runs/:run_id/events
-POST /api/admin/v1/ai-chat/messages
-POST /api/admin/v1/ai-chat/runs/:run_id/cancel
+GET    /api/admin/v1/ai-knowledge-maps/page-init
+GET    /api/admin/v1/ai-knowledge-maps
+GET    /api/admin/v1/ai-knowledge-maps/:id
+POST   /api/admin/v1/ai-knowledge-maps
+PUT    /api/admin/v1/ai-knowledge-maps/:id
+PATCH  /api/admin/v1/ai-knowledge-maps/:id/status
+POST   /api/admin/v1/ai-knowledge-maps/:id/sync
+DELETE /api/admin/v1/ai-knowledge-maps/:id
+GET    /api/admin/v1/ai-knowledge-maps/:id/documents
+POST   /api/admin/v1/ai-knowledge-maps/:id/documents
+PATCH  /api/admin/v1/ai-knowledge-documents/:id/status
+POST   /api/admin/v1/ai-knowledge-documents/:id/refresh-status
+DELETE /api/admin/v1/ai-knowledge-documents/:id
 ```
 
-Runtime rules:
+Rules:
 
-- `POST /ai-chat/runs` creates the conversation/user message/run record, enqueues `ai:run-execute:v1`, and publishes `ai.response.start.v1` best-effort through `platform/realtime.Publisher`
-- `POST /ai-chat/messages` is an alias for sending a message into the runtime contract
-- `GET /events` is REST event replay/reconstruction for missed messages; it is not SSE and does not return a server-sent stream MIME type
-- WebSocket acceleration uses versioned `ai.response.*.v1` envelopes documented in `docs/contracts/admin-realtime-v1.md`
-- the old unversioned AI run event name is removed from active frontend runtime
-- the current provider is deterministic fallback (`收到：{content}` with `go-deterministic-provider`) unless a real provider is explicitly wired and credential-gated
-- this section does not claim real LLM provider E2E, vector search, tool execution, or Python sidecar completion
+- tables: `ai_knowledge_maps`, `ai_knowledge_documents`
+- local map points to a Dify dataset through `engine_dataset_id`; document rows mirror `engine_document_id`, batch id, and indexing status
+- sync/create document calls go through `internal/platform/ai.Engine.SyncKnowledge`, not through Vue and not through module-level Dify imports
+- first slice is mapping/status sync, not a full clone of the Dify dataset console
+- indexing status refresh is explicit; do not claim vector/RAG quality from default smoke
+
+## AI Tool Maps
+
+状态：implemented first sidecar mapping slice.
+
+```text
+GET    /api/admin/v1/ai-tool-maps/page-init
+GET    /api/admin/v1/ai-tool-maps
+POST   /api/admin/v1/ai-tool-maps
+PUT    /api/admin/v1/ai-tool-maps/:id
+PATCH  /api/admin/v1/ai-tool-maps/:id/status
+DELETE /api/admin/v1/ai-tool-maps/:id
+```
+
+Rules:
+
+- table: `ai_tool_maps`
+- local tool map records admin_go name/code/type/visibility/risk plus Dify workflow/tool/node reference fields such as `engine_tool_id`
+- actual tool execution is owned by Dify workflow in the first slice
+- Dify must not call arbitrary internal admin APIs; any future internal tool gateway needs an explicit whitelist, permission check, audit log, and separate spec
 
 ## AI Run Timeout Worker
 
-状态：implemented in Go worker registry on 2026-05-08.
+状态：implemented in Go worker registry.
 
 ```text
 cron_task.name=ai_run_timeout
@@ -1553,9 +1543,9 @@ queue handler=aichat.TimeoutRuns
 
 Rules:
 
-- cron row remains DB-owned through System Cron Tasks, but executable truth comes from Go registry
-- worker marks stale `run_status=1` rows as failed with timeout error
-- default smoke checks the cron registry/list shape; it does not create long-running AI runs just to time them out
+- cron row remains DB-owned through System Cron Tasks, but executable truth comes from the Go registry
+- worker marks stale running/pending rows as `timeout` or failed with a timeout reason according to the current run status contract
+- default smoke checks registry/list shape; it does not create a long-running AI run just to time it out
 
 ## Notification Tasks
 
