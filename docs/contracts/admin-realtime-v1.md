@@ -1,6 +1,6 @@
 # Admin Realtime v1 Contract
 
-状态：partially implemented。当前已实现最小 admin WebSocket：认证 upgrade、本机 connection manager、bounded send queue、read/write pump、heartbeat ping/pong、`realtime.connected.v1`、`realtime.ping.v1` / `realtime.pong.v1`、`realtime.subscribe.v1` topic 白名单骨架、local/no-op Publisher 边界、typed config 开关、断开清理。Vue 前端已从旧 PHP WebSocket 切到 Go WebSocket baseline：URL 指向 `/api/admin/v1/realtime/ws`，移除 `/api/admin/WebSocket/bind`，按 versioned envelope 收发。Redis Pub/Sub fan-out 和 `notification.created.v1` 通知任务推送已实现最小闭环；AI streaming 仍是 planned。
+状态：partially implemented。当前已实现最小 admin WebSocket：认证 upgrade、本机 connection manager、bounded send queue、read/write pump、heartbeat ping/pong、`realtime.connected.v1`、`realtime.ping.v1` / `realtime.pong.v1`、`realtime.subscribe.v1` topic 白名单骨架、local/no-op/redis Publisher 边界、typed config 开关、断开清理。Vue 前端已从旧 PHP WebSocket 切到 Go WebSocket baseline：URL 指向 `/api/admin/v1/realtime/ws`，移除 `/api/admin/WebSocket/bind`，按 versioned envelope 收发。Redis Pub/Sub fan-out、`notification.created.v1` 通知任务推送、以及 AI chat runtime 的 `ai.response.*.v1` envelope first slice 已实现；真实 LLM provider E2E 仍是可选、凭证门控能力。
 
 ## Protocol
 
@@ -255,66 +255,95 @@ task.platform=all/admin 时投递 admin WebSocket；task.platform=app 暂不投�
 
 The active realtime contract no longer defines admin chat message/read/contact/group events because the admin chat module, REST routes, frontend page/store, menu permission, and `chat_*` tables are removed.
 
-AI streaming remains a separate planned realtime area below and must not reuse the removed admin chat contract.
+AI response events are a separate AI runtime area below and must not reuse the removed admin chat contract.
 
 ## AI streaming events
 
-状态：planned。
+状态：implemented first version for AI chat runtime on 2026-05-08。
 
-AI 回复不走 SSE，统一走 WebSocket：
+AI 回复不走 SSE 或 browser event-source runtime。Go runtime 用两层机制：
+
+```text
+WebSocket acceleration: ai.response.*.v1 envelope via platform/realtime.Publisher
+REST catch-up: GET /api/admin/v1/ai-chat/runs/:run_id/events
+```
+
+旧 unversioned AI run event name 已从 active frontend runtime 删除。REST events 是从 run/message 状态重建，不是 Redis Stream，也不是持久 event 表。
+
+Start：
 
 ```json
 {
   "type": "ai.response.start.v1",
   "request_id": "01HX...",
   "data": {
-    "conversation_id": 10
+    "conversation_id": 10,
+    "run_id": 22,
+    "request_id": "run-request-id",
+    "user_message_id": 101,
+    "agent_id": 3,
+    "is_new": true
   }
 }
 ```
+
+Delta：
 
 ```json
 {
   "type": "ai.response.delta.v1",
   "request_id": "01HX...",
   "data": {
-    "text": "你好"
+    "run_id": 22,
+    "delta": "你好"
   }
 }
 ```
+
+Completed：
 
 ```json
 {
   "type": "ai.response.completed.v1",
   "request_id": "01HX...",
   "data": {
+    "conversation_id": 10,
+    "run_id": 22,
+    "user_message_id": 101,
+    "assistant_message_id": 102,
     "usage": {}
   }
 }
 ```
+
+Failed：
 
 ```json
 {
   "type": "ai.response.failed.v1",
   "request_id": "01HX...",
   "data": {
+    "run_id": 22,
     "code": 100,
     "msg": "模型调用失败"
   }
 }
 ```
 
-取消：
+Cancel：
 
 ```json
 {
   "type": "ai.response.cancel.v1",
   "request_id": "01HX...",
   "data": {
-    "response_id": "resp_xxx"
+    "run_id": 22,
+    "status": "canceled"
   }
 }
 ```
+
+当前 Go deterministic fallback provider 会生成 `收到：{content}`；只有显式接入真实 provider 并配置凭证后，才允许把 AI provider E2E 标成通过。
 
 ## Implemented lifecycle
 
@@ -382,7 +411,7 @@ server shutdown: stop accepting upgrades, send close notice, drain within timeou
 
 ```text
 GET /api/admin/v1/realtime/sse
-text/event-stream
+server-sent stream MIME
 access token query string, such as /realtime/ws?access_token=...
 unversioned event type
 client-defined arbitrary topic or subscribing another user/session

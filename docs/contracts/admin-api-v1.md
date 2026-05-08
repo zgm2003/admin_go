@@ -49,7 +49,9 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-contract.ps1
 | logout | `POST /api/admin/v1/auth/logout` | bearer token |
 | current user bootstrap | `GET /api/admin/v1/users/me`, `GET /api/admin/v1/users/init` | bearer token |
 | read-only admin resources | permissions/auth-platforms/roles/users/profile/operation-logs/system-settings/upload-drivers/upload-rules/upload-settings/notifications list or init | bearer token |
-| user session read-only | `GET /api/admin/v1/user-sessions/page-init`, `GET /api/admin/v1/user-sessions`, `GET /api/admin/v1/user-sessions/stats` | bearer token; no RBAC button permission in this read-only slice |
+| user quick-entry current-user write | `PUT /api/admin/v1/users/me/quick-entries` | bearer token; current user only, no user-manager button permission |
+| user login logs read | `GET /api/admin/v1/users/login-logs/page-init`, `GET /api/admin/v1/users/login-logs` | bearer token |
+| user sessions read/revoke | `GET /api/admin/v1/user-sessions/page-init`, `GET /api/admin/v1/user-sessions`, `GET /api/admin/v1/user-sessions/stats`, `PATCH /api/admin/v1/user-sessions/:id/revoke`, `PATCH /api/admin/v1/user-sessions/revoke` | read routes: bearer token; revoke routes: bearer token + `user_userManager_kick` |
 | current user notifications | `GET/PATCH/DELETE /api/admin/v1/notifications...` | bearer token; current-user ownership only, no RBAC button permission |
 | permission mutations | permissions create/update/status/delete | bearer token + `permission_permission_*` route permission |
 | role mutations | roles create/update/default/delete | bearer token + `permission_role_*` route permission |
@@ -61,6 +63,9 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-contract.ps1
 | upload token create | `POST /api/admin/v1/upload-tokens` | bearer token; current-user upload capability, no RBAC button permission |
 | notification task mutations | notification-tasks create/cancel/delete | bearer token + `system_notificationTask_*` route permission |
 | current profile update | `PUT /api/admin/v1/profile` | bearer token; operation log only, no user-manager button permission |
+| AI config management | ai-models/ai-tools/ai-prompts mutations | bearer token; currently auth-only for AI config write routes unless a DB permission seed exists; explicit OperationLog metadata is registered |
+| AI agent / knowledge management | ai-agents and ai-knowledge-bases read/write routes | bearer token; currently auth-only for this migration slice unless DB permission seed exists; explicit OperationLog metadata is registered for writes |
+| AI chat runtime current-user | ai-conversations/ai-messages/ai-chat current-user write routes and ai-runs read monitor | bearer token; current-user ownership where applicable, no RBAC button permission yet; explicit OperationLog metadata is registered for write/chat routes |
 
 ## Health / Readiness
 
@@ -528,18 +533,137 @@ interface UserExportResponse {
 
 规则：只接受显式勾选的正整数用户 id；service 去重后只导出未软删除用户。创建 `export_tasks` pending 记录后投递 `export:run:v1` 到 low queue；队列投递失败必须把任务标记 failed，不允许留下永久 pending。
 
-## User Sessions Read-only
+## Current User Quick Entry
 
-状态：implemented in Go backend, adapted in Vue frontend for `page-init` / `list` / `stats` only。`kick` 和 `batchKick` 仍走 legacy PHP，本 slice 不迁 token 删除、当前会话保护和操作日志。
+状态：implemented in Go backend, adapted in Vue frontend。
 
-用途：后台用户管理页的“登录会话/在线用户”只读列表、筛选字典和在线统计。
+用途：首页“快捷入口”保存当前登录用户选择的后台页面权限。读取仍通过 `GET /api/admin/v1/users/init` 的稳定字段 `quick_entry` 返回。
+
+```text
+PUT /api/admin/v1/users/me/quick-entries
+```
+
+Request：
+
+```ts
+interface CurrentUserQuickEntrySaveRequest {
+  permission_ids: number[]
+}
+```
+
+Response `data`：
+
+```ts
+interface CurrentUserQuickEntrySaveResponse {
+  quick_entry: Array<{
+    id: number
+    permission_id: number
+    sort: number
+  }>
+}
+```
+
+Rules：
+
+```text
+Auth: bearer token only, current user owns the write.
+No user-manager RBAC button permission; this is not editing another user.
+permission_ids must be positive integers; service deduplicates while preserving order.
+max count: 6.
+accepted permission rows: permissions.platform=admin, type=PAGE(2), status=1, is_del=2.
+write is transactional: soft-delete current user's old users_quick_entry rows, insert the new ordered rows, then return the current active rows.
+response field name remains quick_entry; no quickEntry alias.
+```
+
+## User Login Logs
+
+状态：implemented in Go backend, adapted in Vue frontend。
+
+用途：后台用户登录日志页面的字典初始化和分页查询。
+
+### Page Init
+
+`GET /api/admin/v1/users/login-logs/page-init`
+
+Response `data.dict`：
+
+```ts
+interface UserLoginLogPageInitResponse {
+  dict: {
+    platformArr: Array<{ label: string; value: 'admin' | 'app' | string }>
+    login_type_arr: Array<{ label: string; value: 'email' | 'phone' | 'password' }>
+  }
+}
+```
+
+### List
+
+`GET /api/admin/v1/users/login-logs`
+
+Query：
+
+```ts
+interface UserLoginLogListQuery {
+  current_page: number
+  page_size: number
+  user_id?: number
+  login_account?: string
+  login_type?: 'email' | 'phone' | 'password'
+  ip?: string
+  platform?: 'admin' | 'app'
+  is_success?: 1 | 2
+  date_start?: string // YYYY-MM-DD
+  date_end?: string   // YYYY-MM-DD
+}
+```
+
+Response `data`：
+
+```ts
+interface UserLoginLogListResponse {
+  list: Array<{
+    id: number
+    user_id: number | null
+    user_name: string
+    login_account: string
+    login_type: string
+    login_type_name: string
+    platform: string
+    platform_name: string
+    ip: string
+    ua: string
+    is_success: 1 | 2
+    reason: string
+    created_at: string
+  }>
+  page: { page_size: number; current_page: number; total_page: number; total: number }
+}
+```
+
+Rules：
+
+```text
+source table: users_login_log AS l LEFT JOIN users AS u ON u.id = l.user_id AND u.is_del = 2.
+l.is_del = 2.
+login_account filter: prefix LIKE '<login_account>%'.
+ip filter: prefix LIKE '<ip>%'.
+date_start expands to 00:00:00; date_end expands to 23:59:59.
+missing/deleted user returns user_name="" rather than hiding the log row.
+page_size default: 20; max: enum.PageSizeMax.
+```
+
+## User Sessions
+
+状态：implemented in Go backend, adapted in Vue frontend for `page-init` / `list` / `stats` / `revoke` / `batch revoke`。
+
+用途：后台用户管理页的“登录会话/在线用户”列表、筛选字典、在线统计和踢下线。
 
 Auth：
 
 ```text
-Bearer token only.
-No extra route permission in this read-only slice.
-No OperationLog.
+Read routes: bearer token only.
+Revoke routes: bearer token + user_userManager_kick.
+OperationLog: revoke routes only.
 ```
 
 ### Page Init
@@ -638,14 +762,72 @@ Always include admin and app keys even when count is zero.
 No cache in this Go slice; correctness beats stale legacy stats.
 ```
 
-### Legacy Mutations
+### Revoke One
 
 ```text
-POST /api/admin/UserSession/kick       remains legacy PHP
-POST /api/admin/UserSession/batchKick  remains legacy PHP
+PATCH /api/admin/v1/user-sessions/:id/revoke
+Permission: user_userManager_kick
+OperationLog: module=user_session action=revoke title=踢下线用户会话
 ```
 
-不要把 legacy POST action path 伪装成 Go REST。下一刀如果迁下线动作，必须单独处理 Redis token 删除、当前会话保护、按钮权限和 OperationLog。
+Response `data`：
+
+```ts
+interface UserSessionRevokeResponse {
+  id: number
+  revoked: boolean
+}
+```
+
+Rules：
+
+```text
+id must be a positive integer.
+current AuthIdentity.SessionID cannot revoke itself; return code=100.
+missing session returns 404.
+already revoked session is idempotent: { id, revoked: false }.
+new revoke sets user_sessions.revoked_at and clears Redis access token cache.
+single-session pointer TOKEN_REDIS_PREFIX + cur_sess:<platform>:<user_id> is deleted only when its value equals this session id.
+response must never include access_token_hash or refresh_token_hash.
+```
+
+### Batch Revoke
+
+```text
+PATCH /api/admin/v1/user-sessions/revoke
+Permission: user_userManager_kick
+OperationLog: module=user_session action=revoke_batch title=批量踢下线用户会话
+```
+
+Request：
+
+```ts
+interface UserSessionBatchRevokeRequest {
+  ids: number[]
+}
+```
+
+Response `data`：
+
+```ts
+interface UserSessionBatchRevokeResponse {
+  count: number
+  skipped_current: number
+  skipped_already_revoked: number
+}
+```
+
+Rules：
+
+```text
+ids are positive integers; service deduplicates.
+max count: 100.
+current AuthIdentity.SessionID is skipped, not revoked.
+already revoked sessions are skipped.
+only newly revoked sessions have Redis token/pointer cleanup attempted.
+```
+
+Legacy PHP `UserSession/kick` and `UserSession/batchKick` are no longer active frontend contracts. Do not reintroduce legacy POST action paths under Go REST.
 
 ## Export Tasks
 
@@ -1153,19 +1335,19 @@ AI chat is a separate AI module and remains active under `admin_front_ts/src/vie
 
 ## AI Core Migration Preparation
 
-状态：prune implemented on 2026-05-08; AI config P1 is implemented on 2026-05-08; agents/knowledge/chat/runs/streaming/RAG remain planned.
+状态：prune implemented on 2026-05-08; AI config P1, AI agent/knowledge management, and AI chat/runtime/runs first slice are implemented on 2026-05-08. Advanced RAG/vector sidecar and real provider E2E remain separate credential-gated future work.
 
-AI goods/cine are removed product modules. Active AI Go contracts must not define `/api/admin/v1/ai-goods`, `/api/admin/v1/ai-cine`, `/api/admin/Goods`, or `/api/admin/Cine` adapters.
+AI goods/cine are removed product modules. Active AI Go contracts must not define Go REST resources for removed goods/cine modules or carry old PHP goods/cine adapters.
 
 DB cleanup is destructive for module-owned tables: `admin_back_go/database/migrations/20260508_remove_ai_goods_cine_modules.sql` drops `goods`, `cine_projects`, and `cine_assets`, removes `/ai/goods` and `/ai/cine` menu permissions/grants, and soft-deletes retired scene selectors and tools so AI conversation/run/message history stays readable.
 
-Retained AI core migration continues with agents/knowledge/chat/runs/streaming/RAG after the prune migration is applied. Existing retained frontend clients under `admin_front_ts/src/api/ai/*` remain legacy-backed only for the still-planned runtime slices.
+Retained AI core migration now has Go REST clients under `admin_front_ts/src/api/ai/*` for config, agents, knowledge, conversations, messages, runs, and chat runtime. Active Go contracts must not introduce old PHP `Ai*` action-path adapters.
 
 ## AI Core P1 Config Migration
 
 状态：implemented on 2026-05-08.
 
-This P1 slice owns only AI config facts: `ai_models`, `ai_tools`, `ai_prompts`. It does not own agents, knowledge, chat runtime, runs, streaming, or RAG.
+This P1 slice owns only AI config facts: `ai_models`, `ai_tools`, `ai_prompts`. Agents, knowledge, chat runtime, runs, and response envelopes are documented in the following AI sections. Vector RAG/sidecar orchestration is still not part of this slice.
 
 ### Models
 
@@ -1221,6 +1403,159 @@ Rules:
 - tags and variables are always normalized to JSON arrays in responses
 - `use` only increments `use_count` and returns `content`
 - ownership is current-user scoped
+
+## AI Agent / Knowledge Management
+
+状态：implemented in Go backend, adapted in Vue frontend on 2026-05-08.
+
+用途：迁移 AI 智能体和知识库管理页，不复活已删除的 goods/cine 产品模块，不把旧 PHP AiAgents/AiKnowledgeBases action path 搬进 Go。
+
+### Agents
+
+```text
+GET    /api/admin/v1/ai-agents/page-init
+GET    /api/admin/v1/ai-agents
+POST   /api/admin/v1/ai-agents
+PUT    /api/admin/v1/ai-agents/:id
+PATCH  /api/admin/v1/ai-agents/:id/status
+DELETE /api/admin/v1/ai-agents/:id
+```
+
+Rules:
+
+- table: `ai_agents`
+- binding tables: `ai_assistant_tools`, `ai_assistant_knowledge`
+- page-init returns mode/capability/status options plus active model/knowledge/scenes
+- retired goods/cine scenes are excluded from active selectors
+- write routes have explicit OperationLog metadata with module `ai_agent`
+- no RBAC button rule is bound until the DB permission seed exists; auth still applies
+
+### Knowledge bases
+
+```text
+GET    /api/admin/v1/ai-knowledge-bases/page-init
+GET    /api/admin/v1/ai-knowledge-bases
+GET    /api/admin/v1/ai-knowledge-bases/:id
+POST   /api/admin/v1/ai-knowledge-bases
+PUT    /api/admin/v1/ai-knowledge-bases/:id
+PATCH  /api/admin/v1/ai-knowledge-bases/:id/status
+DELETE /api/admin/v1/ai-knowledge-bases/:id
+GET    /api/admin/v1/ai-knowledge-bases/:id/documents
+POST   /api/admin/v1/ai-knowledge-bases/:id/documents
+GET    /api/admin/v1/ai-knowledge-bases/:id/documents/:document_id
+PUT    /api/admin/v1/ai-knowledge-bases/:id/documents/:document_id
+DELETE /api/admin/v1/ai-knowledge-bases/:id/documents/:document_id
+GET    /api/admin/v1/ai-knowledge-bases/:id/chunks
+POST   /api/admin/v1/ai-knowledge-bases/:id/documents/:document_id/reindex
+POST   /api/admin/v1/ai-knowledge-bases/:id/retrieval-test
+```
+
+Rules:
+
+- tables: `ai_knowledge_bases`, `ai_knowledge_documents`, `ai_knowledge_chunks`
+- document ingest uses deterministic MySQL chunks for this admin slice
+- retrieval-test is a deterministic keyword/database probe, not vector search
+- write routes have explicit OperationLog metadata with module `ai_knowledge` / `ai_knowledge_document`
+- no vector DB, embedding sidecar, or external RAG provider is implied by this section
+
+## AI Conversations
+
+状态：implemented in Go backend, adapted in Vue frontend on 2026-05-08.
+
+```text
+GET    /api/admin/v1/ai-conversations
+GET    /api/admin/v1/ai-conversations/:id
+POST   /api/admin/v1/ai-conversations
+PUT    /api/admin/v1/ai-conversations/:id
+PATCH  /api/admin/v1/ai-conversations/:id/status
+DELETE /api/admin/v1/ai-conversations/:id
+```
+
+Rules:
+
+- table: `ai_conversations`
+- current-user scoped: detail/update/status/delete reject conversations owned by another user
+- list supports `current_page`, `page_size`, `status`, `agent_id`, and `title`
+- status accepts `1` enabled and `2` disabled
+- write routes OperationLog: `ai_conversation/create|update|change_status|delete`
+
+## AI Messages
+
+状态：implemented in Go backend, adapted in Vue frontend on 2026-05-08.
+
+```text
+GET    /api/admin/v1/ai-conversations/:id/messages
+PATCH  /api/admin/v1/ai-messages/:id/content
+PATCH  /api/admin/v1/ai-messages/:id/feedback
+DELETE /api/admin/v1/ai-messages/:id
+DELETE /api/admin/v1/ai-messages
+```
+
+Rules:
+
+- table: `ai_messages`
+- message actions are current-user scoped through the owning conversation
+- edit content deletes later messages in the same conversation branch so stale assistant replies do not survive an edited user prompt
+- feedback writes into message metadata
+- write routes OperationLog: `ai_message/edit_content|feedback|delete|delete_batch`
+
+## AI Runs Monitor
+
+状态：implemented in Go backend, adapted in Vue frontend on 2026-05-08.
+
+```text
+GET /api/admin/v1/ai-runs/page-init
+GET /api/admin/v1/ai-runs
+GET /api/admin/v1/ai-runs/:id
+GET /api/admin/v1/ai-runs/stats
+GET /api/admin/v1/ai-runs/stats/by-date
+GET /api/admin/v1/ai-runs/stats/by-agent
+GET /api/admin/v1/ai-runs/stats/by-user
+```
+
+Rules:
+
+- read-only monitor over `ai_runs` and `ai_run_steps`
+- run status: `1 running`, `2 success`, `3 fail`, `4 canceled`
+- stats are backend aggregates; frontend must not compute success rate from a partial page
+- these read routes are bearer-token protected but have no RBAC button rule or OperationLog metadata in this slice
+
+## AI Chat Runtime
+
+状态：implemented first Go slice on 2026-05-08.
+
+```text
+POST /api/admin/v1/ai-chat/runs
+GET  /api/admin/v1/ai-chat/runs/:run_id/events
+POST /api/admin/v1/ai-chat/messages
+POST /api/admin/v1/ai-chat/runs/:run_id/cancel
+```
+
+Runtime rules:
+
+- `POST /ai-chat/runs` creates the conversation/user message/run record, enqueues `ai:run-execute:v1`, and publishes `ai.response.start.v1` best-effort through `platform/realtime.Publisher`
+- `POST /ai-chat/messages` is an alias for sending a message into the runtime contract
+- `GET /events` is REST event replay/reconstruction for missed messages; it is not SSE and does not return a server-sent stream MIME type
+- WebSocket acceleration uses versioned `ai.response.*.v1` envelopes documented in `docs/contracts/admin-realtime-v1.md`
+- the old unversioned AI run event name is removed from active frontend runtime
+- the current provider is deterministic fallback (`收到：{content}` with `go-deterministic-provider`) unless a real provider is explicitly wired and credential-gated
+- this section does not claim real LLM provider E2E, vector search, tool execution, or Python sidecar completion
+
+## AI Run Timeout Worker
+
+状态：implemented in Go worker registry on 2026-05-08.
+
+```text
+cron_task.name=ai_run_timeout
+registry task type=ai:run-timeout:v1
+queue handler=aichat.TimeoutRuns
+```
+
+Rules:
+
+- cron row remains DB-owned through System Cron Tasks, but executable truth comes from Go registry
+- worker marks stale `run_status=1` rows as failed with timeout error
+- default smoke checks the cron registry/list shape; it does not create long-running AI runs just to time them out
 
 ## Notification Tasks
 
@@ -3628,6 +3963,9 @@ Asynq task type: pay:reconcile-execute:v1
 
 name: pay_fulfillment_retry
 Asynq task type: pay:fulfillment-retry:v1
+
+name: ai_run_timeout
+Asynq task type: ai:run-timeout:v1
 ```
 
 未迁 Go 的 legacy handler 不注册假任务；列表返回 `registry_status=missing`。禁用行返回 `disabled`，表达式错误返回 `invalid_cron`。WeChat payment runtime is not active: current DB has no active `channel=1` row. Go does not implement `/api/pay/notify/wechat`. If a WeChat channel is later enabled, write a dedicated WeChat runtime spec before coding. Refund runtime is retired/pending-decision: `pay_refunds` count is 0 and `pay_refund_sync` is_del=1. Do not register `pay_refund_sync` until a refund contract exists.
@@ -3645,6 +3983,9 @@ pay_reconcile_daily.handler = pay:reconcile-daily:v1
 pay_reconcile_execute.handler = pay:reconcile-execute:v1
 database/migrations/20260507_pay_fulfillment_retry_go_handler.sql
 pay_fulfillment_retry.handler = pay:fulfillment-retry:v1
+
+AI runtime migration (2026-05-08)
+ai_run_timeout.handler = ai:run-timeout:v1
 ```
 
 ### Routes
