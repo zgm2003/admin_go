@@ -1153,13 +1153,74 @@ AI chat is a separate AI module and remains active under `admin_front_ts/src/vie
 
 ## AI Core Migration Preparation
 
-状态：prune implemented on 2026-05-08; core AI Go REST migration is still planned.
+状态：prune implemented on 2026-05-08; AI config P1 is implemented on 2026-05-08; agents/knowledge/chat/runs/streaming/RAG remain planned.
 
 AI goods/cine are removed product modules. Active AI Go contracts must not define `/api/admin/v1/ai-goods`, `/api/admin/v1/ai-cine`, `/api/admin/Goods`, or `/api/admin/Cine` adapters.
 
 DB cleanup is destructive for module-owned tables: `admin_back_go/database/migrations/20260508_remove_ai_goods_cine_modules.sql` drops `goods`, `cine_projects`, and `cine_assets`, removes `/ai/goods` and `/ai/cine` menu permissions/grants, and soft-deletes retired scene selectors and tools so AI conversation/run/message history stays readable.
 
-Retained AI core migration starts from models/tools/prompts/agents/knowledge/chat/runs after the prune migration is applied. Existing retained frontend clients under `admin_front_ts/src/api/ai/*` remain legacy-backed until each narrow Go slice has its own contract, implementation, tests, and smoke evidence.
+Retained AI core migration continues with agents/knowledge/chat/runs/streaming/RAG after the prune migration is applied. Existing retained frontend clients under `admin_front_ts/src/api/ai/*` remain legacy-backed only for the still-planned runtime slices.
+
+## AI Core P1 Config Migration
+
+状态：implemented on 2026-05-08.
+
+This P1 slice owns only AI config facts: `ai_models`, `ai_tools`, `ai_prompts`. It does not own agents, knowledge, chat runtime, runs, streaming, or RAG.
+
+### Models
+
+`GET /api/admin/v1/ai-models/page-init`
+`GET /api/admin/v1/ai-models`
+`POST /api/admin/v1/ai-models`
+`PUT /api/admin/v1/ai-models/:id`
+`PATCH /api/admin/v1/ai-models/:id/status`
+`DELETE /api/admin/v1/ai-models/:id`
+
+Rules:
+
+- table: `ai_models`
+- driver dict comes from Go enum/dict
+- `api_key` is write-only, encrypted with secretbox into `api_key_enc`
+- responses never return `api_key` or `api_key_enc`
+- blank `api_key` on update leaves the stored secret unchanged
+- delete is single-id soft delete only
+
+### Tools
+
+`GET /api/admin/v1/ai-tools/page-init`
+`GET /api/admin/v1/ai-tools`
+`POST /api/admin/v1/ai-tools`
+`PUT /api/admin/v1/ai-tools/:id`
+`PATCH /api/admin/v1/ai-tools/:id/status`
+`DELETE /api/admin/v1/ai-tools/:id`
+`GET /api/admin/v1/ai-tools/agent-options?agent_id=<id>`
+`PUT /api/admin/v1/ai-tools/agent-bindings/:agent_id`
+
+Rules:
+
+- table: `ai_tools`
+- binding table: `ai_assistant_tools`
+- executor config and schema are JSON objects
+- retired `cine_generate_keyframe` is never returned as an active agent option
+- delete must reject active bindings
+
+### Prompts
+
+`GET /api/admin/v1/ai-prompts`
+`GET /api/admin/v1/ai-prompts/:id`
+`POST /api/admin/v1/ai-prompts`
+`PUT /api/admin/v1/ai-prompts/:id`
+`DELETE /api/admin/v1/ai-prompts/:id`
+`PATCH /api/admin/v1/ai-prompts/:id/favorite`
+`POST /api/admin/v1/ai-prompts/:id/use`
+
+Rules:
+
+- canonical table: `ai_prompts`
+- old `ai_prompt` table is retained for now and is not dropped in P1
+- tags and variables are always normalized to JSON arrays in responses
+- `use` only increments `use_count` and returns `content`
+- ownership is current-user scoped
 
 ## Notification Tasks
 
