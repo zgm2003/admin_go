@@ -427,7 +427,6 @@ type CreateInput struct {
     EngineType string
     BaseURL string
     APIKey string
-    WorkspaceID string
     ModelIDs []string
     DefaultModelID string
     ModelDisplayNames map[string]string

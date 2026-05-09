@@ -229,7 +229,6 @@ CREATE TABLE ai_engine_connections (
   engine_type VARCHAR(32) NOT NULL,
   base_url VARCHAR(512) NOT NULL,
   api_key_enc TEXT NULL,
-  workspace_id VARCHAR(128) NOT NULL DEFAULT '',
   config_json JSON NULL,
   health_status VARCHAR(32) NOT NULL DEFAULT 'unknown',
   last_checked_at DATETIME NULL,
@@ -879,7 +878,6 @@ type CreateRequest struct {
 	EngineType  string `json:"engine_type" binding:"required,oneof=dify direct eino ragflow"`
 	BaseURL     string `json:"base_url" binding:"required,url,max=512"`
 	APIKey      string `json:"api_key" binding:"omitempty,max=4096"`
-	WorkspaceID string `json:"workspace_id" binding:"omitempty,max=128"`
 	Status      int    `json:"status" binding:"required,oneof=1 2"`
 }
 
