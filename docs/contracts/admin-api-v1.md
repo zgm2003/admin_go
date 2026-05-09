@@ -1415,12 +1415,13 @@ Rules:
 - local agent is the admin_go “智能体” entry
 - `provider_id` points to the local provider row
 - create/update require a concrete `model_id` selected from enabled `ai_provider_models` under the selected provider
-- `model_display_name` and `model_snapshot_json` are server-side snapshots at agent write time
+- `model_display_name` is denormalized from the selected provider model for list display
+- list query supports `scene=chat`; there is no agent code or agent type filter in the MVP
 - MVP scene field is `scenes`; current allowed value is `chat`; empty internal input normalizes to `["chat"]`
 - MVP form fields are name, model cascader, scenes, status, optional system prompt, and optional avatar
-- `external_agent_api_key_enc` is an optional per-agent key override; when blank, runtime may fall back to the provider key in `ai_providers.api_key_enc`
-- `runtime_config_json` is local agent customization; it must not become an unbounded dumping ground
-- `GET /ai-agents/options` feeds chat/runtime selectors and returns only enabled agent id/name/code facts
+- `ai_agents` deliberately does not store agent code, agent type, per-agent external app ids, per-agent API keys, response mode, runtime config JSON, model snapshot JSON, `created_by`, or `updated_by`; those are future contracts, not MVP columns
+- runtime uses the selected agent plus its provider credentials; per-agent credential override is not part of this slice
+- `GET /ai-agents/options` feeds chat/runtime selectors and returns only enabled agent id/name facts
 - `GET /ai-agents/page-init` returns `scene_arr` and `provider_model_options`; `GET /ai-agents/provider-models/:id` refreshes enabled models for a provider
 - agent bindings connect an agent to local scope such as user, role, scene, platform, or menu; the provider does not own admin_go RBAC
 - `agent_id` / `agent_name` are the canonical AI runtime selector fields; old app aliases must not drive new DB queries or new Vue state
