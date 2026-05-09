@@ -78,24 +78,22 @@ CREATE TABLE `ai_agent_scenes`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `ai_agents`;
 CREATE TABLE `ai_agents`  (
-  `id` int UNSIGNED NOT NULL AUTO_INCREMENT,
-  `name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '智能体名称',
-  `model_id` int UNSIGNED NOT NULL COMMENT '关联模型ID',
-  `avatar` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '头像',
-  `system_prompt` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '系统提示词',
-  `mode` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'chat' COMMENT 'chat/rag/tool/workflow（先用chat）',
-  `scene` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
-  `capabilities_json` json NULL COMMENT 'Agent能力配置：chat/tools/rag/workflow/image/file/memory',
-  `runtime_config_json` json NULL COMMENT '运行参数：timeout/retry/max_tokens/reasoning等',
-  `policy_json` json NULL COMMENT '权限策略：工具调用上限、失败策略、审批等',
-  `status` tinyint UNSIGNED NOT NULL DEFAULT 1 COMMENT '1启用 2禁用',
-  `is_del` tinyint UNSIGNED NOT NULL DEFAULT 2 COMMENT '2正常 1删除',
+  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
+  `provider_id` bigint UNSIGNED NOT NULL,
+  `name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `model_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '',
+  `model_display_name` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '',
+  `scenes_json` json NULL,
+  `system_prompt` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL,
+  `avatar` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '',
+  `status` tinyint UNSIGNED NOT NULL DEFAULT 1,
+  `is_del` tinyint UNSIGNED NOT NULL DEFAULT 2,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`) USING BTREE,
-  INDEX `idx_model_id`(`model_id` ASC) USING BTREE,
-  INDEX `idx_status_del`(`status` ASC, `is_del` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 64 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI 智能体' ROW_FORMAT = Dynamic;
+  INDEX `idx_ai_agents_provider`(`provider_id` ASC, `status` ASC, `is_del` ASC) USING BTREE,
+  INDEX `idx_ai_agents_model`(`provider_id` ASC, `model_id` ASC, `status` ASC, `is_del` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI智能体' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for ai_assistant_tools
@@ -1161,3 +1159,4 @@ CREATE TABLE `wallet_transactions`  (
 ) ENGINE = InnoDB AUTO_INCREMENT = 42 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '钱包流水' ROW_FORMAT = Dynamic;
 
 SET FOREIGN_KEY_CHECKS = 1;
+

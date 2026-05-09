@@ -63,7 +63,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-contract.ps1
 | upload token create | `POST /api/admin/v1/upload-tokens` | bearer token; current-user upload capability, no RBAC button permission |
 | notification task mutations | notification-tasks create/cancel/delete | bearer token + `system_notificationTask_*` route permission |
 | current profile update | `PUT /api/admin/v1/profile` | bearer token; operation log only, no user-manager button permission |
-| AI sidecar provider/agent/map management | ai-providers/ai-agents/ai-agent-bindings/ai-knowledge-maps/ai-knowledge-documents/ai-tool-maps write routes | bearer token; mutation routes use explicit `ai_provider_*`, `ai_agent_*`, `ai_knowledge_map_*`, `ai_tool_map_*` route permissions and OperationLog metadata; secret fields are write-only/masked |
+| AI sidecar provider/agent/map management | ai-providers/ai-agents/ai-knowledge-maps/ai-knowledge-documents/ai-tool-maps write routes | bearer token; mutation routes use explicit `ai_provider_*`, `ai_agent_*`, `ai_knowledge_map_*`, `ai_tool_map_*` route permissions and OperationLog metadata; secret fields are write-only/masked |
 | AI sidecar runtime current-user | ai-conversations current-user CRUD, ai-conversations/:id/messages list/send, and ai-runs read monitor | bearer token; current-user ownership where applicable; message send requires an enabled chat-scene AI agent + provider and must fail explicitly when not configured |
 | Retired AI legacy routes | legacy model/tool/prompt/agent/knowledge-base routes | not mounted in active Go runtime; only backup/rollback SQL, historical specs, or negative router tests may mention exact old route strings |
 
@@ -1404,14 +1404,11 @@ PUT    /api/admin/v1/ai-agents/:id
 PATCH  /api/admin/v1/ai-agents/:id/status
 POST   /api/admin/v1/ai-agents/:id/test
 DELETE /api/admin/v1/ai-agents/:id
-GET    /api/admin/v1/ai-agents/:id/bindings
-POST   /api/admin/v1/ai-agents/:id/bindings
-DELETE /api/admin/v1/ai-agent-bindings/:id
 ```
 
 Rules:
 
-- tables: `ai_agents`, `ai_agent_bindings`
+- table: `ai_agents`
 - local agent is the admin_go “智能体” entry
 - `provider_id` points to the local provider row
 - create/update require a concrete `model_id` selected from enabled `ai_provider_models` under the selected provider
@@ -1421,9 +1418,8 @@ Rules:
 - MVP form fields are name, model cascader, scenes, status, optional system prompt, and optional avatar
 - `ai_agents` deliberately does not store agent code, agent type, per-agent external app ids, per-agent API keys, response mode, runtime config JSON, model snapshot JSON, `created_by`, or `updated_by`; those are future contracts, not MVP columns
 - runtime uses the selected agent plus its provider credentials; per-agent credential override is not part of this slice
-- `GET /ai-agents/options` feeds chat/runtime selectors and returns only enabled agent id/name facts
+- `GET /ai-agents/options` feeds chat/runtime selectors and returns only enabled `chat` scene agent id/name facts
 - `GET /ai-agents/page-init` returns `scene_arr` and `provider_model_options`; `GET /ai-agents/provider-models/:id` refreshes enabled models for a provider
-- agent bindings connect an agent to local scope such as user, role, scene, platform, or menu; the provider does not own admin_go RBAC
 - `agent_id` / `agent_name` are the canonical AI runtime selector fields; old app aliases must not drive new DB queries or new Vue state
 
 ## AI Conversations
