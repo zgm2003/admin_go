@@ -1333,49 +1333,59 @@ DB cleanup is destructive and explicit: `admin_back_go/database/migrations/20260
 
 AI chat is a separate AI module and remains active under `admin_front_ts/src/views/Main/ai/chat`, `admin_front_ts/src/api/ai/chat.ts`, and the `ai_chat_images` upload folder.
 
-## AI Core Dify Sidecar Rebuild
+## AI Core Provider Config / Local Runtime Surface
 
-状态：implemented in current working tree for the admin_go sidecar surface; live Dify provider E2E remains credential-gated.
+状态：provider config slice implemented for OpenAI only. Local apps/conversations/runs/chat modules already exist, but 智能体配置、知识库、工具管理、运行监控、AI对话 are separate later slices and must not be marked complete by this page alone.
 
-本节替代旧的 `AI Core P1 Config Migration`、`AI Agent / Knowledge Management` 和旧知识库契约。旧 `ai_models` / `ai_tools` / `ai_prompts` / `ai_agents` / `ai_knowledge_bases` 产品面已经不是 active runtime contract。Dify 是 AI engine sidecar，不是 admin 后台。
+本节替代旧 AI 配置契约。旧 `ai_models` / `ai_tools` / `ai_prompts` / `ai_agents` / `ai_knowledge_bases` 产品面已经不是 active provider-config contract。当前产品方向是 admin_go 自有页面 + 服务端 provider boundary，不嵌入第三方控制台，不把外部 key 暴露给浏览器。
 
 Hard boundaries:
 
 ```text
-Vue -> admin_go REST/WebSocket only; Vue never calls Dify directly.
-Dify API keys stay server-side, encrypted at write boundary and masked in DTOs.
-internal/module/* does not import Dify/OpenAI/Eino clients; engine calls go through internal/platform/ai.
-admin_go keeps users, RBAC, menus, operation logs, REST contracts, WebSocket envelopes, and local MySQL mirrors.
-Dify owns model/workflow/RAG/tool internals for this first production slice.
+Vue -> admin_go REST/WebSocket only; Vue never calls an AI provider directly.
+Provider API keys stay server-side, encrypted at write boundary and masked in DTOs.
+internal/module/* does not import provider SDKs/clients; provider calls go through internal/platform/ai boundaries.
+admin_go owns users, RBAC, menus, operation logs, REST contracts, WebSocket envelopes, local conversations, messages, runs, and agent metadata.
+The first provider-config driver is exactly openai.
+No iframe console embedding, no browser SSE/EventSource provider stream.
 ```
 
 Retired active endpoints and menu routes are the old model/tool/prompt/agent/knowledge-base REST resources and their old model/agent/prompt Vue menu entries. Active contract docs intentionally do not keep the exact old strings; those exact strings may appear only in backup/rollback SQL, historical superpowers docs, or negative router tests that assert the routes are not installed.
 
-## AI Engine Connections
+## AI Engine Connections / Provider Config
 
-状态：implemented.
+状态：implemented for the first AI menu, product name “供应商配置”. The physical table name stays `ai_engine_connections` for compatibility until all six AI menus are migrated.
 
 ```text
 GET    /api/admin/v1/ai-engine-connections/page-init
 GET    /api/admin/v1/ai-engine-connections
+POST   /api/admin/v1/ai-engine-connections/model-options
 POST   /api/admin/v1/ai-engine-connections
 PUT    /api/admin/v1/ai-engine-connections/:id
 PATCH  /api/admin/v1/ai-engine-connections/:id/status
 POST   /api/admin/v1/ai-engine-connections/:id/test
+POST   /api/admin/v1/ai-engine-connections/:id/sync-models
+GET    /api/admin/v1/ai-engine-connections/:id/models
+PUT    /api/admin/v1/ai-engine-connections/:id/models
 DELETE /api/admin/v1/ai-engine-connections/:id
 ```
 
 Rules:
 
-- table: `ai_engine_connections`
-- `engine_type` first slice supports `dify`; future values such as `eino`, `direct`, or `ragflow` must still implement `internal/platform/ai.Engine`
-- `base_url`, `workspace_id`, health fields, timeout, and masked key facts are local admin_go control data
-- plaintext service API key is write-only and encrypted into `api_key_enc`; responses, OperationLog payloads, smoke output, and frontend storage must never expose plaintext or encrypted secret blobs
-- delete is soft delete and must reject active dependent apps/maps when that would create orphan runtime config
+- tables: `ai_engine_connections`, `ai_provider_models`
+- `engine_type` / `driver` first slice supports only `openai`
+- empty `base_url` means `https://api.openai.com/v1`
+- model discovery calls `GET {effective_base_url}/models` with `Authorization: Bearer <api_key>`
+- provider models are persisted in `ai_provider_models`; selected model ids, display names, default model, and model status are not stored as JSON blobs
+- create requires provider name, `openai` driver, API key, at least one model, and a default model contained in selected models
+- update with empty `api_key` keeps the existing encrypted key; non-empty `api_key` rewrites `api_key_enc` and `api_key_hint`
+- plaintext API key is write-only; responses, OperationLog payloads, smoke output, and frontend storage must never expose plaintext or encrypted secret blobs
+- health and model-sync status values are `unknown`, `ok`, and `failed`
+- delete is soft delete and must reject active dependent agents/maps when that would create orphan runtime config
 
-## AI Apps
+## AI Apps / Agents
 
-状态：implemented.
+状态：existing local agent surface. This is not the active slice of the current provider-config task.
 
 ```text
 GET    /api/admin/v1/ai-apps/page-init
@@ -1395,9 +1405,13 @@ DELETE /api/admin/v1/ai-app-bindings/:id
 Rules:
 
 - tables: `ai_apps`, `ai_app_bindings`
-- local app is the admin_go “智能体” entry; it maps to a Dify chat app/workflow through `engine_app_id` and encrypted `engine_app_api_key_enc`
-- `GET /ai-apps/options` feeds chat/runtime selectors and returns only enabled app id/name/code facts
-- app bindings connect an app to local scope such as user, role, scene, platform, or menu; Dify does not own admin_go RBAC
+- local app is the admin_go “智能体” entry
+- `engine_connection_id` points to the local provider row
+- model association will be tightened in the 智能体配置 slice; do not complete it while only implementing 供应商配置
+- `engine_app_api_key_enc` is an optional per-agent key override; when blank, runtime may fall back to the provider key in `ai_engine_connections.api_key_enc`
+- `runtime_config_json` is local agent customization; it must not become an unbounded dumping ground
+- `GET /ai-apps/options` feeds chat/runtime selectors and returns only enabled agent id/name/code facts
+- app bindings connect an agent to local scope such as user, role, scene, platform, or menu; the provider does not own admin_go RBAC
 - `agent_id` / `agent_name` may remain only as short-lived legacy JSON aliases that map to `app_id` / `app_name`; they must not drive new DB queries or new Vue state
 
 ## AI Conversations
@@ -1418,7 +1432,7 @@ Rules:
 - table: `ai_conversations`
 - canonical relationship is `app_id -> ai_apps.id`; active code must not join `ai_agents`
 - current-user scoped: detail/update/status/delete reject conversations owned by another user
-- `engine_conversation_id` mirrors the sidecar conversation id when Dify returns one
+- `engine_conversation_id` is optional provider-side conversation metadata
 - list filters use app/status/title/page inputs; legacy `agent_id` filter is accepted only as alias to app during the transition
 
 ## AI Messages
@@ -1437,13 +1451,13 @@ Rules:
 
 - table: `ai_messages`
 - message ownership is checked through the owning conversation and current user
-- `engine_message_id` mirrors the sidecar message id
+- `engine_message_id` mirrors the provider message id when the provider returns one
 - editing a user message deletes later branch messages so stale assistant replies do not survive a changed prompt
-- feedback writes local metadata and must not call Dify directly from the Vue page
+- feedback writes local metadata and must not call the AI provider directly from the Vue page
 
 ## AI Chat Runtime
 
-状态：implemented for sidecar boundary; disabled-baseline smoke is required; live Dify E2E is optional and credential-gated.
+状态：existing runtime surface. It is not completed or redesigned by the 供应商配置 slice; live provider E2E remains credential-gated.
 
 ```text
 POST /api/admin/v1/ai-chat/runs
@@ -1455,11 +1469,11 @@ POST /api/admin/v1/ai-chat/runs/:run_id/cancel
 Runtime rules:
 
 - `POST /ai-chat/runs` creates or reuses the local conversation, stores the user message, creates `ai_runs`, and executes through `internal/platform/ai.Engine`
-- with no enabled AI app/engine connection, the API returns explicit business failure such as `code=100` and `请先配置 AI 应用和 Dify 连接`; production must not fake a successful provider answer
-- with Dify credentials, `DifyEngine` maps local input to Dify Service API (`query`, `inputs`, `user`, `response_mode`, `conversation_id`, files as needed) and mirrors `task_id`, `message_id`, `conversation_id`, answer deltas, and usage metadata
+- with no enabled AI provider/agent config, the API returns explicit business failure such as `code=100` and `请先配置 AI 供应商和智能体`; production must not fake a successful provider answer
+- provider stream is consumed only inside Go and converted into local run events plus admin_go WebSocket envelopes; the browser never receives provider stream directly
 - `GET /events` is REST catch-up/replay from `ai_run_events`; it is not SSE and must not return `text/event-stream`
-- browser realtime remains admin_go WebSocket `ai.response.start.v1`, `ai.response.delta.v1`, `ai.response.completed.v1`, `ai.response.failed.v1`, and `ai.response.cancel.v1`; Dify SSE is never exposed directly to Vue
-- cancel first marks local cancel request, then calls the engine stop boundary; a failed Dify stop call must be visible in run error/raw status, not silently reported as success
+- browser realtime remains admin_go WebSocket `ai.response.start.v1`, `ai.response.delta.v1`, `ai.response.completed.v1`, `ai.response.failed.v1`, and `ai.response.cancel.v1`
+- cancel first marks local cancel request, then calls the engine stop boundary when the provider supports it; unsupported provider stop must not be reported as a successful upstream cancellation
 
 ## AI Runs Monitor
 
@@ -1481,11 +1495,11 @@ Rules:
 - monitor source is app/engine centric: `ai_runs.app_id`, `ai_runs.engine_connection_id`, `ai_apps.name`, `ai_engine_connections.name/type`, and `ai_run_events.seq/event_type/payload_json`
 - status is string-based runtime state (`pending`, `running`, `success`, `failed`, `canceled`, `timeout`), not old tinyint magic
 - stats are backend aggregates; frontend must not compute success rate from a partial page
-- these read routes are bearer-token protected and must not expose prompt secrets, encrypted API keys, or raw sidecar credentials
+- these read routes are bearer-token protected and must not expose prompt secrets, encrypted API keys, or raw provider credentials
 
 ## AI Knowledge Maps
 
-状态：implemented first sidecar mapping slice.
+状态：existing local metadata/status mapping. This is not the active slice of the current provider-config task.
 
 ```text
 GET    /api/admin/v1/ai-knowledge-maps/page-init
@@ -1506,14 +1520,12 @@ DELETE /api/admin/v1/ai-knowledge-documents/:id
 Rules:
 
 - tables: `ai_knowledge_maps`, `ai_knowledge_documents`
-- local map points to a Dify dataset through `engine_dataset_id`; document rows mirror `engine_document_id`, batch id, and indexing status
-- sync/create document calls go through `internal/platform/ai.Engine.SyncKnowledge`, not through Vue and not through module-level Dify imports
-- first slice is mapping/status sync, not a full clone of the Dify dataset console
-- indexing status refresh is explicit; do not claim vector/RAG quality from default smoke
+- local map records external knowledge-base identifiers and local document/indexing status when a provider supports that boundary
+- indexing status refresh is explicit; do not claim vector quality from default smoke
 
 ## AI Tool Maps
 
-状态：implemented first sidecar mapping slice.
+状态：existing local tool metadata/reference slice. This is not the active slice of the current provider-config task.
 
 ```text
 GET    /api/admin/v1/ai-tool-maps/page-init
@@ -1527,9 +1539,9 @@ DELETE /api/admin/v1/ai-tool-maps/:id
 Rules:
 
 - table: `ai_tool_maps`
-- local tool map records admin_go name/code/type/visibility/risk plus Dify workflow/tool/node reference fields such as `engine_tool_id`
-- actual tool execution is owned by Dify workflow in the first slice
-- Dify must not call arbitrary internal admin APIs; any future internal tool gateway needs an explicit whitelist, permission check, audit log, and separate spec
+- local tool map records admin_go name/code/type/visibility/risk plus optional external tool reference fields such as `engine_tool_id`
+- no first-slice tool execution is owned by this table
+- any future internal tool gateway needs an explicit whitelist, permission check, audit log, and separate spec
 
 ## AI Run Timeout Worker
 
