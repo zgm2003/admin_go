@@ -1363,6 +1363,7 @@ POST   /api/admin/v1/ai-engine-connections/model-options
 POST   /api/admin/v1/ai-engine-connections
 PUT    /api/admin/v1/ai-engine-connections/:id
 PATCH  /api/admin/v1/ai-engine-connections/:id/status
+POST   /api/admin/v1/ai-engine-connections/:id/model-options
 POST   /api/admin/v1/ai-engine-connections/:id/test
 POST   /api/admin/v1/ai-engine-connections/:id/sync-models
 GET    /api/admin/v1/ai-engine-connections/:id/models
@@ -1376,8 +1377,10 @@ Rules:
 - `engine_type` / `driver` first slice supports only `openai`
 - empty `base_url` means `https://api.openai.com/v1`
 - model discovery calls `GET {effective_base_url}/models` with `Authorization: Bearer <api_key>`
-- provider models are persisted in `ai_provider_models`; selected model ids, display names, default model, and model status are not stored as JSON blobs
-- create requires provider name, `openai` driver, API key, at least one model, and a default model contained in selected models
+- create/edit preview `POST /model-options` uses the request API key; edit preview `POST /:id/model-options` uses the saved encrypted API key and does not write sync/health state
+- provider models are persisted in `ai_provider_models`; selected model ids, display names, and model status are not stored as JSON blobs
+- provider config has no default model concept; 智能体配置 owns concrete model selection
+- create requires provider name, `openai` driver, API key, and at least one model
 - update with empty `api_key` keeps the existing encrypted key; non-empty `api_key` rewrites `api_key_enc` and `api_key_hint`
 - plaintext API key is write-only; responses, OperationLog payloads, smoke output, and frontend storage must never expose plaintext or encrypted secret blobs
 - health and model-sync status values are `unknown`, `ok`, and `failed`
