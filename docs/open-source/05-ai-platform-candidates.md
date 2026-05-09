@@ -10,7 +10,7 @@ The product surface is deliberately boring and complete:
 
 ```text
 供应商配置 -> engine/provider connections
-智能体配置 -> local AI apps bound to Dify apps/workflows
+智能体配置 -> local AI agents bound to Dify apps/workflows
 AI 对话     -> admin_go chat page + local conversation/message/run mirror
 知识库       -> local knowledge maps + Dify dataset/document sync
 运行监控     -> local runs/events/usage mirror

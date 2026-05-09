@@ -63,8 +63,8 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-contract.ps1
 | upload token create | `POST /api/admin/v1/upload-tokens` | bearer token; current-user upload capability, no RBAC button permission |
 | notification task mutations | notification-tasks create/cancel/delete | bearer token + `system_notificationTask_*` route permission |
 | current profile update | `PUT /api/admin/v1/profile` | bearer token; operation log only, no user-manager button permission |
-| AI sidecar provider/app/map management | ai-providers/ai-apps/ai-app-bindings/ai-knowledge-maps/ai-knowledge-documents/ai-tool-maps write routes | bearer token; mutation routes use explicit `ai_provider_*`, `ai_app_*`, `ai_knowledge_map_*`, `ai_tool_map_*` route permissions and OperationLog metadata; secret fields are write-only/masked |
-| AI sidecar runtime current-user | ai-conversations/ai-messages/ai-chat current-user write routes and ai-runs read monitor | bearer token; current-user ownership where applicable; chat requires an enabled local AI app + provider and must fail explicitly when not configured |
+| AI sidecar provider/agent/map management | ai-providers/ai-agents/ai-agent-bindings/ai-knowledge-maps/ai-knowledge-documents/ai-tool-maps write routes | bearer token; mutation routes use explicit `ai_provider_*`, `ai_agent_*`, `ai_knowledge_map_*`, `ai_tool_map_*` route permissions and OperationLog metadata; secret fields are write-only/masked |
+| AI sidecar runtime current-user | ai-conversations/ai-messages/ai-chat current-user write routes and ai-runs read monitor | bearer token; current-user ownership where applicable; chat requires an enabled local AI agent + provider and must fail explicitly when not configured |
 | Retired AI legacy routes | legacy model/tool/prompt/agent/knowledge-base routes | not mounted in active Go runtime; only backup/rollback SQL, historical specs, or negative router tests may mention exact old route strings |
 
 ## Health / Readiness
@@ -1335,9 +1335,9 @@ AI chat is a separate AI module and remains active under `admin_front_ts/src/vie
 
 ## AI Core Provider Config / Local Runtime Surface
 
-状态：provider config slice implemented for OpenAI only. Local apps/conversations/runs/chat modules already exist, but 智能体配置、知识库、工具管理、运行监控、AI对话 are separate later slices and must not be marked complete by this page alone.
+状态：provider config slice and 智能体配置 MVP are implemented for OpenAI-first local runtime. 知识库、工具管理、运行监控、AI对话 are separate later slices and must not be marked complete by the agent page alone.
 
-本节替代旧 AI 配置契约。旧 `ai_models` / `ai_tools` / `ai_prompts` / `ai_agents` / `ai_knowledge_bases` 产品面已经不是 active provider-config contract。当前产品方向是 admin_go 自有页面 + 服务端 provider boundary，不嵌入第三方控制台，不把外部 key 暴露给浏览器。
+本节替代旧 AI 配置契约。旧 `ai_models` / `ai_tools` / `ai_prompts` / `ai_knowledge_bases` 产品面和 legacy app 命名已经不是 active provider/agent contract；`ai_agents` 是当前智能体配置事实源。当前产品方向是 admin_go 自有页面 + 服务端 provider boundary，不嵌入第三方控制台，不把外部 key 暴露给浏览器。
 
 Hard boundaries:
 
@@ -1350,7 +1350,7 @@ The first provider-config driver is exactly openai.
 No iframe console embedding, no browser SSE/EventSource provider stream.
 ```
 
-Retired active endpoints and menu routes are the old model/tool/prompt/agent/knowledge-base REST resources and their old model/agent/prompt Vue menu entries. Active contract docs intentionally do not keep the exact old strings; those exact strings may appear only in backup/rollback SQL, historical superpowers docs, or negative router tests that assert the routes are not installed.
+Retired active endpoints and menu routes are the old model/tool/prompt/knowledge-base REST resources plus legacy ai-app/app naming. Active contract docs intentionally do not keep the exact old strings; those exact strings may appear only in backup/rollback SQL, historical superpowers docs, or negative router tests that assert the routes are not installed.
 
 ## AI Engine Connections / Provider Config
 
@@ -1389,36 +1389,41 @@ Rules:
 - health and model-sync status values are `unknown`, `ok`, and `failed`
 - delete is soft delete and must reject active dependent agents/maps when that would create orphan runtime config
 
-## AI Apps / Agents
+## AI Agents / Agents
 
-状态：existing local agent surface. This is not the active slice of the current provider-config task.
+状态：implemented MVP. This page is now the active `agent` configuration slice, not an app-mapping shell.
 
 ```text
-GET    /api/admin/v1/ai-apps/page-init
-GET    /api/admin/v1/ai-apps
-GET    /api/admin/v1/ai-apps/options
-GET    /api/admin/v1/ai-apps/:id
-POST   /api/admin/v1/ai-apps
-PUT    /api/admin/v1/ai-apps/:id
-PATCH  /api/admin/v1/ai-apps/:id/status
-POST   /api/admin/v1/ai-apps/:id/test
-DELETE /api/admin/v1/ai-apps/:id
-GET    /api/admin/v1/ai-apps/:id/bindings
-POST   /api/admin/v1/ai-apps/:id/bindings
-DELETE /api/admin/v1/ai-app-bindings/:id
+GET    /api/admin/v1/ai-agents/page-init
+GET    /api/admin/v1/ai-agents
+GET    /api/admin/v1/ai-agents/options
+GET    /api/admin/v1/ai-agents/provider-models/:id
+GET    /api/admin/v1/ai-agents/:id
+POST   /api/admin/v1/ai-agents
+PUT    /api/admin/v1/ai-agents/:id
+PATCH  /api/admin/v1/ai-agents/:id/status
+POST   /api/admin/v1/ai-agents/:id/test
+DELETE /api/admin/v1/ai-agents/:id
+GET    /api/admin/v1/ai-agents/:id/bindings
+POST   /api/admin/v1/ai-agents/:id/bindings
+DELETE /api/admin/v1/ai-agent-bindings/:id
 ```
 
 Rules:
 
-- tables: `ai_apps`, `ai_app_bindings`
-- local app is the admin_go “智能体” entry
+- tables: `ai_agents`, `ai_agent_bindings`
+- local agent is the admin_go “智能体” entry
 - `provider_id` points to the local provider row
-- model association will be tightened in the 智能体配置 slice; do not complete it while only implementing 供应商配置
-- `engine_app_api_key_enc` is an optional per-agent key override; when blank, runtime may fall back to the provider key in `ai_providers.api_key_enc`
+- create/update require a concrete `model_id` selected from enabled `ai_provider_models` under the selected provider
+- `model_display_name` and `model_snapshot_json` are server-side snapshots at agent write time
+- MVP scene field is `scenes`; current allowed value is `chat`; empty internal input normalizes to `["chat"]`
+- MVP form fields are name, model cascader, scenes, status, optional system prompt, and optional avatar
+- `external_agent_api_key_enc` is an optional per-agent key override; when blank, runtime may fall back to the provider key in `ai_providers.api_key_enc`
 - `runtime_config_json` is local agent customization; it must not become an unbounded dumping ground
-- `GET /ai-apps/options` feeds chat/runtime selectors and returns only enabled agent id/name/code facts
-- app bindings connect an agent to local scope such as user, role, scene, platform, or menu; the provider does not own admin_go RBAC
-- `agent_id` / `agent_name` may remain only as short-lived legacy JSON aliases that map to `app_id` / `app_name`; they must not drive new DB queries or new Vue state
+- `GET /ai-agents/options` feeds chat/runtime selectors and returns only enabled agent id/name/code facts
+- `GET /ai-agents/page-init` returns `scene_arr` and `provider_model_options`; `GET /ai-agents/provider-models/:id` refreshes enabled models for a provider
+- agent bindings connect an agent to local scope such as user, role, scene, platform, or menu; the provider does not own admin_go RBAC
+- `agent_id` / `agent_name` are the canonical AI runtime selector fields; old app aliases must not drive new DB queries or new Vue state
 
 ## AI Conversations
 
@@ -1436,10 +1441,10 @@ DELETE /api/admin/v1/ai-conversations/:id
 Rules:
 
 - table: `ai_conversations`
-- canonical relationship is `app_id -> ai_apps.id`; active code must not join `ai_agents`
+- canonical relationship is `agent_id -> ai_agents.id`; active code must not join `ai_apps`
 - current-user scoped: detail/update/status/delete reject conversations owned by another user
 - `engine_conversation_id` is optional provider-side conversation metadata
-- list filters use app/status/title/page inputs; legacy `agent_id` filter is accepted only as alias to app during the transition
+- list filters use `agent_id` / status / title / page inputs
 
 ## AI Messages
 
@@ -1498,7 +1503,7 @@ GET /api/admin/v1/ai-runs/stats/by-user
 Rules:
 
 - tables: `ai_runs`, `ai_run_events`, `ai_usage_daily`
-- monitor source is app/engine centric: `ai_runs.app_id`, `ai_runs.provider_id`, `ai_apps.name`, `ai_providers.name/type`, and `ai_run_events.seq/event_type/payload_json`
+- monitor source is agent/provider centric: `ai_runs.agent_id`, `ai_runs.provider_id`, `ai_agents.name`, `ai_providers.name/type`, and `ai_run_events.seq/event_type/payload_json`
 - status is string-based runtime state (`pending`, `running`, `success`, `failed`, `canceled`, `timeout`), not old tinyint magic
 - stats are backend aggregates; frontend must not compute success rate from a partial page
 - these read routes are bearer-token protected and must not expose prompt secrets, encrypted API keys, or raw provider credentials
