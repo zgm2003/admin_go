@@ -64,7 +64,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-contract.ps1
 | notification task mutations | notification-tasks create/cancel/delete | bearer token + `system_notificationTask_*` route permission |
 | current profile update | `PUT /api/admin/v1/profile` | bearer token; operation log only, no user-manager button permission |
 | AI sidecar provider/agent/map management | ai-providers/ai-agents/ai-agent-bindings/ai-knowledge-maps/ai-knowledge-documents/ai-tool-maps write routes | bearer token; mutation routes use explicit `ai_provider_*`, `ai_agent_*`, `ai_knowledge_map_*`, `ai_tool_map_*` route permissions and OperationLog metadata; secret fields are write-only/masked |
-| AI sidecar runtime current-user | ai-conversations/ai-messages/ai-chat current-user write routes and ai-runs read monitor | bearer token; current-user ownership where applicable; chat requires an enabled local AI agent + provider and must fail explicitly when not configured |
+| AI sidecar runtime current-user | ai-conversations current-user CRUD, ai-conversations/:id/messages list/send, and ai-runs read monitor | bearer token; current-user ownership where applicable; message send requires an enabled chat-scene AI agent + provider and must fail explicitly when not configured |
 | Retired AI legacy routes | legacy model/tool/prompt/agent/knowledge-base routes | not mounted in active Go runtime; only backup/rollback SQL, historical specs, or negative router tests may mention exact old route strings |
 
 ## Health / Readiness
@@ -1335,7 +1335,7 @@ AI chat is a separate AI module and remains active under `admin_front_ts/src/vie
 
 ## AI Core Provider Config / Local Runtime Surface
 
-状态：provider config slice and 智能体配置 MVP are implemented for OpenAI-first local runtime. 知识库、工具管理、运行监控、AI对话 are separate later slices and must not be marked complete by the agent page alone.
+状态：provider config slice、智能体配置 MVP、AI 对话 WebSocket MVP are implemented for OpenAI-first local runtime. 运行监控、工具、RAG/知识库 are separate later slices and must not be marked complete by the chat page alone.
 
 本节替代旧 AI 配置契约。旧 `ai_models` / `ai_tools` / `ai_prompts` / `ai_knowledge_bases` 产品面和 legacy app 命名已经不是 active provider/agent contract；`ai_agents` 是当前智能体配置事实源。当前产品方向是 admin_go 自有页面 + 服务端 provider boundary，不嵌入第三方控制台，不把外部 key 暴露给浏览器。
 
@@ -1428,64 +1428,70 @@ Rules:
 
 ## AI Conversations
 
-状态：implemented.
+状态：implemented MVP for the “对话” slice. This slice owns only `ai_conversations` and `ai_messages`; run monitor remains a later slice.
 
 ```text
 GET    /api/admin/v1/ai-conversations
 GET    /api/admin/v1/ai-conversations/:id
 POST   /api/admin/v1/ai-conversations
-PUT    /api/admin/v1/ai-conversations/:id
-PATCH  /api/admin/v1/ai-conversations/:id/status
 DELETE /api/admin/v1/ai-conversations/:id
 ```
 
 Rules:
 
 - table: `ai_conversations`
+- physical columns are only `id`, `user_id`, `agent_id`, `title`, `last_message_at`, `is_del`, `created_at`, `updated_at`
 - canonical relationship is `agent_id -> ai_agents.id`; active code must not join `ai_apps`
-- current-user scoped: detail/update/status/delete reject conversations owned by another user
-- `engine_conversation_id` is optional provider-side conversation metadata
-- list filters use `agent_id` / status / title / page inputs
+- current-user scoped: list/detail/delete reject conversations owned by another user
+- list uses cursor inputs `agent_id`, `before_id`, `limit`; no page/status/title archive contract in MVP
+- list order is `last_message_at desc, id desc`, with empty `last_message_at` last
+- every user message insert and assistant completion updates `last_message_at`; frontend uses it for sort/display
+- delete is soft delete (`is_del=1`) and also marks child messages deleted in the same transaction
+- responses do not expose `user_id`, `is_del`, `status`, provider conversation ids, token fields, or run ids
 
 ## AI Messages
 
-状态：implemented.
+状态：implemented MVP for conversation-scoped text messages.
 
 ```text
-GET    /api/admin/v1/ai-conversations/:id/messages
-PATCH  /api/admin/v1/ai-messages/:id/content
-PATCH  /api/admin/v1/ai-messages/:id/feedback
-DELETE /api/admin/v1/ai-messages/:id
-DELETE /api/admin/v1/ai-messages
+GET  /api/admin/v1/ai-conversations/:id/messages
+POST /api/admin/v1/ai-conversations/:id/messages
 ```
 
 Rules:
 
 - table: `ai_messages`
+- physical columns are only `id`, `conversation_id`, `role`, `content_type`, `content`, `is_del`, `created_at`, `updated_at`
 - message ownership is checked through the owning conversation and current user
-- `engine_message_id` mirrors the provider message id when the provider returns one
-- editing a user message deletes later branch messages so stale assistant replies do not survive a changed prompt
-- feedback writes local metadata and must not call the AI provider directly from the Vue page
+- `content_type` is mandatory; current MVP only writes `text`
+- message history uses cursor inputs `before_id`, `limit`; no offset page contract
+- send body is `{ content, request_id }`; response is `{ conversation_id, user_message_id, request_id }`
+- send accepts only conversations whose agent is enabled and has `chat` in `scenes_json`
+- assistant replies are delivered by WebSocket events and persisted as one final assistant message after completion
+- no edit, feedback, delete-message, batch-delete, attachment, tool-call, RAG, `meta_json`, token, provider message id, status, `user_id`, or `run_id` fields in this slice
 
 ## AI Chat Runtime
 
-状态：existing runtime surface. It is not completed or redesigned by the 供应商配置 slice; live provider E2E remains credential-gated.
+状态：implemented as internal conversation reply executor only. There are no active `/api/admin/v1/ai-chat/*` HTTP routes in the conversation MVP.
+
+Active send flow:
 
 ```text
-POST /api/admin/v1/ai-chat/runs
-GET  /api/admin/v1/ai-chat/runs/:run_id/events
-POST /api/admin/v1/ai-chat/messages
-POST /api/admin/v1/ai-chat/runs/:run_id/cancel
+POST /api/admin/v1/ai-conversations/:id/messages
+admin-worker task ai:conversation-reply:v1
+WebSocket /api/admin/v1/realtime/ws -> ai.response.*.v1
 ```
 
 Runtime rules:
 
-- `POST /ai-chat/runs` creates or reuses the local conversation, stores the user message, creates `ai_runs`, and executes through `internal/platform/ai.Engine`
-- with no enabled AI provider/agent config, the API returns explicit business failure such as `code=100` and `请先配置 AI 供应商和智能体`; production must not fake a successful provider answer
-- provider stream is consumed only inside Go and converted into local run events plus admin_go WebSocket envelopes; the browser never receives provider stream directly
-- `GET /events` is REST catch-up/replay from `ai_run_events`; it is not SSE and must not return `text/event-stream`
-- browser realtime remains admin_go WebSocket `ai.response.start.v1`, `ai.response.delta.v1`, `ai.response.completed.v1`, `ai.response.failed.v1`, and `ai.response.cancel.v1`
-- cancel first marks local cancel request, then calls the engine stop boundary when the provider supports it; unsupported provider stop must not be reported as a successful upstream cancellation
+- Vue starts chat by creating/selecting an `ai_conversations` row and posting a text message to `/:id/messages`
+- `aimessage` persists the user message, updates `last_message_at`, generates title from the first user message when title is empty, then enqueues `ai:conversation-reply:v1`
+- `aichat` executes the queued reply through `internal/platform/ai.Engine` using recent conversation messages plus the selected agent prompt
+- provider stream is consumed only inside Go and converted to admin_go WebSocket envelopes; the browser never receives provider stream directly
+- browser realtime is WebSocket-only: `ai.response.start.v1`, `ai.response.delta.v1`, `ai.response.completed.v1`, `ai.response.failed.v1`
+- all AI response payloads are conversation-scoped and must not contain `run_id`
+- removed from active chat slice: `/api/admin/v1/ai-chat/runs`, `/api/admin/v1/ai-chat/runs/:run_id/events`, `/api/admin/v1/ai-chat/runs/:run_id/cancel`, `/api/admin/v1/ai-chat/messages`
+- no SSE, EventSource, streamable HTTP fallback, cancel generation, tool, RAG, image, attachment, or runtime parameter UI in this MVP
 
 ## AI Runs Monitor
 

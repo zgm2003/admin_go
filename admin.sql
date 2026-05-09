@@ -121,19 +121,17 @@ CREATE TABLE `ai_assistant_tools`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `ai_conversations`;
 CREATE TABLE `ai_conversations`  (
-  `id` int UNSIGNED NOT NULL AUTO_INCREMENT,
-  `user_id` int UNSIGNED NOT NULL COMMENT '用户ID',
-  `agent_id` int UNSIGNED NOT NULL COMMENT '智能体ID',
+  `id` int UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '会话ID',
+  `user_id` int UNSIGNED NOT NULL COMMENT '当前用户ID',
+  `agent_id` int UNSIGNED NOT NULL COMMENT 'ai_agents.id',
   `title` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '会话标题',
-  `last_message_at` datetime NULL DEFAULT NULL COMMENT '最后消息时间（列表排序用）',
-  `status` tinyint UNSIGNED NOT NULL DEFAULT 1 COMMENT '1正常 2归档/禁用',
-  `is_del` tinyint UNSIGNED NOT NULL DEFAULT 2 COMMENT '2正常 1删除',
-  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `last_message_at` datetime NULL DEFAULT NULL COMMENT '上次对话时间',
+  `is_del` tinyint UNSIGNED NOT NULL DEFAULT 2 COMMENT '1删除 2正常',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`) USING BTREE,
-  INDEX `idx_agent_del`(`agent_id` ASC, `is_del` ASC) USING BTREE,
-  INDEX `idx_user_list`(`user_id` ASC, `is_del` ASC, `status` ASC, `last_message_at` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 290 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI 会话' ROW_FORMAT = Dynamic;
+  INDEX `idx_ai_conversations_user_agent_del_last_message`(`user_id` ASC, `agent_id` ASC, `is_del` ASC, `last_message_at` ASC, `id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI会话' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for ai_knowledge_bases
@@ -212,19 +210,18 @@ CREATE TABLE `ai_knowledge_documents`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `ai_messages`;
 CREATE TABLE `ai_messages`  (
-  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
-  `conversation_id` int UNSIGNED NOT NULL COMMENT '会话ID',
-  `role` tinyint UNSIGNED NOT NULL COMMENT '1user 2assistant 3system 4tool',
+  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '消息ID',
+  `conversation_id` int UNSIGNED NOT NULL COMMENT 'ai_conversations.id',
+  `role` tinyint UNSIGNED NOT NULL COMMENT '1用户 2助手',
+  `content_type` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'text' COMMENT '内容类型，MVP只写text',
   `content` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '消息内容',
-  `meta_json` json NULL COMMENT '扩展：引用/工具调用/附件等',
-  `is_del` tinyint UNSIGNED NOT NULL DEFAULT 2 COMMENT '2正常 1删除',
-  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `is_del` tinyint UNSIGNED NOT NULL DEFAULT 2 COMMENT '1删除 2正常',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`) USING BTREE,
-  INDEX `idx_conv_id_id`(`conversation_id` ASC, `id` ASC) USING BTREE,
-  INDEX `idx_conv_created`(`conversation_id` ASC, `created_at` ASC) USING BTREE,
-  INDEX `idx_conv_role_del`(`conversation_id` ASC, `role` ASC, `is_del` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 3755 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI 消息' ROW_FORMAT = Dynamic;
+  INDEX `idx_ai_messages_conversation_del_id`(`conversation_id` ASC, `is_del` ASC, `id` ASC) USING BTREE,
+  CONSTRAINT `fk_ai_messages_conversation` FOREIGN KEY (`conversation_id`) REFERENCES `ai_conversations` (`id`) ON DELETE CASCADE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI消息' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for ai_models

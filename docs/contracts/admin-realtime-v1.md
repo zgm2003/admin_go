@@ -1,6 +1,6 @@
 # Admin Realtime v1 Contract
 
-状态：partially implemented。当前已实现最小 admin WebSocket：认证 upgrade、本机 connection manager、bounded send queue、read/write pump、heartbeat ping/pong、`realtime.connected.v1`、`realtime.ping.v1` / `realtime.pong.v1`、`realtime.subscribe.v1` topic 白名单骨架、local/no-op/redis Publisher 边界、typed config 开关、断开清理。Vue 前端已从旧 PHP WebSocket 切到 Go WebSocket baseline：URL 指向 `/api/admin/v1/realtime/ws`，移除 `/api/admin/WebSocket/bind`，按 versioned envelope 收发。Redis Pub/Sub fan-out、`notification.created.v1` 通知任务推送、以及 AI chat runtime 的 `ai.response.*.v1` envelope first slice 已实现；真实 LLM provider E2E 仍是可选、凭证门控能力。
+状态：partially implemented。当前已实现最小 admin WebSocket：认证 upgrade、本机 connection manager、bounded send queue、read/write pump、heartbeat ping/pong、`realtime.connected.v1`、`realtime.ping.v1` / `realtime.pong.v1`、`realtime.subscribe.v1` topic 白名单骨架、local/no-op/redis Publisher 边界、typed config 开关、断开清理。Vue 前端已从旧 PHP WebSocket 切到 Go WebSocket baseline：URL 指向 `/api/admin/v1/realtime/ws`，移除 `/api/admin/WebSocket/bind`，按 versioned envelope 收发。Redis Pub/Sub fan-out、`notification.created.v1` 通知任务推送、以及 AI 对话 MVP 的 conversation-scoped `ai.response.*.v1` envelope 已实现；真实 LLM provider E2E 仍是可选、凭证门控能力。
 
 ## Protocol
 
@@ -257,18 +257,17 @@ The active realtime contract no longer defines admin chat message/read/contact/g
 
 AI response events are a separate AI runtime area below and must not reuse the removed admin chat contract.
 
-## AI streaming events
+## AI response events
 
-状态：implemented first version for AI chat runtime on 2026-05-08。
+状态：implemented conversation-scoped WebSocket MVP on 2026-05-09。
 
-AI 回复不走 SSE 或 browser event-source runtime。Go runtime 用两层机制：
+AI 回复不走 SSE、EventSource、streamable HTTP，也不再用 `/ai-chat/runs/:run_id/events` 做浏览器 catch-up。当前对话页只依赖共享 admin WebSocket：
 
 ```text
-WebSocket acceleration: ai.response.*.v1 envelope via platform/realtime.Publisher
-REST catch-up: GET /api/admin/v1/ai-chat/runs/:run_id/events
+Transport: GET /api/admin/v1/realtime/ws
+Events: ai.response.start.v1 / ai.response.delta.v1 / ai.response.completed.v1 / ai.response.failed.v1
+Scope key: conversation_id + request_id
 ```
-
-旧 unversioned AI run event name 已从 active frontend runtime 删除。REST events 是从 run/message 状态重建，不是 Redis Stream，也不是持久 event 表。
 
 Start：
 
@@ -278,11 +277,9 @@ Start：
   "request_id": "01HX...",
   "data": {
     "conversation_id": 10,
-    "run_id": 22,
-    "request_id": "run-request-id",
+    "request_id": "client-request-id",
     "user_message_id": 101,
-    "agent_id": 3,
-    "is_new": true
+    "agent_id": 3
   }
 }
 ```
@@ -294,7 +291,8 @@ Delta：
   "type": "ai.response.delta.v1",
   "request_id": "01HX...",
   "data": {
-    "run_id": 22,
+    "conversation_id": 10,
+    "request_id": "client-request-id",
     "delta": "你好"
   }
 }
@@ -308,10 +306,8 @@ Completed：
   "request_id": "01HX...",
   "data": {
     "conversation_id": 10,
-    "run_id": 22,
-    "user_message_id": 101,
-    "assistant_message_id": 102,
-    "usage": {}
+    "request_id": "client-request-id",
+    "assistant_message_id": 102
   }
 }
 ```
@@ -323,27 +319,20 @@ Failed：
   "type": "ai.response.failed.v1",
   "request_id": "01HX...",
   "data": {
-    "run_id": 22,
-    "code": 100,
+    "conversation_id": 10,
+    "request_id": "client-request-id",
     "msg": "模型调用失败"
   }
 }
 ```
 
-Cancel：
+Rules:
 
-```json
-{
-  "type": "ai.response.cancel.v1",
-  "request_id": "01HX...",
-  "data": {
-    "run_id": 22,
-    "status": "canceled"
-  }
-}
-```
-
-当前 Go runtime 必须通过 `internal/platform/ai.Engine` 产生 AI 响应；生产环境没有启用的 app/engine 时必须显式失败。只有配置了真实 sidecar/provider 凭证并跑通 smoke 后，才允许把 AI provider E2E 标成通过。
+- payload must not contain `run_id`; token/cost/latency belongs to the later run-monitor slice
+- frontend caches active chat state by `conversation_id`, not by agent or run id
+- switching conversations must not cancel a pending reply; websocket deltas keep appending to the cached conversation session
+- `ai.response.cancel.v1` is not part of this MVP
+- current Go runtime must call `internal/platform/ai.Engine`; production must fail explicitly when no enabled provider/agent exists
 
 ## Implemented lifecycle
 
