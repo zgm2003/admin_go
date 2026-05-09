@@ -63,8 +63,8 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-contract.ps1
 | upload token create | `POST /api/admin/v1/upload-tokens` | bearer token; current-user upload capability, no RBAC button permission |
 | notification task mutations | notification-tasks create/cancel/delete | bearer token + `system_notificationTask_*` route permission |
 | current profile update | `PUT /api/admin/v1/profile` | bearer token; operation log only, no user-manager button permission |
-| AI sidecar provider/app/map management | ai-engine-connections/ai-apps/ai-app-bindings/ai-knowledge-maps/ai-knowledge-documents/ai-tool-maps write routes | bearer token; mutation routes use explicit `ai_engine_*`, `ai_app_*`, `ai_knowledge_map_*`, `ai_tool_map_*` route permissions and OperationLog metadata; secret fields are write-only/masked |
-| AI sidecar runtime current-user | ai-conversations/ai-messages/ai-chat current-user write routes and ai-runs read monitor | bearer token; current-user ownership where applicable; chat requires an enabled local AI app + engine connection and must fail explicitly when not configured |
+| AI sidecar provider/app/map management | ai-providers/ai-apps/ai-app-bindings/ai-knowledge-maps/ai-knowledge-documents/ai-tool-maps write routes | bearer token; mutation routes use explicit `ai_provider_*`, `ai_app_*`, `ai_knowledge_map_*`, `ai_tool_map_*` route permissions and OperationLog metadata; secret fields are write-only/masked |
+| AI sidecar runtime current-user | ai-conversations/ai-messages/ai-chat current-user write routes and ai-runs read monitor | bearer token; current-user ownership where applicable; chat requires an enabled local AI app + provider and must fail explicitly when not configured |
 | Retired AI legacy routes | legacy model/tool/prompt/agent/knowledge-base routes | not mounted in active Go runtime; only backup/rollback SQL, historical specs, or negative router tests may mention exact old route strings |
 
 ## Health / Readiness
@@ -1354,35 +1354,38 @@ Retired active endpoints and menu routes are the old model/tool/prompt/agent/kno
 
 ## AI Engine Connections / Provider Config
 
-状态：implemented for the first AI menu, product name “供应商配置”. The physical table name stays `ai_engine_connections` for compatibility until all six AI menus are migrated.
+状态：implemented for the first AI menu, product name “供应商配置”. The physical table name stays `ai_providers` for compatibility until all six AI menus are migrated.
 
 ```text
-GET    /api/admin/v1/ai-engine-connections/page-init
-GET    /api/admin/v1/ai-engine-connections
-POST   /api/admin/v1/ai-engine-connections/model-options
-POST   /api/admin/v1/ai-engine-connections
-PUT    /api/admin/v1/ai-engine-connections/:id
-PATCH  /api/admin/v1/ai-engine-connections/:id/status
-POST   /api/admin/v1/ai-engine-connections/:id/model-options
-POST   /api/admin/v1/ai-engine-connections/:id/test
-POST   /api/admin/v1/ai-engine-connections/:id/sync-models
-GET    /api/admin/v1/ai-engine-connections/:id/models
-PUT    /api/admin/v1/ai-engine-connections/:id/models
-DELETE /api/admin/v1/ai-engine-connections/:id
+GET    /api/admin/v1/ai-providers/page-init
+GET    /api/admin/v1/ai-providers
+POST   /api/admin/v1/ai-providers/model-options
+POST   /api/admin/v1/ai-providers
+PUT    /api/admin/v1/ai-providers/:id
+PATCH  /api/admin/v1/ai-providers/:id/status
+POST   /api/admin/v1/ai-providers/:id/model-options
+POST   /api/admin/v1/ai-providers/:id/test
+POST   /api/admin/v1/ai-providers/:id/sync-models
+GET    /api/admin/v1/ai-providers/:id/models
+PUT    /api/admin/v1/ai-providers/:id/models
+DELETE /api/admin/v1/ai-providers/:id
 ```
 
 Rules:
 
-- tables: `ai_engine_connections`, `ai_provider_models`
+- tables: `ai_providers`, `ai_provider_models`
 - `engine_type` / `driver` first slice supports only `openai`
 - empty `base_url` means `https://api.openai.com/v1`
 - model discovery calls `GET {effective_base_url}/models` with `Authorization: Bearer <api_key>`
 - create/edit preview `POST /model-options` uses the request API key; edit preview `POST /:id/model-options` uses the saved encrypted API key and does not write sync/health state
-- provider models are persisted in `ai_provider_models`; selected model ids, display names, and model status are not stored as JSON blobs
+- provider models are persisted in `ai_provider_models`; selected model ids, display names, and model status are first-class columns, not JSON blobs
+- `ai_provider_models` is a current selectable model snapshot table, not history; replace writes hard-delete the provider's old snapshot rows and insert the current list
+- `ai_provider_models` must not store `raw_json`, `source`, `is_del`, `created_by`, or `updated_by`
+- `ai_providers` must not store provider-specific dumping-ground `config_json`, `created_by`, or `updated_by`; provider-specific knobs need an explicit future contract
 - provider config has no default model concept; 智能体配置 owns concrete model selection
 - create requires provider name, `openai` driver, API key, and at least one model
 - update with empty `api_key` keeps the existing encrypted key; non-empty `api_key` rewrites `api_key_enc` and `api_key_hint`
-- plaintext API key is write-only; responses, OperationLog payloads, smoke output, and frontend storage must never expose plaintext or encrypted secret blobs
+- plaintext API key is write-only; responses, OperationLog payloads, smoke output, and frontend storage must never expose plaintext or encrypted secret blobs, remote raw model payloads, source markers, or provider config JSON blobs
 - health and model-sync status values are `unknown`, `ok`, and `failed`
 - delete is soft delete and must reject active dependent agents/maps when that would create orphan runtime config
 
@@ -1409,9 +1412,9 @@ Rules:
 
 - tables: `ai_apps`, `ai_app_bindings`
 - local app is the admin_go “智能体” entry
-- `engine_connection_id` points to the local provider row
+- `provider_id` points to the local provider row
 - model association will be tightened in the 智能体配置 slice; do not complete it while only implementing 供应商配置
-- `engine_app_api_key_enc` is an optional per-agent key override; when blank, runtime may fall back to the provider key in `ai_engine_connections.api_key_enc`
+- `engine_app_api_key_enc` is an optional per-agent key override; when blank, runtime may fall back to the provider key in `ai_providers.api_key_enc`
 - `runtime_config_json` is local agent customization; it must not become an unbounded dumping ground
 - `GET /ai-apps/options` feeds chat/runtime selectors and returns only enabled agent id/name/code facts
 - app bindings connect an agent to local scope such as user, role, scene, platform, or menu; the provider does not own admin_go RBAC
@@ -1495,7 +1498,7 @@ GET /api/admin/v1/ai-runs/stats/by-user
 Rules:
 
 - tables: `ai_runs`, `ai_run_events`, `ai_usage_daily`
-- monitor source is app/engine centric: `ai_runs.app_id`, `ai_runs.engine_connection_id`, `ai_apps.name`, `ai_engine_connections.name/type`, and `ai_run_events.seq/event_type/payload_json`
+- monitor source is app/engine centric: `ai_runs.app_id`, `ai_runs.provider_id`, `ai_apps.name`, `ai_providers.name/type`, and `ai_run_events.seq/event_type/payload_json`
 - status is string-based runtime state (`pending`, `running`, `success`, `failed`, `canceled`, `timeout`), not old tinyint magic
 - stats are backend aggregates; frontend must not compute success rate from a partial page
 - these read routes are bearer-token protected and must not expose prompt secrets, encrypted API keys, or raw provider credentials
