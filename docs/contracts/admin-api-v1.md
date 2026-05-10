@@ -2152,7 +2152,7 @@ No old admin pay, wallet, or recharge-orders active contract.
 POST /api/payment/notify/alipay returns text/plain success or text/plain fail.
 private_key_enc and plaintext private key never appear in API response, operation log, smoke output, or frontend types.
 order_no is the order route key; do not expose a second /:id order route that conflicts with Gin wildcard names.
-orders/order_items are not dropped until separately proven payment-only.
+Legacy `pay_*_legacy_20260508`, wallet, reconcile/refund, fulfillment, and old `orders`/`order_items` prototype tables are not active contract tables and are removed from the launch schema after live code-reference verification.
 ```
 
 ### Routes
@@ -3304,4 +3304,3 @@ Error cases：
 404 client version does not exist
 500 repository failure / manifest publisher not configured / upload config missing / COS publish failure
 ```
-
