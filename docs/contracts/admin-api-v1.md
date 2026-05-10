@@ -63,7 +63,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-contract.ps1
 | upload token create | `POST /api/admin/v1/upload-tokens` | bearer token; current-user upload capability, no RBAC button permission |
 | notification task mutations | notification-tasks create/cancel/delete | bearer token + `system_notificationTask_*` route permission |
 | current profile update | `PUT /api/admin/v1/profile` | bearer token; operation log only, no user-manager button permission |
-| AI sidecar provider/agent/tool/knowledge management | ai-providers/ai-agents/ai-tools/ai-knowledge-maps/ai-knowledge-documents write routes | bearer token; mutation routes use explicit `ai_provider_*`, `ai_agent_*`, `ai_tool_*`, `ai_knowledge_map_*` route permissions and OperationLog metadata; secret fields are write-only/masked |
+| AI sidecar provider/agent/tool/knowledge management | ai-providers/ai-agents/ai-tools/ai-knowledge-bases/ai-knowledge-documents write routes | bearer token; mutation routes use explicit `ai_provider_*`, `ai_agent_*`, `ai_tool_*`, `ai_knowledge_*`, `ai_knowledge_document_*` route permissions and OperationLog metadata; secret fields are write-only/masked |
 | AI sidecar runtime current-user | ai-conversations current-user CRUD, ai-conversations/:id/messages list/send, and ai-runs read monitor | bearer token; current-user ownership where applicable; message send requires an enabled chat-scene AI agent + provider and must fail explicitly when not configured |
 | Retired AI legacy routes | legacy model/tool/prompt/agent/knowledge-base routes | not mounted in active Go runtime; only backup/rollback SQL, historical specs, or negative router tests may mention exact old route strings |
 
@@ -1335,7 +1335,7 @@ AI chat is a separate AI module and remains active under `admin_front_ts/src/vie
 
 ## AI Core Provider Config / Local Runtime Surface
 
-状态：provider config slice、智能体配置 MVP、AI 对话 WebSocket MVP、运行监控 token-only MVP、AI tool runtime MVP are implemented for OpenAI-first local runtime. RAG/知识库 are separate later slices and must not be marked complete by the chat page alone.
+状态：provider config slice、智能体配置 MVP、AI 对话 WebSocket MVP、运行监控 token-only MVP、AI tool runtime MVP、AI Knowledge Base RAG MVP are implemented for OpenAI-first local runtime.
 
 本节替代旧 AI 配置契约。旧模型/提示词/知识库产品面、旧工具映射概念和 legacy app 命名已经不是 active provider/agent/tool contract；`ai_agents` 是当前智能体配置事实源，`ai_tools` 是当前工具定义事实源。当前产品方向是 admin_go 自有页面 + 服务端 provider boundary，不嵌入第三方控制台，不把外部 key 暴露给浏览器。
 
@@ -1345,7 +1345,7 @@ Hard boundaries:
 Vue -> admin_go REST/WebSocket only; Vue never calls an AI provider directly.
 Provider API keys stay server-side, encrypted at write boundary and masked in DTOs.
 internal/module/* does not import provider SDKs/clients; provider calls go through internal/platform/ai boundaries.
-admin_go owns users, RBAC, menus, operation logs, REST contracts, WebSocket envelopes, local conversations, messages, runs, and agent metadata.
+admin_go owns users, RBAC, menus, operation logs, REST contracts, WebSocket envelopes, local conversations, messages, runs, agent metadata, local knowledge bases, and knowledge retrieval audit rows.
 The first provider-config driver is exactly openai.
 No iframe console embedding, no browser SSE/EventSource provider stream.
 ```
@@ -1494,10 +1494,14 @@ Runtime rules:
 - `ai:conversation-reply:v1` remains a registered worker task type, but it is not the active browser chat MVP handoff path; the API process owns the immediate reply execution so local WebSocket conversations do not depend on a separately running worker
 - `POST /messages/cancel` cancels the matching in-process reply context by `conversation_id + request_id`; late WebSocket events for a locally canceled request must be ignored by the browser
 - provider stream is consumed only inside Go and converted to admin_go WebSocket envelopes; the browser never receives provider stream directly
+- AI chat streaming timeout is layered: provider stream reads do not use a 30s total HTTP timeout; live reply max duration is controlled by `AI_CHAT_STREAM_MAX_DURATION`; upstream silence is controlled by `AI_CHAT_STREAM_IDLE_TIMEOUT`; `ai_run_timeout` only marks stale running rows older than `AI_RUN_STALE_TIMEOUT`
+- OpenAI-compatible Chat Completions requests set `stream_options.include_usage=true`; token usage is written to existing `prompt_tokens`, `completion_tokens`, and `total_tokens` fields when the provider returns usage
+- before the first provider call, `aichat` invokes the local knowledge runtime for the selected agent; enabled `ai_agent_knowledge_bases` bindings may inject selected knowledge context into the current user content and persist retrieval audit rows
+- knowledge retrieval failure is non-blocking for chat: the run records a `knowledge_failed` event and continues without knowledge context
 - browser realtime is WebSocket-only: `ai.response.start.v1`, `ai.response.delta.v1`, `ai.response.completed.v1`, `ai.response.failed.v1`
 - all AI response payloads are conversation-scoped and must not contain `run_id`
 - removed from active chat slice: `/api/admin/v1/ai-chat/runs`, `/api/admin/v1/ai-chat/runs/:run_id/events`, `/api/admin/v1/ai-chat/runs/:run_id/cancel`, `/api/admin/v1/ai-chat/messages`
-- no SSE, EventSource, streamable HTTP fallback, tool, or RAG in this slice
+- no SSE, EventSource, streamable HTTP fallback, or browser-direct tool/RAG execution path in this slice
 
 ## AI Runs Monitor
 
@@ -1608,6 +1612,35 @@ interface AiRunDetailResponse extends AiRunItem {
     message: string
     created_at: string
   }>
+  knowledge_retrievals: Array<{
+    id: number
+    run_id: number
+    query: string
+    status: 'success' | 'failed' | 'skipped'
+    status_name: string
+    total_hits: number
+    selected_hits: number
+    duration_ms: number | null
+    duration_text: string
+    error_message: string
+    created_at: string
+    hits: Array<{
+      id: number
+      knowledge_base_id: number
+      knowledge_base_name: string
+      document_id: number
+      document_title: string
+      chunk_id: number
+      chunk_index: number
+      score: number
+      rank_no: number
+      content_snapshot: string
+      status: 1 | 2
+      status_name: string
+      skip_reason: string
+      created_at: string
+    }>
+  }>
   tool_calls: Array<{
     id: number
     tool_id: number
@@ -1642,31 +1675,98 @@ interface AiRunStatsSummary {
 }
 ```
 
-## AI Knowledge Maps
+## AI Knowledge Base RAG MVP
 
-状态：existing local metadata/status mapping. This is not the active slice of the current provider-config task.
+状态：implemented. Active truth source is local MySQL-backed RAG tables, not Dify/provider datasets and not the retired `ai_knowledge_maps` contract.
 
 ```text
-GET    /api/admin/v1/ai-knowledge-maps/page-init
-GET    /api/admin/v1/ai-knowledge-maps
-GET    /api/admin/v1/ai-knowledge-maps/:id
-POST   /api/admin/v1/ai-knowledge-maps
-PUT    /api/admin/v1/ai-knowledge-maps/:id
-PATCH  /api/admin/v1/ai-knowledge-maps/:id/status
-POST   /api/admin/v1/ai-knowledge-maps/:id/sync
-DELETE /api/admin/v1/ai-knowledge-maps/:id
-GET    /api/admin/v1/ai-knowledge-maps/:id/documents
-POST   /api/admin/v1/ai-knowledge-maps/:id/documents
+GET    /api/admin/v1/ai-knowledge-bases/page-init
+GET    /api/admin/v1/ai-knowledge-bases
+GET    /api/admin/v1/ai-knowledge-bases/:id
+POST   /api/admin/v1/ai-knowledge-bases
+PUT    /api/admin/v1/ai-knowledge-bases/:id
+PATCH  /api/admin/v1/ai-knowledge-bases/:id/status
+DELETE /api/admin/v1/ai-knowledge-bases/:id
+GET    /api/admin/v1/ai-knowledge-bases/:id/documents
+POST   /api/admin/v1/ai-knowledge-bases/:id/documents
+GET    /api/admin/v1/ai-knowledge-documents/:id
+PUT    /api/admin/v1/ai-knowledge-documents/:id
 PATCH  /api/admin/v1/ai-knowledge-documents/:id/status
-POST   /api/admin/v1/ai-knowledge-documents/:id/refresh-status
 DELETE /api/admin/v1/ai-knowledge-documents/:id
+POST   /api/admin/v1/ai-knowledge-documents/:id/reindex
+GET    /api/admin/v1/ai-knowledge-documents/:id/chunks
+POST   /api/admin/v1/ai-knowledge-bases/:id/retrieval-tests
+GET    /api/admin/v1/ai-agents/:id/knowledge-bases
+PUT    /api/admin/v1/ai-agents/:id/knowledge-bases
+```
+
+Tables:
+
+```text
+ai_knowledge_bases
+ai_knowledge_documents
+ai_knowledge_chunks
+ai_agent_knowledge_bases
+ai_knowledge_retrievals
+ai_knowledge_retrieval_hits
 ```
 
 Rules:
 
-- tables: `ai_knowledge_maps`, `ai_knowledge_documents`
-- local map records external knowledge-base identifiers and local document/indexing status when a provider supports that boundary
-- indexing status refresh is explicit; do not claim vector quality from default smoke
+- `ai_knowledge_bases` stores local knowledge-base configuration: `name`, `code`, `description`, chunk settings, default retrieval settings, `status`, `is_del`, timestamps. Every field is used by CRUD, chunking, retrieval defaults, or filtering.
+- `ai_knowledge_documents` stores editable source text and indexing state. Documents are filtered by `knowledge_base_id`, `status=1`, `is_del=2`, and `index_status='indexed'` at runtime.
+- `ai_knowledge_chunks` stores deterministic text chunks. Runtime retrieval reads `title`, `content`, and `content_chars`; monitor hit snapshots are copied from chunk rows.
+- `ai_agent_knowledge_bases` is the only place that says which knowledge bases an agent may read. Do not add JSON knowledge fields to `ai_agents`.
+- Binding options `top_k`, `min_score`, and `max_context_chars` are runtime controls. Explicit `min_score=0` is valid and must not be replaced by a default.
+- `ai_knowledge_retrievals` records one retrieval attempt per run when a bound agent triggers RAG. `status` is `success`, `failed`, or `skipped`.
+- `ai_knowledge_retrieval_hits` snapshots every selected or skipped hit with score, rank, content snapshot, and skip reason. Run monitor must read this table instead of joining current chunks for historical content.
+- Retrieval is a local deterministic MVP: SQL narrows active chunks by bound knowledge bases, Go scores title/content text matches, then applies `top_k`, `min_score`, and `max_context_chars`. No external vector DB, hosted file_search, Dify/RAGFlow dataset sync, OCR, or hidden provider dataset is part of this slice.
+- Runtime injection format uses `[K1]`, `[K2]` references and prepends knowledge context only to the current provider call. It does not mutate `ai_agents.system_prompt` and does not rewrite persisted user message content.
+- `GET /api/admin/v1/ai-runs/:id` includes `knowledge_retrievals` when retrieval was attempted. This is separate from `tool_calls`; retrieval records are written before the model call and hit records snapshot selected/skipped chunks.
+- Permission mapping: base mutations use `ai_knowledge_add`, `ai_knowledge_edit`, `ai_knowledge_status`, `ai_knowledge_del`; document mutations use `ai_knowledge_document_add`, `ai_knowledge_document_edit`, `ai_knowledge_document_status`, `ai_knowledge_document_del`; reindex uses `ai_knowledge_reindex`; retrieval test uses `ai_knowledge_retrieval_test`; agent knowledge binding save uses `ai_agent_binding_add`.
+
+Request/response highlights:
+
+```ts
+interface AiKnowledgeBaseItem {
+  id: number
+  name: string
+  code: string
+  description: string
+  chunk_size_chars: number
+  chunk_overlap_chars: number
+  default_top_k: number
+  default_min_score: number
+  default_max_context_chars: number
+  status: 1 | 2
+  status_name: string
+  created_at: string
+  updated_at: string
+}
+
+interface AiKnowledgeDocumentItem {
+  id: number
+  knowledge_base_id: number
+  title: string
+  source_type: 'text' | 'markdown' | 'file'
+  source_ref: string
+  index_status: 'pending' | 'indexed' | 'failed'
+  error_message: string
+  last_indexed_at: string
+  status: 1 | 2
+  status_name: string
+}
+
+interface AiAgentKnowledgeBindingItem {
+  id?: number
+  knowledge_base_id: number
+  knowledge_base_name: string
+  top_k: number
+  min_score: number
+  max_context_chars: number
+  status: 1 | 2
+}
+```
 
 ## AI Tools Runtime MVP
 
@@ -1714,7 +1814,8 @@ queue handler=aichat.TimeoutRuns
 Rules:
 
 - cron row remains DB-owned through System Cron Tasks, but executable truth comes from the Go registry
-- worker marks stale `running` rows as `timeout` with a timeout reason according to the current run status contract
+- worker marks only stale `running` rows as `timeout`: `status='running' AND started_at IS NOT NULL AND started_at < now - AI_RUN_STALE_TIMEOUT`
+- online stream max duration and upstream idle timeout are handled by the live `admin-api` reply execution path, not by this cron task
 - default smoke checks registry/list shape; it does not create a long-running AI run just to time it out
 
 ## Notification Tasks
@@ -2868,6 +2969,8 @@ payment_sync_pending_order.handler = payment:sync-pending-order:v1
 AI runtime migration (2026-05-08)
 ai_run_timeout.handler = ai:run-timeout:v1
 ```
+
+`ai_run_timeout` 是 stale-run sweeper only：worker 只处理 `status='running' AND started_at < now - AI_RUN_STALE_TIMEOUT` 的残留运行，不负责正常在线流式请求超时。
 
 ### Routes
 
