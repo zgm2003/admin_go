@@ -256,4 +256,3 @@ Smoke / manual：
 - `ai_runs` / `ai_run_events` 没有新增字段，运行监控页面无需新增展示字段。
 - token usage 仍写入现有 `prompt_tokens/completion_tokens/total_tokens`。
 - 后端 tests、contract check 通过。
-
