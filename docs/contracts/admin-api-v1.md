@@ -1674,7 +1674,9 @@ Rules:
 
 ```text
 GET    /api/admin/v1/ai-tools/page-init
+GET    /api/admin/v1/ai-tools/generate/page-init
 GET    /api/admin/v1/ai-tools
+POST   /api/admin/v1/ai-tools/generate-draft
 POST   /api/admin/v1/ai-tools
 PUT    /api/admin/v1/ai-tools/:id
 PATCH  /api/admin/v1/ai-tools/:id/status
@@ -1688,6 +1690,10 @@ Rules:
 - tables: `ai_tools`, `ai_agent_tools`, `ai_tool_calls`
 - first server-backed tool code: `admin_user_count`; read-only, low risk, returns only `total_users`, `enabled_users`, `disabled_users`
 - tool definition fields are all runtime-visible: `code` becomes provider function name, `parameters_json` becomes function schema, `timeout_ms` bounds server runtime, `result_schema_json` documents monitor/debug output shape
+- `GET /ai-tools/generate/page-init` returns enabled `agent_generate` scene agents; `POST /ai-tools/generate-draft` calls the selected agent and returns a draft only
+- `generate-draft` never inserts `ai_tools`; final persistence still uses `POST /api/admin/v1/ai-tools` after the admin reviews the generated fields
+- generated drafts contain only `name`, `code`, `description`, `parameters_json`, `result_schema_json`, `risk_level`, `timeout_ms`, `status`, `warnings`, `clarifying_questions`, and optional token `usage`
+- if a generated `code` has no registered Go executor, backend forces `status=2` and returns warning `该工具编码暂未注册服务端实现，已默认禁用`
 - `/ai-tools/page-init`, list, create, and update do not expose or accept an executor field; there is no `ai_tools.executor` column because `code` is the single tool identity and server dispatch key
 - disabled tool definitions can be stored before the matching server implementation exists; enabling or saving an enabled tool rejects a `code` that is not registered in the server runtime
 - `/ai/tools` and `/api/admin/v1/ai-tools/*` manage tool definitions only; selecting which tools an agent can use is an agent configuration action under `/ai/agents` and `/api/admin/v1/ai-agents/:id/tools`
