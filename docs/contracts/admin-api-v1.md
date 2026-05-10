@@ -1686,12 +1686,14 @@ PUT    /api/admin/v1/ai-agents/:id/tools
 Rules:
 
 - tables: `ai_tools`, `ai_agent_tools`, `ai_tool_calls`
-- first executor: `admin_user_count`; read-only, low risk, returns only `total_users`, `enabled_users`, `disabled_users`
-- tool definition fields are all runtime-visible: `code` becomes provider function name, `parameters_json` becomes function schema, `timeout_ms` bounds executor runtime, `result_schema_json` documents monitor/debug output shape
+- first server-backed tool code: `admin_user_count`; read-only, low risk, returns only `total_users`, `enabled_users`, `disabled_users`
+- tool definition fields are all runtime-visible: `code` becomes provider function name, `parameters_json` becomes function schema, `timeout_ms` bounds server runtime, `result_schema_json` documents monitor/debug output shape
+- `/ai-tools/page-init`, list, create, and update do not expose or accept an executor field; there is no `ai_tools.executor` column because `code` is the single tool identity and server dispatch key
+- disabled tool definitions can be stored before the matching server implementation exists; enabling or saving an enabled tool rejects a `code` that is not registered in the server runtime
 - `/ai/tools` and `/api/admin/v1/ai-tools/*` manage tool definitions only; selecting which tools an agent can use is an agent configuration action under `/ai/agents` and `/api/admin/v1/ai-agents/:id/tools`
 - bindings live in `ai_agent_tools`; do not add duplicate `tool_ids_json` or `tools_enabled` fields to `ai_agents`
 - tool execution audit lives in `ai_tool_calls`; run detail returns `tool_calls`, while `ai_run_events` stays lifecycle-only
-- MVP auto-executes only low-risk local executors; external HTTP/MCP/RAG/write tools need separate specs
+- MVP auto-executes only low-risk local server-backed tools; external HTTP/MCP/RAG/write tools need separate specs
 
 ## AI Run Timeout Worker
 

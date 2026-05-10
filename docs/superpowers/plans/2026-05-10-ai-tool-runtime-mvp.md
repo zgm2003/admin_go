@@ -4,7 +4,7 @@
 
 **Goal:** 落地第一版真实 AI tool runtime：工具定义、智能体绑定、工具调用审计，以及只读测试工具 `admin_user_count`。
 
-**Architecture:** `ai_tools` 定义工具，`ai_agent_tools` 绑定智能体，`ai_tool_calls` 记录每次调用。`aichat` 负责编排模型 tool call，`aitool` 负责管理 API + executor registry，provider 只接收结构化 tools，不拼 prompt。
+**Architecture:** `ai_tools` 定义工具，`ai_agent_tools` 绑定智能体，`ai_tool_calls` 记录每次调用。`aichat` 负责编排模型 tool call，`aitool` 负责管理 API + server tool registry，provider 只接收结构化 tools，不拼 prompt。
 
 **Tech Stack:** Go + Gin + GORM + MySQL 8 + existing OpenAI-compatible streaming client; Vue 3 + TypeScript + Element Plus.
 
@@ -16,7 +16,7 @@
 
 ```text
 local function tool runtime
-admin_user_count read-only executor
+admin_user_count read-only tool implementation
 agent-tool binding
 run-monitor tool call visibility
 ```
@@ -77,7 +77,6 @@ The DTO must include only fields in the three live tables. No `engine_tool_id`, 
   "name": "查询当前用户量",
   "code": "admin_user_count",
   "description": "查询后台当前用户数量，只返回数量。",
-  "executor": "admin_user_count",
   "parameters_json": {"type":"object","properties":{},"additionalProperties":false},
   "result_schema_json": {"type":"object","properties":{},"additionalProperties":false},
   "risk_level": "low",
@@ -107,7 +106,7 @@ ListRuntimeTools/StartToolCall/FinishToolCall/CountUsers
 
 `ReplaceAgentTools` must verify agent exists and every tool id is active, then update bindings in one transaction.
 
-- [x] **Step 5: Implement executor registry**
+- [x] **Step 5: Implement server tool registry**
 
 `executor.go`:
 
@@ -144,7 +143,7 @@ Create/Update trim strings and reject invalid JSON object
 duplicate code rejected
 Delete soft-deletes tool and disables related agent bindings
 Runtime ListRuntimeTools loads only enabled binding + enabled tool
-Execute rejects unknown executor
+Execute rejects unknown tool code
 ```
 
 - [x] **Step 7: Add handlers/routes**
@@ -319,7 +318,7 @@ reject unbound/unknown
 reject risk_level != low
 StartToolCall(running)
 context.WithTimeout(timeout_ms)
-Execute executor
+Execute tool code
 FinishToolCall(success/failed/timeout)
 return output JSON to provider
 ```
@@ -443,7 +442,7 @@ npx vue-tsc -b --pretty false
 ```text
 AI Tools Runtime MVP
 Tables: ai_tools, ai_agent_tools, ai_tool_calls
-First executor: admin_user_count
+First tool code: admin_user_count
 No active ai_tool_maps table
 ```
 

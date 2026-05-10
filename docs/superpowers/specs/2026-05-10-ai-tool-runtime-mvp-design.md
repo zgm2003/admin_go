@@ -60,7 +60,7 @@ Chat Completions-compatible provider 先做 tools/tool_calls 的最小闭环。
 未来切 Responses API 时复用 ai_tools / ai_agent_tools / ai_tool_calls 三张表，不重做业务表。
 ```
 
-理由很简单：官方 Go SDK 存在，但现在引 SDK 会强迫改 provider boundary 和 streaming 链路，风险大于收益。表和执行器先按 OpenAI 函数调用语义设计即可。
+理由很简单：官方 Go SDK 存在，但现在引 SDK 会强迫改 provider boundary 和 streaming 链路，风险大于收益。表和工具运行先按 OpenAI 函数调用语义设计即可。
 
 ## 4. 范围
 
@@ -70,7 +70,7 @@ Chat Completions-compatible provider 先做 tools/tool_calls 的最小闭环。
 - Seed 一个本地只读工具：`admin_user_count`。
 - 默认绑定所有已启用 chat 场景智能体，保证测试工具马上可用。
 - 后端新增 `internal/module/aitool` 取代旧 `aitoolmap` active 路由。
-- 后端新增 tool executor registry 和 `admin_user_count` executor。
+- 后端新增 server tool runner registry 和 `admin_user_count` 只读实现。
 - `aichat` 执行回复时加载当前智能体启用工具，传给 provider；模型请求 tool 时执行并写 `ai_tool_calls`。
 - 运行监控详情展示 tool calls。
 - 前端 `/ai/tools` 改为工具定义 + 智能体绑定，不再展示旧 `engine_tool_id` / `permission_code` / `config_json`。
@@ -98,7 +98,6 @@ CREATE TABLE IF NOT EXISTS `ai_tools` (
   `name` varchar(128) NOT NULL COMMENT '工具名称，管理页和运行监控展示',
   `code` varchar(128) NOT NULL COMMENT '工具唯一编码，传给模型作为function name',
   `description` varchar(1024) NOT NULL DEFAULT '' COMMENT '工具说明，传给模型作为function description',
-  `executor` varchar(64) NOT NULL COMMENT '本地执行器编码，用于Go executor registry路由',
   `parameters_json` json NOT NULL COMMENT '工具参数JSON Schema，传给模型并用于入参校验',
   `result_schema_json` json NOT NULL COMMENT '工具返回JSON Schema，用于结果校验和运行监控展示',
   `risk_level` varchar(16) NOT NULL COMMENT '风险等级：low/medium/high',
@@ -121,9 +120,8 @@ CREATE TABLE IF NOT EXISTS `ai_tools` (
 | `name` | 工具管理页列表/表单；运行监控 tool call 展示快照来源。 |
 | `code` | 唯一工具编码；传给模型作为 function name；执行结果回传时定位工具。 |
 | `description` | 传给模型作为 function description；管理页编辑。 |
-| `executor` | Go executor registry 路由键；`admin_user_count` 指向同名 executor。 |
 | `parameters_json` | 模型工具参数 JSON Schema；后端执行前校验参数。 |
-| `result_schema_json` | 运行监控展示返回结构；后续测试校验 executor 输出。 |
+| `result_schema_json` | 运行监控展示返回结构；后续测试校验工具输出。 |
 | `risk_level` | 管理页风险标签；运行时首期只允许 `low` 自动执行。 |
 | `timeout_ms` | 每次执行 `context.WithTimeout`。 |
 | `status` | 管理页启停；运行时只加载启用工具。 |
@@ -200,7 +198,7 @@ CREATE TABLE IF NOT EXISTS `ai_tool_calls` (
 | `call_id` | OpenAI tool_call_id / Responses call_id；回传工具结果时必须关联。 |
 | `status` | 调用状态：running/success/failed/timeout。 |
 | `arguments_json` | 模型传入参数；运行监控展示和问题复现。 |
-| `result_json` | executor 输出；运行监控展示和二次提交给模型。 |
+| `result_json` | 工具输出；运行监控展示和二次提交给模型。 |
 | `error_message` | 失败/超时原因。 |
 | `duration_ms` | 工具执行耗时。 |
 | `started_at` | 工具开始执行时间。 |
@@ -217,7 +215,6 @@ Seed 已入库：
 ```text
 name: 查询当前用户量
 code: admin_user_count
-executor: admin_user_count
 risk_level: low
 timeout_ms: 3000
 status: 1
@@ -244,7 +241,7 @@ status: 1
 }
 ```
 
-executor SQL：
+工具实现 SQL：
 
 ```sql
 SELECT COUNT(*) AS total_users,
@@ -295,7 +292,7 @@ agent tool config: ai_agent_edit
   -> aichat 对每个 tool_call：
        创建 ai_tool_calls running
        context.WithTimeout(timeout_ms)
-       registry.Execute(executor, arguments)
+       registry.Execute(code, arguments)
        成功写 success/result_json/duration
        失败写 failed/error_message/duration
        超时写 timeout/error_message/duration
@@ -304,7 +301,7 @@ agent tool config: ai_agent_edit
   -> assistant message + ai_runs success
 ```
 
-MVP 限制：第一版只允许低风险只读 executor 自动执行；`admin_user_count` 满足这个条件。
+MVP 限制：第一版只允许低风险只读工具自动执行；`admin_user_count` 满足这个条件。
 
 ## 9. 前端组件边界
 
@@ -351,7 +348,7 @@ ai_tools
 Seed 已验证：
 
 ```text
-ai_tools: id=1, code=admin_user_count, executor=admin_user_count, timeout_ms=3000
+ai_tools: id=1, code=admin_user_count, timeout_ms=3000
 ai_agent_tools: agent_id=3 -> admin_user_count, agent_id=4 -> admin_user_count
 ```
 
