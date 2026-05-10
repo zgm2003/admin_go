@@ -1413,12 +1413,12 @@ Rules:
 - `provider_id` points to the local provider row
 - create/update require a concrete `model_id` selected from enabled `ai_provider_models` under the selected provider
 - `model_display_name` is denormalized from the selected provider model for list display
-- list query supports `scene=chat`; there is no agent code or agent type filter in the MVP
-- MVP scene field is `scenes`; current allowed value is `chat`; empty internal input normalizes to `["chat"]`
+- list query supports `scene=chat` and `scene=agent_generate`; there is no agent code or agent type filter in the MVP
+- MVP scene field is `scenes`; current allowed values are `chat` and `agent_generate`; empty internal input normalizes to `["chat"]`
 - MVP form fields are name, model cascader, scenes, status, optional system prompt, and optional avatar
 - `ai_agents` deliberately does not store agent code, agent type, per-agent external app ids, per-agent API keys, response mode, runtime config JSON, model snapshot JSON, `created_by`, or `updated_by`; those are future contracts, not MVP columns
 - runtime uses the selected agent plus its provider credentials; per-agent credential override is not part of this slice
-- `GET /ai-agents/options` feeds chat/runtime selectors and returns only enabled `chat` scene agent id/name/avatar/system_prompt facts
+- `GET /ai-agents/options` feeds chat/runtime selectors and returns only enabled `chat` scene agent id/name/avatar/system_prompt facts; `agent_generate` is for the next AI-generated-agent flow and does not enter the chat selector by default
 - `GET /ai-agents/page-init` returns `scene_arr` and `provider_model_options`; `GET /ai-agents/provider-models/:id` refreshes enabled models for a provider
 - `agent_id` / `agent_name` are the canonical AI runtime selector fields; old app aliases must not drive new DB queries or new Vue state
 
