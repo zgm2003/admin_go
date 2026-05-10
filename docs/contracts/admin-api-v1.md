@@ -1335,7 +1335,7 @@ AI chat is a separate AI module and remains active under `admin_front_ts/src/vie
 
 ## AI Core Provider Config / Local Runtime Surface
 
-状态：provider config slice、智能体配置 MVP、AI 对话 WebSocket MVP are implemented for OpenAI-first local runtime. 运行监控、工具、RAG/知识库 are separate later slices and must not be marked complete by the chat page alone.
+状态：provider config slice、智能体配置 MVP、AI 对话 WebSocket MVP、运行监控 token-only MVP are implemented for OpenAI-first local runtime. 工具、RAG/知识库 are separate later slices and must not be marked complete by the chat page alone.
 
 本节替代旧 AI 配置契约。旧 `ai_models` / `ai_tools` / `ai_prompts` / `ai_knowledge_bases` 产品面和 legacy app 命名已经不是 active provider/agent contract；`ai_agents` 是当前智能体配置事实源。当前产品方向是 admin_go 自有页面 + 服务端 provider boundary，不嵌入第三方控制台，不把外部 key 暴露给浏览器。
 
@@ -1424,7 +1424,7 @@ Rules:
 
 ## AI Conversations
 
-状态：implemented MVP for the “对话” slice. This slice owns only `ai_conversations` and `ai_messages`; run monitor remains a later slice.
+状态：implemented MVP for the “对话” slice. This slice owns only `ai_conversations` and `ai_messages`; run monitor is implemented as a separate token-only read slice.
 
 ```text
 GET    /api/admin/v1/ai-conversations
@@ -1501,7 +1501,7 @@ Runtime rules:
 
 ## AI Runs Monitor
 
-状态：implemented.
+状态：implemented token-only MVP.
 
 ```text
 GET /api/admin/v1/ai-runs/page-init
@@ -1515,11 +1515,117 @@ GET /api/admin/v1/ai-runs/stats/by-user
 
 Rules:
 
-- tables: `ai_runs`, `ai_run_events`, `ai_usage_daily`
-- monitor source is agent/provider centric: `ai_runs.agent_id`, `ai_runs.provider_id`, `ai_agents.name`, `ai_providers.name/type`, and `ai_run_events.seq/event_type/payload_json`
-- status is string-based runtime state (`pending`, `running`, `success`, `failed`, `canceled`, `timeout`), not old tinyint magic
-- stats are backend aggregates; frontend must not compute success rate from a partial page
-- these read routes are bearer-token protected and must not expose prompt secrets, encrypted API keys, or raw provider credentials
+- tables: `ai_runs`, `ai_run_events`; there is no daily aggregate table in this MVP
+- one `ai_runs` row represents one assistant reply attempt for one persisted user message
+- run source is conversation/agent/provider centric: `ai_runs.conversation_id`, `ai_runs.user_message_id`, `ai_runs.assistant_message_id`, `ai_runs.agent_id`, `ai_runs.provider_id`, `ai_runs.model_id`, and `ai_runs.model_display_name`
+- status is string-based runtime state: `running`, `success`, `failed`, `canceled`, `timeout`; there is no fake `pending` state
+- event types are lifecycle-only: `start`, `completed`, `failed`, `canceled`, `timeout`; WebSocket delta is not persisted as events
+- stats aggregate only `ai_runs` token and duration fields: total runs, success rate, failed terminal count, prompt/completion/total tokens, and average duration
+- token-only means no billing amount, no provider task ids, no input/output snapshots, no raw usage dumps, and no execution-step timeline
+- these read routes are bearer-token protected and must not expose prompt secrets, encrypted API keys, raw provider credentials, or hidden provider payloads
+
+`GET /api/admin/v1/ai-runs/page-init` returns:
+
+```ts
+interface AiRunInitResponse {
+  dict: {
+    status_arr: Array<{ label: string; value: 'running' | 'success' | 'failed' | 'canceled' | 'timeout' }>
+    agentArr: Array<{ label: string; value: number }>
+    providerArr: Array<{ label: string; value: number }>
+  }
+}
+```
+
+`GET /api/admin/v1/ai-runs` query:
+
+```ts
+interface AiRunListQuery {
+  current_page?: number
+  page_size?: number
+  status?: 'running' | 'success' | 'failed' | 'canceled' | 'timeout'
+  user_id?: number
+  request_id?: string
+  agent_id?: number
+  provider_id?: number
+  date_start?: string
+  date_end?: string
+}
+```
+
+List item:
+
+```ts
+interface AiRunItem {
+  id: number
+  request_id: string
+  user_id: number
+  agent_id: number
+  agent_name: string
+  provider_id: number
+  provider_name: string
+  conversation_id: number
+  conversation_title: string
+  status: 'running' | 'success' | 'failed' | 'canceled' | 'timeout'
+  status_name: string
+  model_id: string
+  model_display_name: string
+  prompt_tokens: number
+  completion_tokens: number
+  total_tokens: number
+  duration_ms: number | null
+  duration_text: string
+  error_message: string
+  created_at: string
+}
+```
+
+Detail adds:
+
+```ts
+interface AiRunDetailResponse extends AiRunItem {
+  username: string
+  user_message: {
+    id: number
+    role: number
+    content_type: string
+    content: string
+    meta_json: object
+    created_at: string
+  } | null
+  assistant_message: {
+    id: number
+    role: number
+    content_type: string
+    content: string
+    meta_json: object
+    created_at: string
+  } | null
+  events: Array<{
+    id: number
+    seq: number
+    event_type: 'start' | 'completed' | 'failed' | 'canceled' | 'timeout'
+    message: string
+    created_at: string
+  }>
+  started_at: string
+  finished_at: string
+  updated_at: string
+}
+```
+
+Stats summary:
+
+```ts
+interface AiRunStatsSummary {
+  total_runs: number
+  success_rate: number
+  fail_runs: number
+  total_tokens: number
+  total_prompt_tokens: number
+  total_completion_tokens: number
+  avg_duration_ms: number
+}
+```
 
 ## AI Knowledge Maps
 
@@ -1580,7 +1686,7 @@ queue handler=aichat.TimeoutRuns
 Rules:
 
 - cron row remains DB-owned through System Cron Tasks, but executable truth comes from the Go registry
-- worker marks stale running/pending rows as `timeout` or failed with a timeout reason according to the current run status contract
+- worker marks stale `running` rows as `timeout` with a timeout reason according to the current run status contract
 - default smoke checks registry/list shape; it does not create a long-running AI run just to time it out
 
 ## Notification Tasks
