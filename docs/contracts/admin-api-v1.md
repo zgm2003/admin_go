@@ -63,7 +63,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-contract.ps1
 | upload token create | `POST /api/admin/v1/upload-tokens` | bearer token; current-user upload capability, no RBAC button permission |
 | notification task mutations | notification-tasks create/cancel/delete | bearer token + `system_notificationTask_*` route permission |
 | current profile update | `PUT /api/admin/v1/profile` | bearer token; operation log only, no user-manager button permission |
-| AI sidecar provider/agent/map management | ai-providers/ai-agents/ai-knowledge-maps/ai-knowledge-documents/ai-tool-maps write routes | bearer token; mutation routes use explicit `ai_provider_*`, `ai_agent_*`, `ai_knowledge_map_*`, `ai_tool_map_*` route permissions and OperationLog metadata; secret fields are write-only/masked |
+| AI sidecar provider/agent/tool/knowledge management | ai-providers/ai-agents/ai-tools/ai-knowledge-maps/ai-knowledge-documents write routes | bearer token; mutation routes use explicit `ai_provider_*`, `ai_agent_*`, `ai_tool_*`, `ai_knowledge_map_*` route permissions and OperationLog metadata; secret fields are write-only/masked |
 | AI sidecar runtime current-user | ai-conversations current-user CRUD, ai-conversations/:id/messages list/send, and ai-runs read monitor | bearer token; current-user ownership where applicable; message send requires an enabled chat-scene AI agent + provider and must fail explicitly when not configured |
 | Retired AI legacy routes | legacy model/tool/prompt/agent/knowledge-base routes | not mounted in active Go runtime; only backup/rollback SQL, historical specs, or negative router tests may mention exact old route strings |
 
@@ -1335,9 +1335,9 @@ AI chat is a separate AI module and remains active under `admin_front_ts/src/vie
 
 ## AI Core Provider Config / Local Runtime Surface
 
-状态：provider config slice、智能体配置 MVP、AI 对话 WebSocket MVP、运行监控 token-only MVP are implemented for OpenAI-first local runtime. 工具、RAG/知识库 are separate later slices and must not be marked complete by the chat page alone.
+状态：provider config slice、智能体配置 MVP、AI 对话 WebSocket MVP、运行监控 token-only MVP、AI tool runtime MVP are implemented for OpenAI-first local runtime. RAG/知识库 are separate later slices and must not be marked complete by the chat page alone.
 
-本节替代旧 AI 配置契约。旧 `ai_models` / `ai_tools` / `ai_prompts` / `ai_knowledge_bases` 产品面和 legacy app 命名已经不是 active provider/agent contract；`ai_agents` 是当前智能体配置事实源。当前产品方向是 admin_go 自有页面 + 服务端 provider boundary，不嵌入第三方控制台，不把外部 key 暴露给浏览器。
+本节替代旧 AI 配置契约。旧模型/提示词/知识库产品面、旧工具映射概念和 legacy app 命名已经不是 active provider/agent/tool contract；`ai_agents` 是当前智能体配置事实源，`ai_tools` 是当前工具定义事实源。当前产品方向是 admin_go 自有页面 + 服务端 provider boundary，不嵌入第三方控制台，不把外部 key 暴露给浏览器。
 
 Hard boundaries:
 
@@ -1515,7 +1515,8 @@ GET /api/admin/v1/ai-runs/stats/by-user
 
 Rules:
 
-- tables: `ai_runs`, `ai_run_events`; there is no daily aggregate table in this MVP
+- lifecycle tables: `ai_runs`, `ai_run_events`; there is no daily aggregate table in this MVP
+- tool execution audit is owned by `ai_tool_calls` and appears only on run detail as `tool_calls`; lifecycle events stay in `ai_run_events`
 - one `ai_runs` row represents one assistant reply attempt for one persisted user message
 - run source is conversation/agent/provider centric: `ai_runs.conversation_id`, `ai_runs.user_message_id`, `ai_runs.assistant_message_id`, `ai_runs.agent_id`, `ai_runs.provider_id`, `ai_runs.model_id`, and `ai_runs.model_display_name`
 - status is string-based runtime state: `running`, `success`, `failed`, `canceled`, `timeout`; there is no fake `pending` state
@@ -1607,6 +1608,20 @@ interface AiRunDetailResponse extends AiRunItem {
     message: string
     created_at: string
   }>
+  tool_calls: Array<{
+    id: number
+    tool_id: number
+    tool_code: string
+    tool_name: string
+    call_id: string | null
+    status: 'running' | 'success' | 'failed' | 'timeout'
+    arguments_json: object
+    result_json: object | null
+    error_message: string
+    duration_ms: number | null
+    started_at: string
+    finished_at: string
+  }>
   started_at: string
   finished_at: string
   updated_at: string
@@ -1653,25 +1668,30 @@ Rules:
 - local map records external knowledge-base identifiers and local document/indexing status when a provider supports that boundary
 - indexing status refresh is explicit; do not claim vector quality from default smoke
 
-## AI Tool Maps
+## AI Tools Runtime MVP
 
-状态：existing local tool metadata/reference slice. This is not the active slice of the current provider-config task.
+状态：implemented. Active truth source is exactly `ai_tools` + `ai_agent_tools` + `ai_tool_calls`; old tool-map metadata is retired from active runtime.
 
 ```text
-GET    /api/admin/v1/ai-tool-maps/page-init
-GET    /api/admin/v1/ai-tool-maps
-POST   /api/admin/v1/ai-tool-maps
-PUT    /api/admin/v1/ai-tool-maps/:id
-PATCH  /api/admin/v1/ai-tool-maps/:id/status
-DELETE /api/admin/v1/ai-tool-maps/:id
+GET    /api/admin/v1/ai-tools/page-init
+GET    /api/admin/v1/ai-tools
+POST   /api/admin/v1/ai-tools
+PUT    /api/admin/v1/ai-tools/:id
+PATCH  /api/admin/v1/ai-tools/:id/status
+DELETE /api/admin/v1/ai-tools/:id
+GET    /api/admin/v1/ai-agents/:id/tools
+PUT    /api/admin/v1/ai-agents/:id/tools
 ```
 
 Rules:
 
-- table: `ai_tool_maps`
-- local tool map records admin_go name/code/type/visibility/risk plus optional external tool reference fields such as `engine_tool_id`
-- no first-slice tool execution is owned by this table
-- any future internal tool gateway needs an explicit whitelist, permission check, audit log, and separate spec
+- tables: `ai_tools`, `ai_agent_tools`, `ai_tool_calls`
+- first executor: `admin_user_count`; read-only, low risk, returns only `total_users`, `enabled_users`, `disabled_users`
+- tool definition fields are all runtime-visible: `code` becomes provider function name, `parameters_json` becomes function schema, `timeout_ms` bounds executor runtime, `result_schema_json` documents monitor/debug output shape
+- `/ai/tools` and `/api/admin/v1/ai-tools/*` manage tool definitions only; selecting which tools an agent can use is an agent configuration action under `/ai/agents` and `/api/admin/v1/ai-agents/:id/tools`
+- bindings live in `ai_agent_tools`; do not add duplicate `tool_ids_json` or `tools_enabled` fields to `ai_agents`
+- tool execution audit lives in `ai_tool_calls`; run detail returns `tool_calls`, while `ai_run_events` stays lifecycle-only
+- MVP auto-executes only low-risk local executors; external HTTP/MCP/RAG/write tools need separate specs
 
 ## AI Run Timeout Worker
 
