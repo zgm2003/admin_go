@@ -1418,7 +1418,7 @@ Rules:
 - MVP form fields are name, model cascader, scenes, status, optional system prompt, and optional avatar
 - `ai_agents` deliberately does not store agent code, agent type, per-agent external app ids, per-agent API keys, response mode, runtime config JSON, model snapshot JSON, `created_by`, or `updated_by`; those are future contracts, not MVP columns
 - runtime uses the selected agent plus its provider credentials; per-agent credential override is not part of this slice
-- `GET /ai-agents/options` feeds chat/runtime selectors and returns only enabled `chat` scene agent id/name facts
+- `GET /ai-agents/options` feeds chat/runtime selectors and returns only enabled `chat` scene agent id/name/avatar/system_prompt facts
 - `GET /ai-agents/page-init` returns `scene_arr` and `provider_model_options`; `GET /ai-agents/provider-models/:id` refreshes enabled models for a provider
 - `agent_id` / `agent_name` are the canonical AI runtime selector fields; old app aliases must not drive new DB queries or new Vue state
 
@@ -1430,6 +1430,7 @@ Rules:
 GET    /api/admin/v1/ai-conversations
 GET    /api/admin/v1/ai-conversations/:id
 POST   /api/admin/v1/ai-conversations
+PUT    /api/admin/v1/ai-conversations/:id
 DELETE /api/admin/v1/ai-conversations/:id
 ```
 
@@ -1438,33 +1439,40 @@ Rules:
 - table: `ai_conversations`
 - physical columns are only `id`, `user_id`, `agent_id`, `title`, `last_message_at`, `is_del`, `created_at`, `updated_at`
 - canonical relationship is `agent_id -> ai_agents.id`; active code must not join `ai_apps`
-- current-user scoped: list/detail/delete reject conversations owned by another user
+- current-user scoped: list/detail/update/delete reject conversations owned by another user
 - list uses cursor inputs `agent_id`, `before_id`, `limit`; no page/status/title archive contract in MVP
 - list order is `last_message_at desc, id desc`, with empty `last_message_at` last
+- update only renames `title`; blank title is rejected
 - every user message insert and assistant completion updates `last_message_at`; frontend uses it for sort/display
 - delete is soft delete (`is_del=1`) and also marks child messages deleted in the same transaction
 - responses do not expose `user_id`, `is_del`, `status`, provider conversation ids, token fields, or run ids
 
 ## AI Messages
 
-状态：implemented MVP for conversation-scoped text messages.
+状态：implemented for conversation-scoped chat messages with the restored old-admin input surface. Transport remains WebSocket-only for assistant output.
 
 ```text
 GET  /api/admin/v1/ai-conversations/:id/messages
 POST /api/admin/v1/ai-conversations/:id/messages
+POST /api/admin/v1/ai-conversations/:id/messages/cancel
 ```
 
 Rules:
 
 - table: `ai_messages`
-- physical columns are only `id`, `conversation_id`, `role`, `content_type`, `content`, `is_del`, `created_at`, `updated_at`
+- physical columns are `id`, `conversation_id`, `role`, `content_type`, `content`, `meta_json`, `is_del`, `created_at`, `updated_at`
 - message ownership is checked through the owning conversation and current user
-- `content_type` is mandatory; current MVP only writes `text`
+- `content_type` is mandatory; current chat writes `text`
+- `meta_json` stores explicit message extensions only: `attachments`, `runtime_params`, and later-renderable `blocks` / `feedback`; it is not a dump bucket for hidden provider state
 - message history uses cursor inputs `before_id`, `limit`; no offset page contract
-- send body is `{ content, request_id }`; response is `{ conversation_id, user_message_id, request_id }`
+- send body is `{ content, request_id, attachments?, runtime_params? }`; `content` may be empty only when at least one uploaded image attachment exists
+- `attachments` currently supports up to 5 image objects `{ type:"image", url, name, size }`
+- `runtime_params` currently accepts `temperature`, `max_tokens`, and `max_history`; unknown keys are rejected instead of silently ignored
+- send response is `{ conversation_id, user_message_id, request_id }`
+- cancel body is `{ request_id }`; response is `{ conversation_id, request_id, status:"canceled" }`
 - send accepts only conversations whose agent is enabled and has `chat` in `scenes_json`
 - assistant replies are delivered by WebSocket events and persisted as one final assistant message after completion
-- no edit, feedback, delete-message, batch-delete, attachment, tool-call, RAG, `meta_json`, token, provider message id, status, `user_id`, or `run_id` fields in this slice
+- no edit, delete-message, batch-delete, tool-call, RAG, token, provider message id, status, `user_id`, or `run_id` fields in this slice
 
 ## AI Chat Runtime
 
@@ -1474,20 +1482,22 @@ Active send flow:
 
 ```text
 POST /api/admin/v1/ai-conversations/:id/messages
-admin-worker task ai:conversation-reply:v1
+admin-api in-process conversation reply dispatcher
 WebSocket /api/admin/v1/realtime/ws -> ai.response.*.v1
 ```
 
 Runtime rules:
 
 - Vue starts chat by creating/selecting an `ai_conversations` row and posting a text message to `/:id/messages`
-- `aimessage` persists the user message, updates `last_message_at`, generates title from the first user message when title is empty, then enqueues `ai:conversation-reply:v1`
-- `aichat` executes the queued reply through `internal/platform/ai.Engine` using recent conversation messages plus the selected agent prompt
+- `aimessage` persists the user message plus explicit `meta_json`, updates `last_message_at`, generates title from the first user message when title is empty, then hands off to the API-process reply dispatcher
+- `aichat` executes the reply through `internal/platform/ai.Engine` using recent conversation messages, selected agent prompt, optional image attachments, and allowed runtime parameters
+- `ai:conversation-reply:v1` remains a registered worker task type, but it is not the active browser chat MVP handoff path; the API process owns the immediate reply execution so local WebSocket conversations do not depend on a separately running worker
+- `POST /messages/cancel` cancels the matching in-process reply context by `conversation_id + request_id`; late WebSocket events for a locally canceled request must be ignored by the browser
 - provider stream is consumed only inside Go and converted to admin_go WebSocket envelopes; the browser never receives provider stream directly
 - browser realtime is WebSocket-only: `ai.response.start.v1`, `ai.response.delta.v1`, `ai.response.completed.v1`, `ai.response.failed.v1`
 - all AI response payloads are conversation-scoped and must not contain `run_id`
 - removed from active chat slice: `/api/admin/v1/ai-chat/runs`, `/api/admin/v1/ai-chat/runs/:run_id/events`, `/api/admin/v1/ai-chat/runs/:run_id/cancel`, `/api/admin/v1/ai-chat/messages`
-- no SSE, EventSource, streamable HTTP fallback, cancel generation, tool, RAG, image, attachment, or runtime parameter UI in this MVP
+- no SSE, EventSource, streamable HTTP fallback, tool, or RAG in this slice
 
 ## AI Runs Monitor
 
