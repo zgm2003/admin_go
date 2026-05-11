@@ -45,7 +45,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-contract.ps1
 | Area | Routes | Auth requirement |
 | --- | --- | --- |
 | health/readiness | `GET /health`, `GET /ready` | public |
-| auth config/captcha/code/login/refresh | `/api/admin/v1/auth/login-config`, `/captcha`, `/send-code`, `/login`, `/refresh` | public |
+| auth config/captcha/code/login/forgot-password/refresh | `/api/admin/v1/auth/login-config`, `/captcha`, `/send-code`, `/forgot-password`, `/login`, `/refresh` | public |
 | logout | `POST /api/admin/v1/auth/logout` | bearer token |
 | current user bootstrap | `GET /api/admin/v1/users/me`, `GET /api/admin/v1/users/init` | bearer token |
 | read-only admin resources | permissions/auth-platforms/roles/users/profile/operation-logs/system-settings/upload-drivers/upload-rules/upload-settings/notifications list or init | bearer token |
@@ -145,8 +145,11 @@ Body：
 
 ```ts
 type SendCodeBody =
-  | { scene: 'login'; login_type: 'email'; account: string }
-  | { scene: 'login'; login_type: 'phone'; account: string }
+  | { scene: 'login'; account: string }
+  | { scene: 'forget'; account: string }
+  | { scene: 'bind_phone'; account: string }
+  | { scene: 'bind_email'; account: string }
+  | { scene: 'change_password'; account: string }
 ```
 
 Response example：
@@ -155,7 +158,52 @@ Response example：
 { "code": 0, "data": {}, "msg": "ok" }
 ```
 
-规则：local dev 可使用 `VERIFY_CODE_DEV_MODE=true` 和 `VERIFY_CODE_DEV_CODE`；production 不允许假装已接真实短信/邮件。
+规则：account 必须是合法邮箱或手机号；scene 由 Go `enum.VerifyCodeScenes` + `verify_code_scene` validator 派生。local dev 可使用 `VERIFY_CODE_DEV_MODE=true` 和 `VERIFY_CODE_DEV_CODE`；production 不允许假装已接真实短信/邮件。
+
+### Forgot Password
+
+`POST /api/admin/v1/auth/forgot-password`
+
+Body：
+
+```ts
+interface ForgotPasswordBody {
+  account: string
+  code: string
+  new_password: string
+  confirm_password: string
+}
+```
+
+Response:
+
+```json
+{ "code": 0, "data": {}, "msg": "ok" }
+```
+
+规则：
+
+```text
+该接口是公共 auth 入口，不需要 bearer token。
+验证码继续复用 POST /api/admin/v1/auth/send-code，scene 必须是 forget。
+account 必须是当前 users.email 或 users.phone 中存在且未删除的账号。
+用户必须处于启用状态。
+成功后写入 users.password 的 PHP-compatible bcrypt hash，并消费 Redis 验证码。
+前端必须使用 Go request 调用本接口，不允许再走 legacy /api/Users/forgetPassword。
+新 Go 契约不接受 legacy 字段：newpassword、respassword、account_type。
+```
+
+错误：
+
+```text
+invalid account                            -> code 100 / 请输入正确的邮箱或手机号
+missing account                            -> code 100 / 重置密码参数错误
+invalid or expired verification code        -> code 100 / 验证码错误或已失效
+password confirm mismatch                   -> code 100 / 两次输入的密码不一致
+password length invalid                     -> code 100 / 密码长度必须为6-128位
+missing user                                -> code 100 / 账号不存在
+disabled user                               -> code 100 / 账号已被禁用，请联系管理员
+```
 
 ### Captcha
 
