@@ -409,6 +409,8 @@ interface AddressTreeNode {
 }
 ```
 
+`auth_address_tree` 是地址大字典，Go 后端从 Redis `admin_go:dict:address:v1` 读取；缓存不存在、Redis 不可用或 payload 损坏时，回源 MySQL `address` 表并重建，不改变 response shape。
+
 ### List
 
 `GET /api/admin/v1/users`
@@ -945,6 +947,16 @@ interface ProfileResponse {
     verify_type_arr: Array<{ label: string; value: 'password' | 'code' }>
   }
 }
+```
+
+地址字典来源：
+
+```text
+MySQL address 表是真相源。
+Go user service 通过 Redis cache-aside 读取派生地址树。
+Redis key: admin_go:dict:address:v1
+TTL: none，redis TTL 期望为 -1。
+Redis miss / Redis error / corrupt cache 会回源 MySQL 重建，不改变 response shape。
 ```
 
 规则：
