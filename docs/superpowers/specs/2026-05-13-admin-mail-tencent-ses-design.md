@@ -113,8 +113,10 @@ github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/ses/v20201002
 4. 管理邮件配置、业务模板映射、发送日志。
 5. `auth.SendCode` 在 `VERIFY_CODE_DEV_MODE=false` 且账号是邮箱时，真实发送验证码邮件。
 6. 邮件发送链路可测试、可审计、可定位腾讯云错误码和 RequestId。
-7. 保留 dev mode 本地开发能力，不让开发环境必须打真实邮件。
-8. 为后续回调/重试/队列留下干净边界，但不在第一期实现。
+7. 三张业务表都必须有 `is_del`，且所有读路径过滤 `is_del=2`。
+8. 表里每一个字段都必须在接口、发送链路、查询条件、软删除、审计或展示中明确用到。
+9. 保留 dev mode 本地开发能力，不让开发环境必须打真实邮件。
+10. 为后续回调/重试/队列留下干净边界，但不在第一期实现。
 
 ## 非目标
 
@@ -218,13 +220,14 @@ CREATE TABLE mail_configs (
   from_name VARCHAR(100) NOT NULL DEFAULT '',
   reply_to VARCHAR(255) NOT NULL DEFAULT '',
   status TINYINT UNSIGNED NOT NULL DEFAULT 2,
+  is_del TINYINT UNSIGNED NOT NULL DEFAULT 2,
   last_test_at DATETIME NULL,
   last_test_error VARCHAR(500) NOT NULL DEFAULT '',
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE KEY uk_mail_configs_config_key (config_key),
-  KEY idx_mail_configs_status (status)
+  KEY idx_mail_configs_status_del (status, is_del)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
 
@@ -235,7 +238,8 @@ config_key 固定 default，避免用 id=1 这种魔法约定；
 secret_id_enc / secret_key_enc 使用 secretbox 加密；
 secret_id_hint / secret_key_hint 使用 secretbox.Hint 展示末 4 位；
 status: 1=启用，2=禁用；
-不提供删除配置接口，配置只能更新或禁用；
+is_del: 1=删除，2=正常；所有配置读取和发送链路必须过滤 is_del=2；
+DELETE /mail/config 是重置配置，soft delete 当前 default 行；下一次 PUT /mail/config 恢复并覆盖同一行；
 endpoint 是腾讯云 API endpoint，不是多 provider 抽象。
 ```
 
@@ -295,6 +299,7 @@ CREATE TABLE mail_logs (
   tencent_request_id VARCHAR(128) NOT NULL DEFAULT '',
   tencent_message_id VARCHAR(128) NOT NULL DEFAULT '',
   status TINYINT UNSIGNED NOT NULL,
+  is_del TINYINT UNSIGNED NOT NULL DEFAULT 2,
   error_code VARCHAR(128) NOT NULL DEFAULT '',
   error_message VARCHAR(500) NOT NULL DEFAULT '',
   duration_ms BIGINT UNSIGNED NOT NULL DEFAULT 0,
@@ -302,9 +307,9 @@ CREATE TABLE mail_logs (
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
-  KEY idx_mail_logs_scene_created (scene, created_at),
-  KEY idx_mail_logs_status_created (status, created_at),
-  KEY idx_mail_logs_to_email_created (to_email, created_at)
+  KEY idx_mail_logs_scene_created (is_del, scene, created_at),
+  KEY idx_mail_logs_status_created (is_del, status, created_at),
+  KEY idx_mail_logs_to_email_created (is_del, to_email, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
 
@@ -323,9 +328,72 @@ CREATE TABLE mail_logs (
 不保存验证码 code；
 不保存 TemplateData 原文；
 错误信息最多 500 字符；
-列表默认按 created_at DESC；
+列表和详情必须过滤 is_del=2，默认按 created_at DESC；
+DELETE 日志只把 is_del=1，不物理删除；
 日志保留策略第一期不做自动清理，后续可以挂 cron。
 ```
+
+### 字段使用合同
+
+规则很简单：**表里的每一个字段都必须被创建、读取、写入、过滤、展示或审计中的至少一个真实路径使用；没有路径就不建字段。**
+
+#### mail_configs 字段使用
+
+| 字段 | 使用路径 |
+| --- | --- |
+| `id` | `GET /mail/config` 返回；`PUT /mail/config` 更新已有行；OperationLog 记录配置变更对象。 |
+| `config_key` | 固定 `default`；`GET/PUT/DELETE /mail/config` 和发送链路按它定位 singleton 配置。 |
+| `secret_id_enc` | `PUT /mail/config` 加密写入；发送/测试时解密后创建腾讯云 credential。 |
+| `secret_id_hint` | `GET /mail/config` 展示；编辑页 placeholder 提醒当前已保存密钥。 |
+| `secret_key_enc` | `PUT /mail/config` 加密写入；发送/测试时解密后创建腾讯云 credential。 |
+| `secret_key_hint` | `GET /mail/config` 展示；编辑页 placeholder 提醒当前已保存密钥。 |
+| `region` | `PUT /mail/config` 保存；腾讯云 SDK client 初始化使用。 |
+| `endpoint` | `PUT /mail/config` 保存；腾讯云 SES API endpoint 使用。 |
+| `from_email` | `PUT /mail/config` 保存；SendEmail `FromEmailAddress` 使用。 |
+| `from_name` | `PUT /mail/config` 保存；拼接 `FromEmailAddress` 别名使用。 |
+| `reply_to` | `PUT /mail/config` 保存；非空时写入 SendEmail reply-to 参数。 |
+| `status` | `GET /mail/config` 返回；发送/测试前必须要求 `status=1`。 |
+| `is_del` | `DELETE /mail/config` 写 `1`；所有配置读取和发送链路过滤 `is_del=2`。 |
+| `last_test_at` | `POST /mail/test` 成功或失败后更新；`GET /mail/config` 展示最近测试时间。 |
+| `last_test_error` | `POST /mail/test` 失败时写错误摘要，成功时清空；`GET /mail/config` 展示。 |
+| `created_at` | `GET /mail/config` 返回；配置页可用于提示首次配置时间。 |
+| `updated_at` | `GET /mail/config` 返回；配置页可用于提示最近更新时间。 |
+
+#### mail_templates 字段使用
+
+| 字段 | 使用路径 |
+| --- | --- |
+| `id` | 模板列表返回；`PUT/PATCH/DELETE /mail/templates/:id` 定位模板；日志写入 `template_id`。 |
+| `scene` | `auth.SendCode` 按 scene 查模板；模板列表筛选和唯一约束使用。 |
+| `name` | 模板列表/表单展示，便于管理员识别业务用途。 |
+| `subject` | 邮件发送时作为 SendEmail subject；日志保存同一 subject。 |
+| `tencent_template_id` | 腾讯云 SendEmail `TemplateID` 使用。 |
+| `variables_json` | 发送前校验必须变量；前端变量 tag 输入读写。 |
+| `sample_variables_json` | `POST /mail/test` 构造测试 TemplateData 使用。 |
+| `status` | 模板列表返回；发送前必须要求 `status=1`。 |
+| `is_del` | `DELETE /mail/templates/:id` 写 `1`；列表、更新、删除、发送链路过滤 `is_del=2`。 |
+| `created_at` | 模板列表返回。 |
+| `updated_at` | 模板列表返回，编辑后刷新排序/展示。 |
+
+#### mail_logs 字段使用
+
+| 字段 | 使用路径 |
+| --- | --- |
+| `id` | 日志列表/详情返回；`DELETE /mail/logs/:id` 定位日志。 |
+| `scene` | 发送链路写入；日志列表按 scene 查询。 |
+| `template_id` | 发送链路写入；详情用于追溯当时使用的模板。 |
+| `to_email` | 发送链路写入；日志列表按收件邮箱查询。 |
+| `subject` | 发送链路写入；日志列表展示，不保存正文。 |
+| `tencent_request_id` | 腾讯云成功/失败响应写入；排查腾讯云工单使用。 |
+| `tencent_message_id` | 腾讯云 SendEmail 成功响应写入；后续人工查投递状态使用。 |
+| `status` | pending/success/failed；日志列表筛选和状态 tag 展示。 |
+| `is_del` | `DELETE /mail/logs/:id` 或批量删除写 `1`；列表/详情过滤 `is_del=2`。 |
+| `error_code` | 腾讯云 SDK/API 错误码写入；日志列表和详情展示。 |
+| `error_message` | 错误摘要写入；日志列表和详情展示。 |
+| `duration_ms` | 发送完成后写入耗时；列表展示和排查慢请求使用。 |
+| `sent_at` | 成功发送时写入；列表展示实际发送时间。 |
+| `created_at` | 列表默认倒序排序；时间范围查询使用。 |
+| `updated_at` | 状态从 pending 变 success/failed 时更新；详情审计使用。 |
 
 ## API 契约
 
@@ -360,6 +428,7 @@ interface MailPageInitResponse {
 ```text
 GET /api/admin/v1/mail/config
 PUT /api/admin/v1/mail/config
+DELETE /api/admin/v1/mail/config
 POST /api/admin/v1/mail/test
 ```
 
@@ -379,6 +448,8 @@ interface MailConfigResponse {
   status: 1 | 2
   last_test_at: string | null
   last_test_error: string
+  created_at: string | null
+  updated_at: string | null
 }
 ```
 
@@ -407,6 +478,8 @@ interface TestMailBody {
 ```
 
 规则：测试发送真实邮件，使用目标模板的 `sample_variables_json`，写一条 `scene=test` 的发送日志。
+
+`DELETE /mail/config` 规则：soft delete 当前 `config_key=default` 行，后续 `GET /mail/config` 返回 `configured=false`；下一次 `PUT /mail/config` 恢复并覆盖同一行。
 
 ### templates
 
@@ -449,6 +522,8 @@ sample_variables 必须覆盖 variables 里的所有 key；
 ```text
 GET /api/admin/v1/mail/logs
 GET /api/admin/v1/mail/logs/:id
+DELETE /api/admin/v1/mail/logs/:id
+DELETE /api/admin/v1/mail/logs
 ```
 
 查询参数：
@@ -476,13 +551,25 @@ interface MailLogItem {
   subject: string
   status: 1 | 2 | 3
   tencent_request_id: string
+  tencent_message_id: string
   error_code: string
   error_message: string
   duration_ms: number
   sent_at: string | null
   created_at: string
+  updated_at: string
 }
 ```
+
+批量删除 body：
+
+```ts
+interface DeleteMailLogsBody {
+  ids: number[]
+}
+```
+
+规则：删除日志只写 `is_del=1`，不物理删除；列表和详情永远过滤 `is_del=2`。
 
 ## 权限设计
 
@@ -496,11 +583,13 @@ BUTTON：
 
 ```text
 system_mail_configEdit
+system_mail_configDel
 system_mail_test
 system_mail_templateAdd
 system_mail_templateEdit
 system_mail_templateStatus
 system_mail_templateDel
+system_mail_logDel
 ```
 
 权限规则：
@@ -508,9 +597,10 @@ system_mail_templateDel
 ```text
 GET page-init/config/templates/logs 只需要 bearer token + 页面可见；
 PUT config 需要 system_mail_configEdit；
+DELETE config 需要 system_mail_configDel；
 POST test 需要 system_mail_test；
 POST/PUT/PATCH/DELETE template 使用对应 system_mail_template*；
-发送日志只读，不设置删除按钮；
+DELETE log routes 需要 system_mail_logDel；
 route_meta.go 必须显式注册所有 mutation 权限和 OperationLog 元数据。
 ```
 
@@ -668,6 +758,8 @@ go test ./internal/bootstrap ./internal/server
 
 ```text
 secret_id/secret_key 加密、hint、编辑留空保留旧密钥；
+mail_configs / mail_templates / mail_logs 所有 repository read 路径过滤 is_del=2；
+DELETE config/templates/logs 只写 is_del=1，不物理删除；
 模板变量校验和 sample_variables 覆盖；
 mail.SendVerifyCode 缺配置/缺模板/禁用场景失败；
 Tencent client fake 成功/失败都写日志；
@@ -684,7 +776,8 @@ mail API Vitest contract test；
 Vue SFC parse/build check；
 邮件配置表单 secret hint/留空保留逻辑；
 模板变量和 sample_variables 校验；
-按钮权限 v-if 使用 system_mail_*。
+按钮权限 v-if 使用 system_mail_*；
+删除按钮只做 soft delete，并刷新列表。
 ```
 
 Smoke：
@@ -730,6 +823,8 @@ docs/testing/smoke-matrix.md 增加邮件管理 read probes。
 无自建邮件服务器；
 无正文/验证码日志泄漏；
 无邮件密钥 env；
+三张表都有 is_del，且读路径过滤、删除路径写入；
+每一个表字段都有明确使用路径；
 不破坏现有 send-code 响应结构；
 不改变短信现状；
 腾讯云模板规则已反映到本地模板设计；
