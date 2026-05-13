@@ -9,13 +9,14 @@
 ```text
 Superpowers = 怎么推进任务
 agents/     = 谁负责什么、不能做什么、必须产出什么
+docs/superpowers = spec/plan 总入口，包含当前计划和历史归档
 ```
 
 ## Agent 列表
 
 ```text
 architect.md        # 架构调研、开源对标、阶段边界
-api-contract.md     # REST/OpenAPI/legacy API 映射
+api-contract.md     # REST/OpenAPI/current API contract；historical PHP mapping 只作考古
 backend-worker.md   # Go 后端实现
 frontend-adapter.md # 前端适配 Go API
 reviewer.md         # 越界、质量、验证审查
@@ -78,7 +79,7 @@ admin_back_go/docs/architecture.md
 允许：
 
 ```text
-按契约继续 Go/Vue 窄切片迁移
+按契约继续 Go/Vue 窄切片演进
 修复与运行时不一致的文档
 补测试、smoke、contract gate
 维护 agent 冷启动规则
@@ -89,7 +90,18 @@ admin_back_go/docs/architecture.md
 ```text
 绕过 current-status 直接猜进度
 绕过 API contract 让前后端互猜字段
-把 legacy PHP 路由风格搬进 Go 新接口
-一次迁一堆业务模块
+把 historical PHP 路由风格搬进 Go 新接口
+一次改一堆业务模块
 安装未调研、未记录取舍、未验证的依赖
 ```
+
+
+## Superpowers 文档归属
+
+```text
+E:\admin_go\docs\superpowers                    # 当前 spec/plan 总入口
+E:\admin_go\docs\superpowers\archive            # 历史 spec/plan 归档
+E:\admin_go\admin_back_go\docs                   # 只放 Go 后端运行时文档
+```
+
+`admin_back_go/docs/superpowers` 不再作为有效入口。看到历史后端 bootstrap 计划时，先去总控 `docs/superpowers/archive/backend-bootstrap`。

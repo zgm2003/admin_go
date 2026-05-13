@@ -2,7 +2,7 @@
 
 ## 核心判断
 
-这是一个 **open-source-first admin rewrite workspace**，不是闭门造车实验场。
+这是一个 **open-source-first Go/Vue admin workspace**。旧 PHP 已退出 active runtime，只作为业务事实、历史迁移和考古参考；不要再把本项目当成 PHP 迁移半成品。
 
 冷启动判断顺序固定：
 
@@ -22,7 +22,8 @@ Phase 2: Minimal Go service skeleton
 Phase 3: Database and config baseline
 Phase 4: Auth and RBAC core
 Phase 5: Admin frontend API adaptation
-Phase 6: Legacy PHP feature migration
+Phase 6: Legacy PHP runtime cutover closure
+Phase 7: Post-migration Go/Vue module evolution
 ```
 
 ## Linus 三问
@@ -84,21 +85,22 @@ Phase 6: Legacy PHP feature migration
 
 ```text
 Phase 0-5: 已经有基线实现，具体状态以 docs/migration/current-status.md 为准
-Phase 6: 后续按模块迁移 legacy PHP 业务，每次只迁一个窄切片
+Phase 6: PHP active runtime cutover 已收口；历史 PHP 只作为业务事实参考
+Phase 7: 后续按 Go/Vue runtime 做模块演进、产品补齐和质量 hardening，每次只做一个窄切片
 ```
 
 禁止跨阶段偷跑。比如 RBAC 或契约没验明，就别写业务模块；Go skeleton 或 smoke 没验证，就别声称基建完成。
 
-### 3. Legacy 只提供业务事实，不提供新架构规则
+### 3. Historical PHP 只提供业务事实，不提供新架构规则
 
-旧项目可以参考：
+历史项目可以参考：
 
 ```text
-E:\admin\admin_back       # PHP legacy backend reference
-E:\admin_go\admin_front_ts # current frontend workspace
+E:\admin\admin_back       # historical PHP backend reference only
+E:\admin_go\admin_front_ts # current Vue frontend workspace
 ```
 
-但旧 PHP 的路由风格、分层、命名、历史兼容，不自动成为 Go 新项目规则。
+但旧 PHP 的路由风格、分层、命名、历史兼容，不自动成为 Go 新项目规则；不得把 PHP 当成 active runtime 依赖。
 
 ### 4. Agent 分工优先于“全能 AI”
 
@@ -129,6 +131,7 @@ docs/architecture/02-agent-framework.md
 docs/architecture/03-technology-decision.md
 docs/architecture/04-go-backend-framework.md
 docs/architecture/05-development-quality-rules.md
+docs/migration/current-status.md
 ```
 
 按角色继续读：

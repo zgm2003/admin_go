@@ -1,6 +1,6 @@
 # Admin Go Workspace Docs
 
-这是 `E:\admin_go` 的 **Codex 冷启动入口**。
+这是 `E:\admin_go` 的 **Codex 冷启动入口**，也是 Go/Vue admin 新项目的总控文档入口。
 
 目标不是写漂亮文档，而是让一个全新的 Codex 进仓库后，不依赖聊天记录，也能判断：
 
@@ -43,19 +43,21 @@
 agents/*.md                              # agent 分工
 docs/open-source/*.md                    # 开源调研和取舍
 docs/deployment/*.md                     # 本地、生产、分布式 readiness 运行边界
-docs/superpowers/plans/*.md              # 长计划和阶段任务；历史计划不是运行时真相
+docs/superpowers/plans/*.md              # 当前长计划和阶段任务；历史计划不是运行时真相
+docs/superpowers/archive/**/*.md         # 已归档历史计划，只能用于考古，不覆盖 current-status
 admin_back_go/docs/architecture.md       # Go 后端运行时架构
 admin_back_go/scripts/*.ps1              # smoke/contract 脚本
 ```
 
 ## 仓库边界
 
-`E:\admin_go` 是 meta repo，只跟踪：
+`E:\admin_go` 是 meta repo / 总控仓库，只跟踪：
 
 ```text
 AGENTS.md
 agents/
 docs/
+  superpowers/          # spec/plan 总入口；后端子仓不再保存独立 superpowers 计划
 ```
 
 不跟踪：
@@ -89,6 +91,27 @@ planned = 只计划，不许说成已完成
 live runtime behavior > smoke output > served assets/API > process config > docs > comments
 ```
 
+## PHP / legacy 边界
+
+当前 active runtime 是：
+
+```text
+admin_back_go    # Go backend runtime
+admin_front_ts   # Vue frontend runtime
+```
+
+历史 PHP 只允许作为：
+
+```text
+业务事实来源
+字段/权限/流程考古
+历史迁移记录或 rollback provenance
+```
+
+禁止把 PHP 当作当前运行依赖，禁止把旧 PHP 全 POST action path 带进新的 Go REST 契约。
+
+所有 Superpowers spec/plan 统一归总控 `docs/superpowers`；`admin_back_go/docs` 只放 Go 后端运行时文档。
+
 ## 当前工程方向
 
 ```text
@@ -97,7 +120,7 @@ live runtime behavior > smoke output > served assets/API > process config > docs
 API：/api/admin/v1/...，未来 /api/app/v1/...
 Realtime：WebSocket-only，不新增 SSE
 异步：admin-worker + Asynq + gocron/v2；队列监控优先用官方 asynqmon 只读 UI
-认证/RBAC：先完成 admin core，再迁移业务
+认证/RBAC：core 已成型；后续是 Go/Vue runtime 的模块演进、产品补齐和 hardening
 ```
 
 ## 不可破坏规则
@@ -108,7 +131,7 @@ Realtime：WebSocket-only，不新增 SSE
 不在 handler 直连 DB/Redis
 不让 service 依赖 gin.Context
 不在前端 touched code 引入 any / as any / Record<string, any>
-不把 legacy PHP 架构搬进 Go
+不把 historical PHP 架构搬进 Go
 不把 planned 写成 implemented
 不跳过验证就说完成
 ```

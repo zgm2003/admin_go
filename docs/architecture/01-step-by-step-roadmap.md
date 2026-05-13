@@ -1,14 +1,14 @@
 # Step By Step Roadmap
 
-状态更新时间：2026-05-04
+状态更新时间：2026-05-13
 
 ## 目标
 
-从低到高搭建 `E:\admin_go`，每阶段只解决一个真实问题。
+记录 `E:\admin_go` 从低到高搭建的历史阶段，并固定当前 post-migration Go/Vue 演进口径。每次仍只解决一个真实问题。
 
 ## 当前状态
 
-这份 roadmap 是历史推进顺序，不是说项目还停在 Phase 0。
+这份 roadmap 是历史推进顺序，不是说项目还停在 Phase 0，也不是说 active runtime 仍依赖 PHP。
 
 当前真实进度看：
 
@@ -23,7 +23,8 @@ admin_back_go/docs/architecture.md
 
 ```text
 implemented / partially implemented / planned 以 current-status 为准。
-后续进入 Phase 6 时，一个 legacy PHP 业务模块一个模块迁，不允许大撒网。
+Phase 6 的 PHP active runtime cutover 已经收口；后续如果发现历史 PHP 事实，只作为业务考古输入。
+当前进入 Phase 7：按 Go/Vue runtime 做模块演进、产品补齐和质量 hardening，不允许大撒网。
 ```
 
 ## Phase 0: Agent Framework
@@ -134,16 +135,30 @@ API 权限能拦截
 旧 PHP API 不被新适配层污染
 ```
 
-## Phase 6: Legacy Migration
+## Phase 6: Legacy Runtime Cutover Closure
 
-按模块迁移 PHP 业务。每个模块必须先有 legacy map 和 OpenAPI contract。
+历史目标是把旧 PHP active runtime 入口按模块切到 Go/Vue。现在不再把项目理解为“正在依赖 PHP 的半迁移系统”。
 
 成功标准：
 
 ```text
-一个模块迁一个模块
-迁完有测试和前端验证
-不破坏既有用户路径
+Go/Vue active runtime 能承接后台主链路
+旧 PHP 只作为业务事实、历史迁移和 rollback provenance
+新接口不继承旧 PHP all POST/action path 风格
+```
+
+## Phase 7: Post-migration Go/Vue Module Evolution
+
+当前阶段按 Go/Vue runtime 继续做产品模块、质量 hardening、部署和真实第三方接入。每个切片仍然必须先看 current-status、contract、runtime docs，再改代码。
+
+成功标准：
+
+```text
+一次只做一个窄切片
+spec/plan 统一进入 docs/superpowers
+后端运行时文档只放 admin_back_go/docs
+改完有测试、smoke 或明确验证证据
+不破坏登录、权限、菜单、前端路由和已有接口
 ```
 
 ## 铁律

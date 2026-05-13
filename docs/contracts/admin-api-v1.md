@@ -48,7 +48,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-contract.ps1
 | auth config/captcha/code/login/forgot-password/refresh | `/api/admin/v1/auth/login-config`, `/captcha`, `/send-code`, `/forgot-password`, `/login`, `/refresh` | public |
 | logout | `POST /api/admin/v1/auth/logout` | bearer token |
 | current user bootstrap | `GET /api/admin/v1/users/me`, `GET /api/admin/v1/users/init` | bearer token |
-| read-only admin resources | permissions/auth-platforms/roles/users/profile/operation-logs/system-settings/upload-drivers/upload-rules/upload-settings/notifications list or init | bearer token |
+| read-only admin resources | permissions/auth-platforms/roles/users/profile/operation-logs/system-settings/mail/upload-drivers/upload-rules/upload-settings/notifications list or init | bearer token |
 | user quick-entry current-user write | `PUT /api/admin/v1/users/me/quick-entries` | bearer token; current user only, no user-manager button permission |
 | user login logs read | `GET /api/admin/v1/users/login-logs/page-init`, `GET /api/admin/v1/users/login-logs` | bearer token |
 | user sessions read/revoke | `GET /api/admin/v1/user-sessions/page-init`, `GET /api/admin/v1/user-sessions`, `GET /api/admin/v1/user-sessions/stats`, `PATCH /api/admin/v1/user-sessions/:id/revoke`, `PATCH /api/admin/v1/user-sessions/revoke` | read routes: bearer token; revoke routes: bearer token + `user_userManager_kick` |
@@ -59,6 +59,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-contract.ps1
 | user mutations | users update/status/batch/delete | bearer token + `user_userManager_*` route permission |
 | operation log delete | operation-logs delete/batch delete | bearer token + `devTools_operationLog_del` route permission |
 | system setting mutations | system-settings create/update/status/delete | bearer token + `system_setting_*` route permission |
+| mail management mutations | mail config/test/template/log write routes | bearer token + `system_mail_*` route permission |
 | upload config mutations | upload-drivers/upload-rules/upload-settings create/update/status/delete | bearer token + `system_uploadConfig_*` route permission |
 | upload token create | `POST /api/admin/v1/upload-tokens` | bearer token; current-user upload capability, no RBAC button permission |
 | notification task mutations | notification-tasks create/cancel/delete | bearer token + `system_notificationTask_*` route permission |
@@ -158,7 +159,7 @@ Response example：
 { "code": 0, "data": {}, "msg": "ok" }
 ```
 
-规则：account 必须是合法邮箱或手机号；scene 由 Go `enum.VerifyCodeScenes` + `verify_code_scene` validator 派生。local dev 可使用 `VERIFY_CODE_DEV_MODE=true` 和 `VERIFY_CODE_DEV_CODE`；production 不允许假装已接真实短信/邮件。
+规则：account 必须是合法邮箱或手机号；scene 由 Go `enum.VerifyCodeScenes` + `verify_code_scene` validator 派生。local dev 可使用 `VERIFY_CODE_DEV_MODE=true` 和 `VERIFY_CODE_DEV_CODE`；`VERIFY_CODE_DEV_MODE=false` 时邮箱账号必须走 `internal/module/mail.SendVerifyCode` + 腾讯云 SES，手机号仍明确返回“短信验证码服务未配置”。生产环境不允许假装已接真实短信/邮件。
 
 ### Forgot Password
 
@@ -2185,6 +2186,205 @@ mutating routes 显式注册 operation log rule。
 `devtools_queue_monitor_queues` 是旧 PHP 队列监控配置项。Go 队列监控已经采用官方 `asynqmon`、Asynq Redis lane 和 `QUEUE_*` env；系统设置 CRUD 不再读取或维护该 key。
 
 迁移时应将该行软删或标记删除，不删除队列监控功能本身。
+
+
+## Mail Tencent SES
+
+状态：implemented in Go backend, adapted in Vue frontend。
+
+用途：后台“系统管理 / 邮件管理”维护腾讯云 SES 发信配置、本地业务场景到腾讯云模板 ID 的映射、发送日志，并为 `auth/send-code` 的邮箱验证码真实发送提供运行时能力。
+
+### Shared Rules
+
+```text
+Only Tencent Cloud SES API.
+No SMTP.
+No self-hosted mail server.
+No multi-provider abstraction.
+Tencent SecretId / SecretKey are encrypted in mail_configs by APP_SECRET-derived secretbox.
+HTTP responses never return secret_id_enc / secret_key_enc or plaintext secrets.
+mail_configs / mail_templates / mail_logs all include is_del; every read path filters is_del=2.
+mail_logs never store email body, verification plaintext, or full template payload.
+Tencent Cloud SDK imports are confined to internal/platform/mail/tencentcloudses.
+auth.Service depends only on VerifyCodeMailSender and does not import module/mail or Tencent SDK.
+```
+
+### Page Init
+
+`GET /api/admin/v1/mail/page-init`
+
+Response `data.dict`:
+
+```ts
+interface MailPageInitDict {
+  common_status_arr: Array<{ label: string; value: 1 | 2 }>
+  mail_scene_arr: Array<{ label: string; value: 'login' | 'forget' | 'bind_email' | 'change_password' }>
+  mail_log_scene_arr: Array<{ label: string; value: 'login' | 'forget' | 'bind_email' | 'change_password' | 'test' }>
+  mail_log_status_arr: Array<{ label: string; value: 1 | 2 | 3 }>
+  default_region: string
+  default_endpoint: string
+}
+```
+
+### Config
+
+```text
+GET    /api/admin/v1/mail/config
+PUT    /api/admin/v1/mail/config
+DELETE /api/admin/v1/mail/config
+POST   /api/admin/v1/mail/test
+```
+
+`GET /mail/config` response:
+
+```ts
+interface MailConfigResponse {
+  id: number | null
+  configured: boolean
+  secret_id_hint: string
+  secret_key_hint: string
+  region: string
+  endpoint: string
+  from_email: string
+  from_name: string
+  reply_to: string
+  status: 1 | 2
+  last_test_at: string | null
+  last_test_error: string
+  created_at: string | null
+  updated_at: string | null
+}
+```
+
+`PUT /mail/config` body accepts plaintext `secret_id` / `secret_key` only as write-only inputs. First setup requires both. Later updates may leave them blank to reuse the current encrypted values.
+
+Rules:
+
+```text
+config_key is fixed to default.
+DELETE is a soft delete of the active default row.
+PUT restores a soft-deleted default row instead of inserting a duplicate.
+status=1 enables real sending; status=2 disables it explicitly.
+POST /mail/test uses the selected template scene sample variables and updates last_test_at / last_test_error.
+```
+
+### Templates
+
+```text
+GET    /api/admin/v1/mail/templates
+POST   /api/admin/v1/mail/templates
+PUT    /api/admin/v1/mail/templates/:id
+PATCH  /api/admin/v1/mail/templates/:id/status
+DELETE /api/admin/v1/mail/templates/:id
+```
+
+Template item:
+
+```ts
+interface MailTemplateItem {
+  id: number
+  scene: 'login' | 'forget' | 'bind_email' | 'change_password'
+  name: string
+  subject: string
+  tencent_template_id: number
+  variables: string[]
+  sample_variables: Record<string, string>
+  status: 1 | 2
+  created_at: string
+  updated_at: string
+}
+```
+
+Rules:
+
+```text
+This system does not edit Tencent HTML body. It maps local scenes to approved Tencent TemplateID.
+variables must be non-empty; sample_variables must cover variables.
+scene is unique; saving a soft-deleted scene restores the old row.
+DELETE is soft delete.
+```
+
+### Logs
+
+```text
+GET    /api/admin/v1/mail/logs
+GET    /api/admin/v1/mail/logs/:id
+DELETE /api/admin/v1/mail/logs/:id
+DELETE /api/admin/v1/mail/logs        body: { ids: number[] }
+```
+
+Query:
+
+```ts
+interface MailLogQuery {
+  current_page: number
+  page_size: number
+  scene?: 'login' | 'forget' | 'bind_email' | 'change_password' | 'test'
+  status?: 1 | 2 | 3
+  to_email?: string
+  created_at_start?: string
+  created_at_end?: string
+}
+```
+
+Log item:
+
+```ts
+interface MailLogItem {
+  id: number
+  scene: string
+  template_id: number | null
+  to_email: string
+  subject: string
+  status: 1 | 2 | 3
+  tencent_request_id: string
+  tencent_message_id: string
+  error_code: string
+  error_message: string
+  duration_ms: number
+  sent_at: string | null
+  created_at: string
+  updated_at: string
+}
+```
+
+Rules:
+
+```text
+status: 1=pending, 2=success, 3=failed.
+Logs store provider request/message IDs, error code/message, duration and timestamps only.
+No body, plaintext verification value, or template payload field is present in DB/API/frontend contract.
+DELETE is soft delete.
+```
+
+### Auth send-code integration
+
+```text
+POST /api/admin/v1/auth/send-code
+```
+
+When `VERIFY_CODE_DEV_MODE=true`, behavior is unchanged: write Redis verification value and return the test message.
+
+When `VERIFY_CODE_DEV_MODE=false`:
+
+```text
+email account -> generate value, write Redis, call mail.SendVerifyCode, cleanup Redis on send failure
+phone account -> return “短信验证码服务未配置” before writing Redis
+missing mail config/template/sender -> explicit error, no fake success
+```
+
+Operation log / permission:
+
+```text
+PUT    /mail/config                 -> system_mail_configEdit, module=mail, action=update_config
+DELETE /mail/config                 -> system_mail_configDel, module=mail, action=delete_config
+POST   /mail/test                   -> system_mail_test, module=mail, action=test_send
+POST   /mail/templates              -> system_mail_templateAdd, module=mail, action=create_template
+PUT    /mail/templates/:id          -> system_mail_templateEdit, module=mail, action=update_template
+PATCH  /mail/templates/:id/status   -> system_mail_templateStatus, module=mail, action=change_template_status
+DELETE /mail/templates/:id          -> system_mail_templateDel, module=mail, action=delete_template
+DELETE /mail/logs/:id and /logs     -> system_mail_logDel, module=mail, action=delete_log/delete_logs
+```
 
 ## Payment
 
