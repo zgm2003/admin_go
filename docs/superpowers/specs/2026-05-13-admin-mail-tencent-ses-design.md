@@ -410,10 +410,14 @@ GET /api/admin/v1/mail/page-init
 Auth: bearer token
 ```
 
-Response data：
+Response `data.dict`，保持当前 Go admin page-init 约定：
 
 ```ts
 interface MailPageInitResponse {
+  dict: MailPageInitDict
+}
+
+interface MailPageInitDict {
   common_status_arr: Array<{ label: string; value: 1 | 2 }>
   mail_scene_arr: Array<{ label: string; value: 'login' | 'forget' | 'bind_email' | 'change_password' }>
   mail_log_scene_arr: Array<{ label: string; value: 'login' | 'forget' | 'bind_email' | 'change_password' | 'test' }>
