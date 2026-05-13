@@ -98,6 +98,7 @@ github.com/gin-gonic/gin                     HTTP core
 github.com/go-co-op/gocron/v2                scheduler wrapper
 github.com/go-pay/gopay                      Alipay gateway
 github.com/go-playground/validator/v10       request validation
+github.com/golang-jwt/jwt/v5                 JWT access-token codec only; Gin JWT middleware is not used
 github.com/go-sql-driver/mysql               MySQL driver and MySQL error type
 github.com/gorilla/websocket                 realtime WebSocket
 github.com/hibiken/asynq                     task queue
@@ -139,7 +140,7 @@ github.com/gin-contrib/secure
 go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin
 Prometheus middleware
 Redis-backed rate limiter
-golang-jwt/jwt/v5 as a codec library
+gin-contrib/jwt or other JWT middleware
 ```
 
 采用前必须写独立 plan，并证明：
@@ -167,7 +168,7 @@ gin-gonic/contrib/sessions
 
 ```text
 admin 登录态已经有 user_sessions、refresh token、踢下线、单端登录、最大会话数、platform/device/IP policy。
-JWT 只能作为后续 AccessTokenCodec，不是认证架构本身。
+JWT 只作为 internal/platform/accesstoken codec，不是认证架构本身。
 gin-gonic/contrib/sessions 已 abandoned，不能采用。
 全局 timeout 会误伤 WebSocket、AI stream、支付回调。
 全局 rate limit 会误伤后台正常操作。
@@ -183,10 +184,10 @@ gin-gonic/contrib/sessions 已 abandoned，不能采用。
 3. RequestID/AccessLog refinement：评估 requestid/logger/slog 是否真有收益。
 4. Metrics：Prometheus endpoint，内网或鉴权。
 5. Tracing：otelgin，敏感字段屏蔽，可关闭 exporter。
-6. Auth Foundation v2：双令牌、AccessTokenCodec、refresh rotation、OAuth2/OIDC 预留。
+6. OAuth2/OIDC callback foundation：后续只负责把外部身份换成本系统 user_sessions + token pair。
 ```
 
-认证底座必须单独 spec + plan，不得混入普通依赖提纯。
+认证底座已由 Auth Foundation v2 收口：APP_SECRET + HKDF 派生 key、JWT access token、opaque refresh token、user_sessions 真相源。后续 OAuth2/OIDC 不得绕过这条登录态边界。
 
 ## 验证门槛
 

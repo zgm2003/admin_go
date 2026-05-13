@@ -256,6 +256,7 @@ Response example：
 密码登录必须通过 slide captcha。
 验证码登录支持 allow_register 控制的自动注册。
 access_token / refresh_token TTL 来自当前 platform 的 auth_platforms.access_ttl / auth_platforms.refresh_ttl；不是 .env。
+access_token 是本系统签发的 JWT，只包含 sid/sub/platform/device_id/iat/nbf/exp/iss 这类最小 claims；refresh_token 是 opaque random string，数据库只保存 hash。前端不得解析 JWT 决定权限，权限仍以后端 users/me、RBAC 和菜单接口为准。
 登录日志投递 auth:login-log:v1 到 critical queue；队列不可用时按已记录策略同步写库。
 ```
 
@@ -2288,7 +2289,7 @@ internal/enum -> internal/dict
 upload_driver list/detail 永远不返回 secret_id、secret_key、secret_id_enc、secret_key_enc。
 写入 secret 只保存 secret_id_enc、secret_key_enc 和 hint。
 operation log 必须 mask secret_id、secret_key、secret_id_enc、secret_key_enc。
-VAULT_KEY 为空时写入 secret 会明确失败，不做假加密。
+APP_SECRET 缺失、默认值或长度不足时 API/worker 启动失败；secretbox 只接收 HKDF 派生的 32-byte key，不做假加密。
 ```
 
 ### Dependency Boundary
@@ -2860,7 +2861,7 @@ Token TTL 事实源：
 ```text
 auth_platforms.access_ttl  = access_token 有效期，单位秒
 auth_platforms.refresh_ttl = refresh_token 总有效期，单位秒
-.env 只保存 TOKEN_PEPPER、TOKEN_REDIS_PREFIX、TOKEN_REDIS_DB、TOKEN_SESSION_CACHE_TTL、TOKEN_SINGLE_SESSION_POINTER_TTL 这类运行时基础设施配置
+.env 只保存 APP_SECRET、TOKEN_REDIS_PREFIX、TOKEN_REDIS_DB、TOKEN_SESSION_CACHE_TTL、TOKEN_SINGLE_SESSION_POINTER_TTL 这类运行时基础设施配置。access_ttl / refresh_ttl 仍以 auth_platforms 表为业务事实源
 ```
 
 ### Enum / Dict

@@ -1,6 +1,6 @@
 # Admin Smoke Matrix
 
-状态更新时间：2026-05-10
+状态更新时间：2026-05-13
 
 本文是 smoke 覆盖地图，不是接口契约。接口契约看 `docs/contracts/admin-api-v1.md`。
 
@@ -40,7 +40,7 @@
 | system settings read | no | yes | `GET /api/admin/v1/system-settings/init`, `GET /api/admin/v1/system-settings` | no | n/a | full smoke 只探测 init/list shape；旧 `devtools_queue_monitor_queues` 清理由迁移脚本/人工执行，不在 smoke 里做写库删除 |
 | client version management read | no | yes | `GET /api/admin/v1/client-versions/page-init`, `GET /api/admin/v1/client-versions`, `GET /api/admin/v1/client-versions/update-json` | no | n/a | full smoke only probes dict/page/list/update-json shape; does not create version rows, does not set latest, does not publish COS manifest |
 | upload config read | no | yes | `GET /api/admin/v1/upload-drivers/init`, `GET /api/admin/v1/upload-drivers`, `GET /api/admin/v1/upload-rules/init`, `GET /api/admin/v1/upload-rules`, `GET /api/admin/v1/upload-settings/init`, `GET /api/admin/v1/upload-settings` | no | n/a | full smoke 必须始终探测三类配置 init/list shape；不触发云 SDK |
-| upload config write probe | no | gated yes | `POST/DELETE upload-drivers`, `POST/DELETE upload-rules`, `POST/DELETE upload-settings` | yes, only disabled temp rows | delete setting -> rule -> driver | 只有 VAULT_KEY 存在时执行；永远不启用临时 setting，不修改现有 enabled setting；VAULT_KEY 空时 summary 输出 skipped_no_vault_key；不安装/调用 OSS SDK |
+| upload config write probe | no | gated yes | `POST/DELETE upload-drivers`, `POST/DELETE upload-rules`, `POST/DELETE upload-settings` | yes, only disabled temp rows | delete setting -> rule -> driver | API 启动已强校验 APP_SECRET；永远不启用临时 setting，不修改现有 enabled setting；不安装/调用 OSS SDK |
 | upload token shape | no | gated yes | `POST /api/admin/v1/upload-tokens` | token only | n/a | `COS_STS_ENABLED=false` 时 summary 输出 skipped_cos_sts_disabled；启用时只校验 provider/key/credentials shape，永远不上传真实文件 |
 | payment domain rebuild | no | yes | full smoke probes `GET /api/admin/v1/payment/channels/page-init`, `GET /api/admin/v1/payment/channels`, `GET /api/admin/v1/payment/orders/page-init`, `GET /api/admin/v1/payment/orders`, `GET /api/admin/v1/payment/events`; users/init menu gate asserts old `/pay` and `/wallet` menus are absent and payment routes are present | no default mutation | n/a | Alipay only; no wallet/refund/reconcile/WeChat; smoke must assert `private_key_enc` never leaks, `order_no` is the order route key, and old admin pay, wallet, and recharge-orders routes are not treated as active smoke targets |
 | operation log read/delete | no | yes | `GET /api/admin/v1/operation-logs/init`, `GET /api/admin/v1/operation-logs`, `DELETE /api/admin/v1/operation-logs/:id` | yes | delete temp operation log row; delete temp permission | full 先创建临时权限触发 `新增权限` 操作日志，再删除该日志 |

@@ -79,8 +79,8 @@ vim /www/docker/admin-go/admin-go.env
 MYSQL_DSN=admin_user:CHANGE_ME@tcp(DB_PRIVATE_IP:3306)/admin?charset=utf8mb4&parseTime=True&loc=Local
 REDIS_ADDR=REDIS_PRIVATE_IP:6379
 REDIS_PASSWORD=
-TOKEN_PEPPER=CHANGE_ME_LONG_RANDOM_SECRET
-VAULT_KEY=CHANGE_ME_32_BYTES_OR_COMPATIBLE_SECRET
+# 至少 64 位随机字符串；所有 admin-api/admin-worker 节点必须一致
+APP_SECRET=CHANGE_ME_AT_LEAST_64_RANDOM_CHARS
 ```
 
 第一台机器固定：

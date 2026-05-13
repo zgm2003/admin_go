@@ -92,7 +92,7 @@ HTTP_ADDR=:8080
 MYSQL_DSN=<user:pass@tcp(host:3306)/db?...>
 REDIS_ADDR=<host:6379>
 REDIS_PASSWORD=<secret if any>
-TOKEN_PEPPER=<stable random secret>
+APP_SECRET=<at least 64 random chars>
 TOKEN_REDIS_DB=2
 QUEUE_ENABLED=true
 QUEUE_REDIS_DB=3
@@ -105,7 +105,7 @@ VERIFY_CODE_DEV_MODE=false
 规则：
 
 ```text
-TOKEN_PEPPER 变更会让现有 token 全部失效。
+APP_SECRET 变更会让现有 access/refresh token、Redis session cache、以及已加密的 AI/upload/payment secret 全部失效；变更前按 auth-foundation-v2 reset runbook 处理。
 VERIFY_CODE_DEV_MODE=false 后必须接真实短信/邮件发送器；没接就返回明确配置错误，不要假装发送成功。
 REALTIME_PUBLISHER 支持 local/noop/redis；redis 是 `notification.created.v1` 的跨进程 fan-out 选项，前提是 Redis 正常可用。
 ```
