@@ -2207,6 +2207,10 @@ mail_configs / mail_templates / mail_logs all include is_del; every read path fi
 mail_logs never store email body, verification plaintext, or full template payload.
 Tencent Cloud SDK imports are confined to internal/platform/mail/tencentcloudses.
 auth.Service depends only on VerifyCodeMailSender and does not import module/mail or Tencent SDK.
+Verification-code templates must include exactly code and ttl_minutes.
+app_name is not a verification-code template variable; mail_configs.from_name only controls the Tencent SES FromEmailAddress display name.
+ttl_minutes comes from system_settings.auth.verify_code.ttl_minutes and is shared by email verification and future SMS verification.
+Templates do not own independent TTL, app-name, brand-name, or system-name policy.
 ```
 
 ### Page Init
@@ -2224,6 +2228,7 @@ interface MailPageInitDict {
   mail_region_arr: Array<{ label: string; value: 'ap-guangzhou' | 'ap-hongkong' }>
   default_region: string
   default_endpoint: string
+  default_ttl_minutes: number
 }
 ```
 
@@ -2250,6 +2255,7 @@ interface MailConfigResponse {
   from_name: string
   reply_to: string
   status: 1 | 2
+  verify_code_ttl_minutes: number
   last_test_at: string | null
   last_test_error: string
   created_at: string | null
@@ -2257,7 +2263,7 @@ interface MailConfigResponse {
 }
 ```
 
-`PUT /mail/config` body accepts plaintext `secret_id` / `secret_key` only as write-only inputs. First setup requires both. Later updates may leave them blank to reuse the current encrypted values.
+`PUT /mail/config` body accepts plaintext `secret_id` / `secret_key` only as write-only inputs. First setup requires both. Later updates may leave them blank to reuse the current encrypted values. It also accepts `verify_code_ttl_minutes: number`; the value is saved to `system_settings.auth.verify_code.ttl_minutes`, not `mail_configs`.
 
 Rules:
 
@@ -2301,7 +2307,7 @@ Rules:
 
 ```text
 This system does not edit Tencent HTML body. It maps local scenes to approved Tencent TemplateID.
-variables must be non-empty; sample_variables must cover variables.
+Verification-code template variables must be exactly `code` and `ttl_minutes`; `sample_variables` must contain exactly the same two keys. Extra keys such as `app_name` are rejected.
 scene is unique; saving a soft-deleted scene restores the old row.
 DELETE is soft delete.
 ```

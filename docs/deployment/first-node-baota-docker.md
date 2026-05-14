@@ -96,11 +96,10 @@ CORS_ALLOW_ORIGINS=https://zgm2003.cn
 验证码：
 
 ```env
-VERIFY_CODE_TTL=5m
 VERIFY_CODE_REDIS_PREFIX=auth:verify_code:
 ```
 
-手机号验证码固定 `123456`，不接短信，不受 env 控制；邮箱验证码走腾讯云 SES。真实用户上线如果不开放手机号登录，在 `auth_platforms.login_types` 关闭 `phone`。
+手机号验证码固定 `123456`，不接短信，不受 env 控制；邮箱验证码走腾讯云 SES。真实用户上线如果不开放手机号登录，在 `auth_platforms.login_types` 关闭 `phone`。验证码有效期不是 env；它来自 DB 配置 `system_settings.auth.verify_code.ttl_minutes`，默认 seed 为 5 分钟，可在 `/system/mail` 的“验证码公共配置”里修改。验证码模板变量必须且只能包含 `code` / `ttl_minutes`。
 
 ## 3. 支付证书目录
 

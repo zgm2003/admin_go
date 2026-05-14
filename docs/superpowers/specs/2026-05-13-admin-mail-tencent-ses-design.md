@@ -2,9 +2,9 @@
 
 日期：2026-05-13  
 范围：`admin_back_go` 邮件管理、腾讯云 SES 发信、邮箱验证码真实发送、`admin_front_ts` 系统菜单入口  
-状态：design for review
+状态：superseded by `2026-05-14-verify-code-template-ttl-db-design.md` for verification-code TTL/template-variable policy
 
-> 2026-05-14 补充：验证码 dev env 开关已经按最新业务规则删除；手机号验证码固定 123456，邮箱验证码走腾讯云 SES。
+> 2026-05-14 补充：本 spec 的邮件 SES 主体仍可作历史设计参考；验证码 TTL 与模板变量规则以后续 `2026-05-14-verify-code-template-ttl-db-design.md` 为准。
 
 ## Linus 三问
 
@@ -69,7 +69,7 @@ admin_back_go/internal/module/auth/code_store.go
   Redis key = VERIFY_CODE_REDIS_PREFIX + account_type + ':' + scene + ':' + md5(account)
 
 admin_back_go/internal/config/config.go
-  VerifyCodeConfig 只有 TTL / RedisPrefix
+  VerifyCodeConfig 只保留 RedisPrefix；验证码 TTL 已迁到 system_settings
 ```
 
 ### 配置事实
@@ -78,7 +78,6 @@ admin_back_go/internal/config/config.go
 
 ```env
 APP_SECRET=...
-VERIFY_CODE_TTL=5m
 VERIFY_CODE_REDIS_PREFIX=auth:verify_code:
 ```
 
@@ -702,7 +701,6 @@ sample_variables 用变量表格编辑，保证 key 全覆盖；
 保留现有 env：
 
 ```env
-VERIFY_CODE_TTL=5m
 VERIFY_CODE_REDIS_PREFIX=auth:verify_code:
 ```
 
