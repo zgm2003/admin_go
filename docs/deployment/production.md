@@ -99,14 +99,15 @@ QUEUE_REDIS_DB=3
 REALTIME_ENABLED=true
 REALTIME_PUBLISHER=local
 CORS_ALLOW_ORIGINS=https://admin.example.com
-VERIFY_CODE_DEV_MODE=false
+VERIFY_CODE_TTL=5m
+VERIFY_CODE_REDIS_PREFIX=auth:verify_code:
 ```
 
 规则：
 
 ```text
 APP_SECRET 变更会让现有 access/refresh token、Redis session cache、以及已加密的 AI/upload/payment secret 全部失效；变更前按 auth-foundation-v2 reset runbook 处理。
-VERIFY_CODE_DEV_MODE=false 后必须接真实短信/邮件发送器；没接就返回明确配置错误，不要假装发送成功。
+手机号验证码固定 123456，不接短信，不受 env 控制；邮箱验证码必须走邮件管理配置的腾讯云 SES。生产如果不开放手机号登录，在 auth_platforms.login_types 关闭 phone。
 REALTIME_PUBLISHER 支持 local/noop/redis；redis 是 `notification.created.v1` 的跨进程 fan-out 选项，前提是 Redis 正常可用。
 ```
 

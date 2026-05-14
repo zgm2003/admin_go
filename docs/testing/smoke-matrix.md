@@ -19,7 +19,7 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | readiness | yes | via basic | `GET /ready` with database/redis/token_redis/queue_redis/realtime checks | no | n/a | 证明 MySQL/Redis/QueueRedis/Realtime readiness shape；dependency detail 属于 readiness，不属于 health |
 | login config | yes | via basic | `GET /api/admin/v1/auth/login-config` | no | n/a | 断言登录方式顺序是 `email,phone,password` |
-| verify code login | yes | via basic | `POST /api/admin/v1/auth/send-code`, `POST /api/admin/v1/auth/login` | login session | logout | 使用 dev code，不接真实短信/邮件 |
+| verify code login | yes | via basic | `POST /api/admin/v1/auth/send-code`, `POST /api/admin/v1/auth/login` | login session | logout | 手机号验证码固定 `123456`；邮箱验证码走腾讯云 SES，basic smoke 默认用手机号账号 |
 | slide captcha login | yes | via basic + full own login | `GET /api/admin/v1/auth/captcha`, `POST /api/admin/v1/auth/login` | login session | logout | 自动读取本次 challenge 的 Redis 答案，不绕过验证码 |
 | login log queue | yes | via basic | `users_login_log` recent count | yes | no cleanup | 证明 auth queue/worker 或同步兜底路径可用 |
 | users bootstrap | yes | via basic | `GET /api/admin/v1/users/me`, `GET /api/admin/v1/users/init` | no | n/a | 验证 router/buttonCodes；client version route 必须返回 `/system/clientVersion` + `system/clientVersion` |

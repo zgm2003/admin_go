@@ -30,7 +30,7 @@ mail_configs / mail_templates / mail_logs all include is_del.
 Every read path filters is_del=2.
 Every table field must have a real usage path.
 Mail logs never store email body, verify code, or full TemplateData.
-VERIFY_CODE_DEV_MODE=true behavior stays unchanged.
+Phone code stores fixed 123456 and returns success; no env switch.
 Phone real-mode branch still returns SMS-not-configured.
 Page-init follows the existing project convention: response payload is `data.dict`, not a flat `data` object.
 ```
@@ -823,8 +823,8 @@ Add tests:
 ```go
 func TestServiceSendCodeRealEmailUsesMailSender(t *testing.T)
 func TestServiceSendCodeRealEmailDeletesCachedCodeWhenMailFails(t *testing.T)
-func TestServiceSendCodeRealPhoneStillReportsSMSNotConfigured(t *testing.T)
-func TestServiceSendCodeDevModeStillReturnsTestCode(t *testing.T)
+func TestServiceSendCodePhoneIgnoresMailSenderAndStoresFixedCode(t *testing.T)
+func TestServiceSendCodeEmailRequiresMailSenderAndDeletesCachedCode(t *testing.T)
 ```
 
 Assertions:
@@ -833,8 +833,8 @@ Assertions:
 Real email branch calls sender once with scene, account, generated code, and TTL.
 Real email branch writes Redis before sender call.
 Sender failure best-effort deletes Redis code.
-Phone real-mode branch still returns 短信验证码服务未配置.
-Dev mode still returns 验证码发送成功(测试:xxxxxx).
+Phone branch stores fixed 123456 and returns success.
+Email branch sends through Tencent SES; phone branch returns success with fixed code.
 ```
 
 - [ ] **Step 2: Add auth interface and option**
@@ -862,15 +862,17 @@ verifyCodeMailSender VerifyCodeMailSender
 Rules:
 
 ```text
-If !DevMode and account type is phone: return 短信验证码服务未配置.
-Generate code.
-Write Redis.
-If !DevMode and account type is email:
-  require verifyCodeMailSender.
-  call SendVerifyCode.
-  on failure delete Redis key and return error.
-  on success return 验证码发送成功.
-If DevMode: return 验证码发送成功(测试:code).
+If account type is phone:
+  use fixed code 123456
+  write Redis
+  return 验证码发送成功
+If account type is email:
+  generate random code
+  write Redis
+  require verifyCodeMailSender
+  call SendVerifyCode
+  on failure delete Redis key and return error
+  on success return 验证码发送成功
 ```
 
 Do not change `VerifyCodeCacheKey`.
@@ -1198,9 +1200,9 @@ mail_logs has is_del and list/detail filter is_del=2.
 Every table field has a code path matching the spec field-use contract.
 Frontend does not contain secret_id_enc or secret_key_enc.
 Mail logs do not expose body, verify code, or TemplateData.
-VERIFY_CODE_DEV_MODE=true still returns test code.
-VERIFY_CODE_DEV_MODE=false email branch sends through mail service.
-VERIFY_CODE_DEV_MODE=false phone branch still reports SMS not configured.
+Phone branch stores fixed 123456 and returns success.
+Email branch sends through mail service.
+No verification-code env switch remains.
 Tencent SDK is isolated under internal/platform/mail/tencentcloudses.
 Default smoke does not send real email.
 Docs, contract, smoke matrix, and architecture match runtime behavior.

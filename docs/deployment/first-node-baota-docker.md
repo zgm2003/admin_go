@@ -96,15 +96,11 @@ CORS_ALLOW_ORIGINS=https://zgm2003.cn
 验证码：
 
 ```env
-VERIFY_CODE_DEV_MODE=true
-VERIFY_CODE_DEV_CODE=123456
+VERIFY_CODE_TTL=5m
+VERIFY_CODE_REDIS_PREFIX=auth:verify_code:
 ```
 
-这只适合第一阶段联调。真实用户上线前必须接短信/邮件后改成：
-
-```env
-VERIFY_CODE_DEV_MODE=false
-```
+手机号验证码固定 `123456`，不接短信，不受 env 控制；邮箱验证码走腾讯云 SES。真实用户上线如果不开放手机号登录，在 `auth_platforms.login_types` 关闭 `phone`。
 
 ## 3. 支付证书目录
 

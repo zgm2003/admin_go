@@ -4,13 +4,15 @@
 范围：`admin_back_go` 邮件管理、腾讯云 SES 发信、邮箱验证码真实发送、`admin_front_ts` 系统菜单入口  
 状态：design for review
 
+> 2026-05-14 补充：验证码 dev env 开关已经按最新业务规则删除；手机号验证码固定 123456，邮箱验证码走腾讯云 SES。
+
 ## Linus 三问
 
 ### 1. 这是个真问题，还是臆想出来的？
 
 是真问题。
 
-当前登录页已经暴露邮箱验证码登录、找回密码、绑定邮箱这些用户路径；但 Go 后端的 `auth/send-code` 在 `VERIFY_CODE_DEV_MODE=false` 时直接返回“邮件验证码服务未配置”。这不是“未来优化”，这是已经摆在用户路径上的缺口。
+当前登录页已经暴露邮箱验证码登录、找回密码、绑定邮箱这些用户路径；但 Go 后端的 `auth/send-code` 在邮箱验证码未接真实发送时直接返回“邮件验证码服务未配置”。这不是“未来优化”，这是已经摆在用户路径上的缺口。
 
 更关键的是，验证码已经被 `RedisCodeStore` 管起来了，登录/找回密码/绑定邮箱都依赖这条链路。如果真实邮件不接，系统永远停在 demo 模式。
 
@@ -39,8 +41,8 @@ auth.SendCode -> mail.SendVerifyCode -> Tencent SES SendEmail -> Redis code stor
 
 ```text
 POST /api/admin/v1/auth/send-code 响应结构不变；
-VERIFY_CODE_DEV_MODE=true 时仍能本地返回测试验证码；
-短信验证码仍明确报“短信验证码服务未配置”，本 slice 不碰短信；
+手机号验证码固定 123456，写 Redis 后返回成功；
+不接短信，不新增短信 env；
 登录、refresh、RBAC、菜单、WebSocket 不因邮件模块改变；
 APP_SECRET 仍是唯一根密钥，腾讯云密钥不放 .env、不明文出库。
 ```
@@ -48,7 +50,7 @@ APP_SECRET 仍是唯一根密钥，腾讯云密钥不放 .env、不明文出库�
 可以接受这些变化：
 
 ```text
-VERIFY_CODE_DEV_MODE=false 后，邮箱验证码必须依赖邮件配置和模板；
+邮件配置和模板启用后，邮箱验证码必须依赖真实腾讯云 SES 发送；
 没有配置或模板时，邮箱验证码明确失败，不再假装成功；
 邮件管理新增系统菜单、权限、表、API、前端页面和 smoke 探针。
 ```
@@ -60,15 +62,14 @@ VERIFY_CODE_DEV_MODE=false 后，邮箱验证码必须依赖邮件配置和模�
 ```text
 admin_back_go/internal/module/auth/service.go
   SendCode 校验 account/scene 后：
-    DevMode=true  -> 生成测试 code，写 Redis，返回“验证码发送成功(测试:xxxxxx)”
-    DevMode=false -> email 直接报“邮件验证码服务未配置”
-                 -> phone 直接报“短信验证码服务未配置”
+    phone -> 固定 code 123456，写 Redis，返回“验证码发送成功”
+    email -> 生成随机 6 位 code，写 Redis，调用 VerifyCodeMailSender 发送腾讯云 SES 邮件
 
 admin_back_go/internal/module/auth/code_store.go
   Redis key = VERIFY_CODE_REDIS_PREFIX + account_type + ':' + scene + ':' + md5(account)
 
 admin_back_go/internal/config/config.go
-  VerifyCodeConfig 只有 TTL / RedisPrefix / DevMode / DevCode
+  VerifyCodeConfig 只有 TTL / RedisPrefix
 ```
 
 ### 配置事实
@@ -79,8 +80,6 @@ admin_back_go/internal/config/config.go
 APP_SECRET=...
 VERIFY_CODE_TTL=5m
 VERIFY_CODE_REDIS_PREFIX=auth:verify_code:
-VERIFY_CODE_DEV_MODE=true
-VERIFY_CODE_DEV_CODE=123456
 ```
 
 邮件密钥不应回到 `.env`。腾讯云 `SecretId` / `SecretKey` 是后台业务配置，必须入库加密，使用现有 `APP_SECRET -> secretbox` 派生 key。
@@ -111,7 +110,7 @@ github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/ses/v20201002
 2. 只接入腾讯云 SES API 发信。
 3. 腾讯云密钥入库加密，响应只返回 hint，不返回明文或密文。
 4. 管理邮件配置、业务模板映射、发送日志。
-5. `auth.SendCode` 在 `VERIFY_CODE_DEV_MODE=false` 且账号是邮箱时，真实发送验证码邮件。
+5. `auth.SendCode` 在账号是邮箱时，真实发送验证码邮件。
 6. 邮件发送链路可测试、可审计、可定位腾讯云错误码和 RequestId。
 7. 三张业务表都必须有 `is_del`，且所有读路径过滤 `is_del=2`。
 8. 表里每一个字段都必须在接口、发送链路、查询条件、软删除、审计或展示中明确用到。
@@ -613,13 +612,12 @@ route_meta.go 必须显式注册所有 mutation 权限和 OperationLog 元数据
 ### auth.SendCode 分支
 
 ```text
-if VERIFY_CODE_DEV_MODE=true:
-  保持现状：生成 dev code -> 写 Redis -> 返回测试消息
+if account is phone:
+  使用固定 code 123456
+  写 Redis
+  返回“验证码发送成功”
 
-if VERIFY_CODE_DEV_MODE=false and account is phone:
-  返回“短信验证码服务未配置”
-
-if VERIFY_CODE_DEV_MODE=false and account is email:
+if account is email:
   生成随机 6 位 code
   写 Redis
   调用 mail.SendVerifyCode
@@ -706,8 +704,6 @@ sample_variables 用变量表格编辑，保证 key 全覆盖；
 ```env
 VERIFY_CODE_TTL=5m
 VERIFY_CODE_REDIS_PREFIX=auth:verify_code:
-VERIFY_CODE_DEV_MODE=true
-VERIFY_CODE_DEV_CODE=123456
 ```
 
 不新增这些 env：
@@ -726,9 +722,8 @@ SMTP_PASSWORD=
 1. 后台录入邮件配置；
 2. 后台录入登录/找回/绑定邮箱/改密场景的腾讯云模板 ID；
 3. 点“发送测试邮件”确认腾讯云配置、发件地址、模板审核都正确；
-4. 把 VERIFY_CODE_DEV_MODE=false；
-5. 重启 admin-api；
-6. 走邮箱验证码登录 smoke。
+4. 无需切换验证码 env；邮箱验证码会直接走腾讯云 SES；
+5. 走邮箱验证码登录 smoke。
 ```
 
 ## 错误处理

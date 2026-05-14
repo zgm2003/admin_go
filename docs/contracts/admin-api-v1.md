@@ -159,7 +159,7 @@ Response example：
 { "code": 0, "data": {}, "msg": "ok" }
 ```
 
-规则：account 必须是合法邮箱或手机号；scene 由 Go `enum.VerifyCodeScenes` + `verify_code_scene` validator 派生。local dev 可使用 `VERIFY_CODE_DEV_MODE=true` 和 `VERIFY_CODE_DEV_CODE`；`VERIFY_CODE_DEV_MODE=false` 时邮箱账号必须走 `internal/module/mail.SendVerifyCode` + 腾讯云 SES，手机号仍明确返回“短信验证码服务未配置”。生产环境不允许假装已接真实短信/邮件。
+规则：account 必须是合法邮箱或手机号；scene 由 Go `enum.VerifyCodeScenes` + `verify_code_scene` validator 派生。手机号验证码固定 `123456`，写 Redis 后返回成功，不接短信且不受 env 控制；邮箱账号生成随机验证码，写 Redis 后必须走 `internal/module/mail.SendVerifyCode` + 腾讯云 SES，发送失败要清理 Redis code。生产如果不开放手机号登录，在 `auth_platforms.login_types` 关闭 `phone`。
 
 ### Forgot Password
 
@@ -2374,14 +2374,11 @@ DELETE is soft delete.
 POST /api/admin/v1/auth/send-code
 ```
 
-When `VERIFY_CODE_DEV_MODE=true`, behavior is unchanged: write Redis verification value and return the test message.
-
-When `VERIFY_CODE_DEV_MODE=false`:
-
 ```text
 email account -> generate value, write Redis, call mail.SendVerifyCode, cleanup Redis on send failure
-phone account -> return “短信验证码服务未配置” before writing Redis
+phone account -> use fixed value 123456, write Redis, return success, no SMS sender
 missing mail config/template/sender -> explicit error, no fake success
+no env switch exists for fake verification-code delivery
 ```
 
 Operation log / permission:
