@@ -8,6 +8,15 @@
 { "code": 0, "data": {}, "msg": "ok" }
 ```
 
+语言规则：
+
+```text
+前端请求通过 Accept-Language 传当前 UI 语言，当前只支持 zh-CN / en-US。
+后端 response shape 不变，仍然只返回 code/data/msg。
+msg 是面向用户展示的本地化文本；业务判断只能依赖 code 和 HTTP status，不能依赖 msg 字符串。
+缺失或不支持的语言默认 zh-CN。
+```
+
 命名空间：
 
 ```text

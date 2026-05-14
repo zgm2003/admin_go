@@ -1,12 +1,13 @@
 # Admin Go Migration Current Status
 
-状态更新时间：2026-05-13
+状态更新时间：2026-05-14
 
 本文只记录已经验证的 Go/Vue 迁移事实。不要把 planned 写成 implemented。
 
 | Module | Go backend status | Frontend status | Tests | Smoke | Docs | Remaining risk |
 | --- | --- | --- | --- | --- | --- | --- |
 | health / ready | implemented: liveness separated from DB/Redis readiness, checks include database/redis/token_redis/queue_redis/realtime | n/a | `internal/readiness`, `internal/module/system`, `internal/bootstrap` | `/ready` in basic smoke | architecture + contract + deployment docs | readiness does not replace full smoke |
+| backend i18n foundation | implemented: Gin i18n middleware, zh-CN/en-US catalog loader, keyed app error fallback, localized AuthToken/PermissionCheck outer errors | adapted: common HTTP headers send Accept-Language from `lang` Cookie | `internal/i18n`, `internal/apperror`, `internal/response`, `internal/middleware`, `internal/server`; frontend HTTP header Vitest | outer errors covered by focused tests; full smoke still validates response shape | contract + backend architecture + i18n foundation spec/plan | business modules are still migrated one-by-one; DB labels and historical logs are not translated in this slice |
 | auth login/session | implemented | adapted | `internal/module/auth`, `internal/module/session` | password/code login, refresh/logout, login log count | architecture + contract | phone code fixed 123456; email uses Tencent SES |
 | captcha | implemented | adapted with `go-captcha-vue` | `internal/module/captcha` | real slide challenge in smoke | architecture + contract | only slide supported |
 | auth platform | implemented: login types, captcha type, token TTL and session policy are DB-managed facts | adapted | `internal/module/authplatform` | init/list in smoke | `docs/contracts/admin-api-v1.md` | broader policy UI polish later |
