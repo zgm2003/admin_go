@@ -2221,6 +2221,7 @@ interface MailPageInitDict {
   mail_scene_arr: Array<{ label: string; value: 'login' | 'forget' | 'bind_email' | 'change_password' }>
   mail_log_scene_arr: Array<{ label: string; value: 'login' | 'forget' | 'bind_email' | 'change_password' | 'test' }>
   mail_log_status_arr: Array<{ label: string; value: 1 | 2 | 3 }>
+  mail_region_arr: Array<{ label: string; value: 'ap-guangzhou' | 'ap-hongkong' }>
   default_region: string
   default_endpoint: string
 }
@@ -2264,6 +2265,7 @@ Rules:
 config_key is fixed to default.
 DELETE is a soft delete of the active default row.
 PUT restores a soft-deleted default row instead of inserting a duplicate.
+region only accepts Tencent Cloud SES SendEmail supported regions: ap-guangzhou or ap-hongkong; default is ap-guangzhou.
 status=1 enables real sending; status=2 disables it explicitly.
 POST /mail/test uses the selected template scene sample variables and updates last_test_at / last_test_error.
 ```
@@ -2345,6 +2347,14 @@ interface MailLogItem {
   sent_at: string | null
   created_at: string
   updated_at: string
+  template?: {
+    id: number
+    scene: 'login' | 'forget' | 'bind_email' | 'change_password'
+    name: string
+    tencent_template_id: number
+    variables: string[]
+    status: 1 | 2
+  } | null
 }
 ```
 
@@ -2353,6 +2363,7 @@ Rules:
 ```text
 status: 1=pending, 2=success, 3=failed.
 Logs store provider request/message IDs, error code/message, duration and timestamps only.
+Detail may include a template summary so humans can identify the Tencent TemplateID and variable names used by the send.
 No body, plaintext verification value, or template payload field is present in DB/API/frontend contract.
 DELETE is soft delete.
 ```
