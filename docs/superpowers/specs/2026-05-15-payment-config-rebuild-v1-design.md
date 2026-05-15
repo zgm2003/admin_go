@@ -185,7 +185,7 @@ cert_url      # 证书不暴露公网 URL
 
 ### 4.3 旧表处理
 
-本 slice 把 `payment_channels` 和 `payment_channel_configs` 从 active runtime 移除。
+本 slice 把旧 `payment_channels`、`payment_channel_configs`、`payment_orders`、`payment_events` 从 live DB 和 active runtime 移除。
 
 迁移策略：
 
@@ -193,11 +193,11 @@ cert_url      # 证书不暴露公网 URL
 1. 创建 payment_alipay_configs。
 2. 从 payment_channels + payment_channel_configs 迁移 provider=alipay 且 is_del=2 的配置。
 3. code/name/status/supported_methods/private_key/certs/notify/return/environment 做确定性映射。
-4. 不立刻物理 drop payment_orders/payment_events，因为订单/事件后续单独重构。
-5. payment_channels/payment_channel_configs 物理 drop 或归档放到支付订单 slice 的 cleanup，除非实现时确认当前 live DB 无订单引用。
+4. 迁移后执行 `20260515_payment_config_only_cleanup.sql`，删除旧 payment_channel/payment_order/payment_event 权限、旧 payment 订单 cron 行，并 drop 旧 payment channel/order/event 表。
+5. 执行前备份旧表和旧权限到 `.tmp/payment-config-only-cleanup-backup-*.json`，后续支付订单 slice 从新 spec 重新建表，不继承旧表结构。
 ```
 
-注意：这不是保留旧设计。旧表只是迁移来源和回滚证据，不再被新 runtime 读取。
+注意：这不是保留旧设计。旧表只在 rebuild migration 里作为迁移来源；cleanup 后 live DB 只保留 `payment_alipay_configs`。
 
 ## 5. 证书上传设计
 
@@ -489,5 +489,5 @@ admin_back_go/docs/architecture.md
 - 无未完成项。
 - 每个新表字段都有第一版用途。
 - 第一版只做支付宝支付配置，不把钱包和订单混进来。
-- 旧表只作为迁移来源，不作为新 runtime 事实源。
+- 旧表只作为迁移来源，cleanup 后 live DB 只保留支付配置表。
 - 菜单、权限、API、前端文件名都从 channel 收口到 config。

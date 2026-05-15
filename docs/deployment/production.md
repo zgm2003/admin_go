@@ -163,7 +163,6 @@ runtime/payment/certs/alipay/<config_code>/<sha256>.crt
 
 ```text
 PAYMENT_CERT_BASE_DIR=/path/to/admin_back_go
-PAYMENT_ALIPAY_TIMEOUT=10s
 ```
 
 发布 gate：

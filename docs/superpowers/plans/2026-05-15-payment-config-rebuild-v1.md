@@ -67,6 +67,7 @@ Current frontend files: src/api/payment/channel.ts, order.ts, event.ts and views
 
 ```text
 admin_back_go/database/migrations/20260515_payment_config_rebuild_v1.sql
+admin_back_go/database/migrations/20260515_payment_config_only_cleanup.sql
 admin_back_go/internal/platform/payment/certstore.go
 admin_back_go/internal/platform/payment/certstore_test.go
 admin_back_go/internal/platform/payment/alipay/config_test.go
@@ -123,7 +124,7 @@ admin_front_ts/tests/shared/payment/payment-order-api.test.ts
 admin_front_ts/tests/shared/payment/payment-event-api.test.ts
 ```
 
-Do not physically drop `payment_orders` or `payment_events` in this slice. They are not active UI/API, but future payment-order slice decides their final schema.
+This slice now physically removes the old payment runtime after config migration. `20260515_payment_config_only_cleanup.sql` drops `payment_channels`, `payment_channel_configs`, `payment_orders`, and `payment_events`, and deletes retired payment channel/order/event permissions plus old payment cron rows. Future payment-order slices must rebuild tables from a new spec instead of inheriting the old schema.
 
 ---
 
@@ -183,6 +184,7 @@ updated_by
 
 **Files:**
 - Create: `admin_back_go/database/migrations/20260515_payment_config_rebuild_v1.sql`
+- Create: `admin_back_go/database/migrations/20260515_payment_config_only_cleanup.sql`
 
 - [x] **Step 1: Create the migration file**
 
@@ -407,12 +409,22 @@ DROP TEMPORARY TABLE IF EXISTS `tmp_payment_config_permission_map`;
 
 - [x] **Step 4: Static migration review**
 
+Create `admin_back_go/database/migrations/20260515_payment_config_only_cleanup.sql` after the rebuild migration. It must:
+
+```text
+delete retired payment_channel/payment_order/payment_event role grants
+delete retired payment_channel/payment_order/payment_event permission rows
+delete old payment order cron rows/logs
+drop payment_events, payment_orders, payment_channel_configs, payment_channels
+```
+
 Run:
 
 ```powershell
 cd E:\admin_go
 Select-String -Path .\admin_back_go\database\migrations\20260515_payment_config_rebuild_v1.sql -Pattern 'payment_alipay_configs','payment_config_list','payment_config_upload_cert','payment_channel_list'
-git -C admin_back_go diff --check -- database/migrations/20260515_payment_config_rebuild_v1.sql
+Select-String -Path .\admin_back_go\database\migrations\20260515_payment_config_only_cleanup.sql -Pattern 'DROP TABLE IF EXISTS','payment_channels','payment_orders','payment_events'
+git -C admin_back_go diff --check -- database/migrations/20260515_payment_config_rebuild_v1.sql database/migrations/20260515_payment_config_only_cleanup.sql
 ```
 
 Expected:
@@ -1345,7 +1357,7 @@ No generated certificate files under runtime/ are staged.
 Spec coverage: schema, cert upload, CRUD, enable-before-test, menu/RBAC, frontend page, docs and smoke are covered.
 Scope control: no wallet, order, notify, refund, withdraw, reconcile, WeChat, or product billing.
 Field control: every new table field has first-version behavior; provider/merchant_id/sign_type/extra_config are banned.
-Runtime truth: old channel/order/event routes and menus are retired from active contract.
+Runtime truth: old channel/order/event routes, menus, cron rows, and tables are removed from the active slice.
 Security: private key is write-only; cert files are private local files; operation logs must not expose secrets.
 Verification: backend tests, frontend tests, contract check, smoke script checks, and diff checks are explicit.
 ```

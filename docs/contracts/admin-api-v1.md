@@ -3300,7 +3300,7 @@ database/migrations/20260506_cron_task_go_handler_cleanup.sql
 notification_task_scheduler.handler = notification:dispatch-due:v1
 
 payment config rebuild v1 migration
-payment_close_expired_order and payment_sync_pending_order are disabled/retired until a payment-order slice reintroduces them with a new spec.
+payment_close_expired_order and payment_sync_pending_order are removed from the live config-only slice until a payment-order slice reintroduces them with a new spec.
 
 AI runtime migration (2026-05-08)
 ai_run_timeout.handler = ai:run-timeout:v1
