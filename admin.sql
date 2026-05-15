@@ -11,7 +11,7 @@
  Target Server Version : 80408 (8.4.8)
  File Encoding         : 65001
 
- Date: 08/05/2026 12:53:19
+ Date: 15/05/2026 21:30:28
 */
 
 SET NAMES utf8mb4;
@@ -35,11 +35,469 @@ CREATE TABLE `address`  (
 ) ENGINE = InnoDB AUTO_INCREMENT = 43132 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '区域表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
--- AI schema note
+-- Table structure for ai_agent_knowledge_bases
 -- ----------------------------
--- AI table DDL is intentionally not stored in this legacy dump.
--- Live AI schema/count must be read from MySQL MCP; see docs/db/ai-live-schema-mcp-2026-05-10.md.
--- Current executable AI schema changes live under admin_back_go/database/migrations/*ai*.sql.
+DROP TABLE IF EXISTS `ai_agent_knowledge_bases`;
+CREATE TABLE `ai_agent_knowledge_bases`  (
+  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '绑定ID',
+  `agent_id` bigint UNSIGNED NOT NULL COMMENT 'ai_agents.id',
+  `knowledge_base_id` bigint UNSIGNED NOT NULL COMMENT 'ai_knowledge_bases.id',
+  `top_k` int UNSIGNED NOT NULL DEFAULT 5 COMMENT '本智能体对此知识库召回条数',
+  `min_score` decimal(8, 4) NOT NULL DEFAULT 0.1000 COMMENT '本智能体对此知识库最低命中分',
+  `max_context_chars` int UNSIGNED NOT NULL DEFAULT 6000 COMMENT '本智能体对此知识库最大注入字符数',
+  `status` tinyint UNSIGNED NOT NULL DEFAULT 1 COMMENT '1启用 2禁用；运行时只加载启用绑定',
+  `is_del` tinyint UNSIGNED NOT NULL DEFAULT 2 COMMENT '1删除 2正常',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_ai_agent_knowledge_base`(`agent_id` ASC, `knowledge_base_id` ASC, `is_del` ASC) USING BTREE,
+  INDEX `idx_ai_agent_knowledge_agent`(`agent_id` ASC, `status` ASC, `is_del` ASC) USING BTREE,
+  INDEX `idx_ai_agent_knowledge_base`(`knowledge_base_id` ASC, `status` ASC, `is_del` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI智能体知识库绑定' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for ai_agent_tools
+-- ----------------------------
+DROP TABLE IF EXISTS `ai_agent_tools`;
+CREATE TABLE `ai_agent_tools`  (
+  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '绑定ID',
+  `agent_id` bigint UNSIGNED NOT NULL COMMENT 'ai_agents.id',
+  `tool_id` bigint UNSIGNED NOT NULL COMMENT 'ai_tools.id',
+  `status` tinyint UNSIGNED NOT NULL DEFAULT 1 COMMENT '1启用 2禁用；运行时只加载启用绑定',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_ai_agent_tools_agent_tool`(`agent_id` ASC, `tool_id` ASC) USING BTREE,
+  INDEX `idx_ai_agent_tools_agent_status`(`agent_id` ASC, `status` ASC, `id` ASC) USING BTREE,
+  INDEX `idx_ai_agent_tools_tool_status`(`tool_id` ASC, `status` ASC, `id` ASC) USING BTREE,
+  CONSTRAINT `fk_ai_agent_tools_agent` FOREIGN KEY (`agent_id`) REFERENCES `ai_agents` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
+  CONSTRAINT `fk_ai_agent_tools_tool` FOREIGN KEY (`tool_id`) REFERENCES `ai_tools` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
+  CONSTRAINT `chk_ai_agent_tools_status` CHECK (`status` in (1,2))
+) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI智能体工具绑定' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for ai_agents
+-- ----------------------------
+DROP TABLE IF EXISTS `ai_agents`;
+CREATE TABLE `ai_agents`  (
+  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
+  `provider_id` bigint UNSIGNED NOT NULL,
+  `name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `model_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '',
+  `model_display_name` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '',
+  `scenes_json` json NULL,
+  `system_prompt` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL,
+  `avatar` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '',
+  `status` tinyint UNSIGNED NOT NULL DEFAULT 1,
+  `is_del` tinyint UNSIGNED NOT NULL DEFAULT 2,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_ai_agents_provider`(`provider_id` ASC, `status` ASC, `is_del` ASC) USING BTREE,
+  INDEX `idx_ai_agents_model`(`provider_id` ASC, `model_id` ASC, `status` ASC, `is_del` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 7 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI agent mappings' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for ai_conversations
+-- ----------------------------
+DROP TABLE IF EXISTS `ai_conversations`;
+CREATE TABLE `ai_conversations`  (
+  `id` int UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '会话ID',
+  `user_id` int UNSIGNED NOT NULL COMMENT '当前用户ID',
+  `agent_id` int UNSIGNED NOT NULL COMMENT 'ai_agents.id',
+  `title` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '会话标题',
+  `last_message_at` datetime NULL DEFAULT NULL COMMENT '上次对话时间',
+  `is_del` tinyint UNSIGNED NOT NULL DEFAULT 2 COMMENT '1删除 2正常',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_ai_conversations_user_agent_del_last_message`(`user_id` ASC, `agent_id` ASC, `is_del` ASC, `last_message_at` ASC, `id` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI会话' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for ai_image_assets
+-- ----------------------------
+DROP TABLE IF EXISTS `ai_image_assets`;
+CREATE TABLE `ai_image_assets`  (
+  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '图片资产ID',
+  `user_id` bigint UNSIGNED NOT NULL COMMENT '归属用户ID',
+  `storage_provider` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'cos/remote_url',
+  `storage_key` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '对象存储key',
+  `storage_url` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '可访问URL',
+  `mime_type` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT 'MIME类型',
+  `width` int UNSIGNED NOT NULL DEFAULT 0 COMMENT '图片宽度',
+  `height` int UNSIGNED NOT NULL DEFAULT 0 COMMENT '图片高度',
+  `size_bytes` bigint UNSIGNED NOT NULL DEFAULT 0 COMMENT '文件字节数',
+  `source_type` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'upload/mask/generated',
+  `is_del` tinyint UNSIGNED NOT NULL DEFAULT 2 COMMENT '1删除2正常',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_ai_image_assets_user_created`(`user_id` ASC, `is_del` ASC, `created_at` ASC, `id` ASC) USING BTREE,
+  INDEX `idx_ai_image_assets_storage`(`storage_provider` ASC, `storage_key` ASC) USING BTREE,
+  CONSTRAINT `chk_ai_image_assets_del` CHECK (`is_del` in (1,2)),
+  CONSTRAINT `chk_ai_image_assets_source` CHECK (`source_type` in (_utf8mb4'upload',_utf8mb4'mask',_utf8mb4'generated'))
+) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI图片资产' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for ai_image_task_assets
+-- ----------------------------
+DROP TABLE IF EXISTS `ai_image_task_assets`;
+CREATE TABLE `ai_image_task_assets`  (
+  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '任务资产关系ID',
+  `task_id` bigint UNSIGNED NOT NULL COMMENT 'ai_image_tasks.id',
+  `asset_id` bigint UNSIGNED NOT NULL COMMENT 'ai_image_assets.id',
+  `role` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'input/mask/output',
+  `sort_order` int UNSIGNED NOT NULL DEFAULT 0 COMMENT '排序',
+  `related_asset_id` bigint UNSIGNED NULL DEFAULT NULL COMMENT 'mask 对应的被编辑资产',
+  `actual_params_json` json NULL COMMENT '单图实际参数摘要',
+  `revised_prompt` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT 'provider 返回的修订提示词',
+  `is_del` tinyint UNSIGNED NOT NULL DEFAULT 2 COMMENT '1删除2正常',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_ai_image_task_assets_task_role`(`task_id` ASC, `role` ASC, `sort_order` ASC, `id` ASC) USING BTREE,
+  INDEX `idx_ai_image_task_assets_asset`(`asset_id` ASC, `is_del` ASC) USING BTREE,
+  INDEX `idx_ai_image_task_assets_related`(`related_asset_id` ASC) USING BTREE,
+  CONSTRAINT `fk_ai_image_task_assets_asset` FOREIGN KEY (`asset_id`) REFERENCES `ai_image_assets` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
+  CONSTRAINT `fk_ai_image_task_assets_task` FOREIGN KEY (`task_id`) REFERENCES `ai_image_tasks` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
+  CONSTRAINT `chk_ai_image_task_assets_del` CHECK (`is_del` in (1,2)),
+  CONSTRAINT `chk_ai_image_task_assets_role` CHECK (`role` in (_utf8mb4'input',_utf8mb4'mask',_utf8mb4'output'))
+) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI图片任务资产关系' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for ai_image_tasks
+-- ----------------------------
+DROP TABLE IF EXISTS `ai_image_tasks`;
+CREATE TABLE `ai_image_tasks`  (
+  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '图片任务ID',
+  `user_id` bigint UNSIGNED NOT NULL COMMENT '发起用户ID',
+  `agent_id` bigint UNSIGNED NOT NULL COMMENT 'ai_agents.id',
+  `agent_name_snapshot` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '任务创建时智能体名称',
+  `provider_id_snapshot` bigint UNSIGNED NOT NULL COMMENT '任务创建时供应商ID',
+  `provider_name_snapshot` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '任务创建时供应商名称',
+  `model_id_snapshot` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '任务创建时模型ID',
+  `model_display_name_snapshot` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '任务创建时模型展示名',
+  `prompt` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '图片提示词',
+  `size` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '图片尺寸',
+  `quality` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '质量参数',
+  `output_format` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '输出格式',
+  `output_compression` int UNSIGNED NULL DEFAULT NULL COMMENT '输出压缩率，仅部分格式有效',
+  `moderation` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '安全审核参数',
+  `n` int UNSIGNED NOT NULL DEFAULT 1 COMMENT '输出张数',
+  `status` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'pending/running/success/failed',
+  `error_message` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '失败原因',
+  `actual_params_json` json NULL COMMENT 'provider 实际参数摘要',
+  `raw_response_json` json NULL COMMENT 'provider 原始响应摘要，不保存图片bytes',
+  `is_favorite` tinyint UNSIGNED NOT NULL DEFAULT 2 COMMENT '1是2否',
+  `finished_at` datetime NULL DEFAULT NULL COMMENT '完成时间',
+  `elapsed_ms` int UNSIGNED NOT NULL DEFAULT 0 COMMENT '耗时毫秒',
+  `is_del` tinyint UNSIGNED NOT NULL DEFAULT 2 COMMENT '1删除2正常',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_ai_image_tasks_user_created`(`user_id` ASC, `is_del` ASC, `created_at` ASC, `id` ASC) USING BTREE,
+  INDEX `idx_ai_image_tasks_user_status`(`user_id` ASC, `status` ASC, `is_del` ASC, `created_at` ASC, `id` ASC) USING BTREE,
+  INDEX `idx_ai_image_tasks_user_favorite`(`user_id` ASC, `is_favorite` ASC, `is_del` ASC, `created_at` ASC, `id` ASC) USING BTREE,
+  INDEX `idx_ai_image_tasks_agent_created`(`agent_id` ASC, `created_at` ASC, `id` ASC) USING BTREE,
+  INDEX `idx_ai_image_tasks_status_created`(`status` ASC, `created_at` ASC, `id` ASC) USING BTREE,
+  CONSTRAINT `chk_ai_image_tasks_del` CHECK (`is_del` in (1,2)),
+  CONSTRAINT `chk_ai_image_tasks_favorite` CHECK (`is_favorite` in (1,2)),
+  CONSTRAINT `chk_ai_image_tasks_status` CHECK (`status` in (_utf8mb4'pending',_utf8mb4'running',_utf8mb4'success',_utf8mb4'failed'))
+) ENGINE = InnoDB AUTO_INCREMENT = 6 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI图片生成任务' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for ai_knowledge_bases
+-- ----------------------------
+DROP TABLE IF EXISTS `ai_knowledge_bases`;
+CREATE TABLE `ai_knowledge_bases`  (
+  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '知识库ID',
+  `name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '知识库名称，列表、绑定、监控展示',
+  `code` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '知识库唯一编码，用于种子幂等和人工识别',
+  `description` varchar(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '知识库说明，管理页展示和智能体绑定时辅助选择',
+  `chunk_size_chars` int UNSIGNED NOT NULL DEFAULT 1200 COMMENT '默认分块字符数，重建文档分块时使用',
+  `chunk_overlap_chars` int UNSIGNED NOT NULL DEFAULT 120 COMMENT '默认分块重叠字符数，重建文档分块时使用',
+  `default_top_k` int UNSIGNED NOT NULL DEFAULT 5 COMMENT '检索测试和智能体绑定默认召回条数',
+  `default_min_score` decimal(8, 4) NOT NULL DEFAULT 0.1000 COMMENT '检索测试和智能体绑定默认最低分',
+  `default_max_context_chars` int UNSIGNED NOT NULL DEFAULT 6000 COMMENT '检索测试和智能体绑定默认上下文字符预算',
+  `status` tinyint UNSIGNED NOT NULL DEFAULT 1 COMMENT '1启用 2禁用；运行时只读取启用知识库',
+  `is_del` tinyint UNSIGNED NOT NULL DEFAULT 2 COMMENT '1删除 2正常；所有查询默认 is_del=2',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_ai_knowledge_bases_code`(`code` ASC, `is_del` ASC) USING BTREE,
+  INDEX `idx_ai_knowledge_bases_status`(`status` ASC, `is_del` ASC, `updated_at` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI知识库' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for ai_knowledge_chunks
+-- ----------------------------
+DROP TABLE IF EXISTS `ai_knowledge_chunks`;
+CREATE TABLE `ai_knowledge_chunks`  (
+  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '分块ID',
+  `knowledge_base_id` bigint UNSIGNED NOT NULL COMMENT 'ai_knowledge_bases.id，检索时直接过滤',
+  `document_id` bigint UNSIGNED NOT NULL COMMENT 'ai_knowledge_documents.id',
+  `chunk_index` int UNSIGNED NOT NULL COMMENT '同一文档内分块序号，从1开始',
+  `title` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '分块标题，默认继承文档标题',
+  `content` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '分块内容，检索和上下文注入使用',
+  `content_chars` int UNSIGNED NOT NULL DEFAULT 0 COMMENT '分块字符数，用于 max_context_chars 预算',
+  `status` tinyint UNSIGNED NOT NULL DEFAULT 1 COMMENT '1启用 2禁用；运行时只读取启用分块',
+  `is_del` tinyint UNSIGNED NOT NULL DEFAULT 2 COMMENT '1删除 2正常',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_ai_knowledge_chunks_doc_index`(`document_id` ASC, `chunk_index` ASC, `is_del` ASC) USING BTREE,
+  INDEX `idx_ai_knowledge_chunks_base`(`knowledge_base_id` ASC, `status` ASC, `is_del` ASC, `id` ASC) USING BTREE,
+  INDEX `idx_ai_knowledge_chunks_document`(`document_id` ASC, `status` ASC, `is_del` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 9 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI知识库分块' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for ai_knowledge_documents
+-- ----------------------------
+DROP TABLE IF EXISTS `ai_knowledge_documents`;
+CREATE TABLE `ai_knowledge_documents`  (
+  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '文档ID',
+  `knowledge_base_id` bigint UNSIGNED NOT NULL COMMENT 'ai_knowledge_bases.id',
+  `title` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '文档标题，列表、分块、监控展示',
+  `source_type` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'text' COMMENT '来源类型：text/markdown/file；第一版写 text/markdown',
+  `source_ref` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '来源标识，如 docs/architecture/04-go-backend-framework.md 或上传文件URL；与 knowledge_base_id、is_del 组成同来源幂等唯一键',
+  `content` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '文档原文，编辑和重建分块使用',
+  `index_status` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'pending' COMMENT 'pending/indexing/indexed/failed；分块状态展示和运行过滤',
+  `error_message` varchar(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '分块失败原因，管理页展示',
+  `last_indexed_at` datetime NULL DEFAULT NULL COMMENT '最近成功重建分块时间',
+  `status` tinyint UNSIGNED NOT NULL DEFAULT 1 COMMENT '1启用 2禁用；运行时只读取启用文档',
+  `is_del` tinyint UNSIGNED NOT NULL DEFAULT 2 COMMENT '1删除 2正常',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_ai_knowledge_documents_source`(`knowledge_base_id` ASC, `source_ref` ASC, `is_del` ASC) USING BTREE,
+  INDEX `idx_ai_knowledge_documents_base`(`knowledge_base_id` ASC, `status` ASC, `is_del` ASC, `updated_at` ASC) USING BTREE,
+  INDEX `idx_ai_knowledge_documents_index`(`index_status` ASC, `is_del` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 8 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI知识库文档' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for ai_knowledge_retrieval_hits
+-- ----------------------------
+DROP TABLE IF EXISTS `ai_knowledge_retrieval_hits`;
+CREATE TABLE `ai_knowledge_retrieval_hits`  (
+  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '命中ID',
+  `retrieval_id` bigint UNSIGNED NOT NULL COMMENT 'ai_knowledge_retrievals.id',
+  `knowledge_base_id` bigint UNSIGNED NOT NULL COMMENT '命中知识库ID',
+  `knowledge_base_name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '命中时知识库名称快照',
+  `document_id` bigint UNSIGNED NOT NULL COMMENT '命中文档ID',
+  `document_title` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '命中时文档标题快照',
+  `chunk_id` bigint UNSIGNED NOT NULL COMMENT '命中分块ID',
+  `chunk_index` int UNSIGNED NOT NULL COMMENT '命中分块序号快照',
+  `score` decimal(10, 6) NOT NULL DEFAULT 0.000000 COMMENT '检索评分',
+  `rank_no` int UNSIGNED NOT NULL COMMENT '本次检索排序，从1开始',
+  `content_snapshot` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '命中内容快照，运行监控和问题复盘使用',
+  `status` tinyint UNSIGNED NOT NULL DEFAULT 1 COMMENT '1进入上下文 2跳过',
+  `skip_reason` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '跳过原因：low_score/context_limit',
+  `is_del` tinyint UNSIGNED NOT NULL DEFAULT 2 COMMENT '1删除 2正常',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_ai_knowledge_hits_retrieval`(`retrieval_id` ASC, `status` ASC, `rank_no` ASC) USING BTREE,
+  INDEX `idx_ai_knowledge_hits_chunk`(`chunk_id` ASC, `is_del` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 13 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI知识库检索命中' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for ai_knowledge_retrievals
+-- ----------------------------
+DROP TABLE IF EXISTS `ai_knowledge_retrievals`;
+CREATE TABLE `ai_knowledge_retrievals`  (
+  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '检索ID',
+  `run_id` bigint UNSIGNED NOT NULL COMMENT 'ai_runs.id',
+  `query` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '本轮检索查询文本，通常为用户消息正文',
+  `status` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'success/failed/skipped',
+  `total_hits` int UNSIGNED NOT NULL DEFAULT 0 COMMENT '原始命中数量',
+  `selected_hits` int UNSIGNED NOT NULL DEFAULT 0 COMMENT '进入上下文的命中数量',
+  `duration_ms` int UNSIGNED NULL DEFAULT NULL COMMENT '检索耗时毫秒',
+  `error_message` varchar(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '失败原因',
+  `is_del` tinyint UNSIGNED NOT NULL DEFAULT 2 COMMENT '1删除 2正常；运行监控默认只读正常记录',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_ai_knowledge_retrievals_run`(`run_id` ASC, `is_del` ASC, `created_at` ASC) USING BTREE,
+  INDEX `idx_ai_knowledge_retrievals_status`(`status` ASC, `is_del` ASC, `created_at` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI知识库检索记录' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for ai_messages
+-- ----------------------------
+DROP TABLE IF EXISTS `ai_messages`;
+CREATE TABLE `ai_messages`  (
+  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '消息ID',
+  `conversation_id` int UNSIGNED NOT NULL COMMENT 'ai_conversations.id',
+  `role` tinyint UNSIGNED NOT NULL COMMENT '1用户 2助手',
+  `content_type` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'text' COMMENT '内容类型，MVP只写text',
+  `content` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '消息内容',
+  `meta_json` json NULL COMMENT '消息扩展元数据：attachments/runtime_params/blocks/feedback',
+  `is_del` tinyint UNSIGNED NOT NULL DEFAULT 2 COMMENT '1删除 2正常',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_ai_messages_conversation_del_id`(`conversation_id` ASC, `is_del` ASC, `id` ASC) USING BTREE,
+  CONSTRAINT `fk_ai_messages_conversation` FOREIGN KEY (`conversation_id`) REFERENCES `ai_conversations` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
+) ENGINE = InnoDB AUTO_INCREMENT = 51 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI消息' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for ai_provider_models
+-- ----------------------------
+DROP TABLE IF EXISTS `ai_provider_models`;
+CREATE TABLE `ai_provider_models`  (
+  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
+  `provider_id` bigint UNSIGNED NOT NULL,
+  `model_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `display_name` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '',
+  `status` tinyint UNSIGNED NOT NULL DEFAULT 1,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_ai_provider_models_provider_model`(`provider_id` ASC, `model_id` ASC) USING BTREE,
+  INDEX `idx_ai_provider_models_provider_status`(`provider_id` ASC, `status` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 14 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI provider enabled model catalog' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for ai_providers
+-- ----------------------------
+DROP TABLE IF EXISTS `ai_providers`;
+CREATE TABLE `ai_providers`  (
+  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
+  `name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `engine_type` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `base_url` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '',
+  `api_key_enc` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL,
+  `api_key_hint` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '',
+  `health_status` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'unknown',
+  `last_checked_at` datetime NULL DEFAULT NULL,
+  `last_check_error` varchar(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '',
+  `last_model_sync_at` datetime NULL DEFAULT NULL,
+  `last_model_sync_status` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'unknown',
+  `last_model_sync_error` varchar(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '',
+  `status` tinyint UNSIGNED NOT NULL DEFAULT 1,
+  `is_del` tinyint UNSIGNED NOT NULL DEFAULT 2,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_ai_providers_type_name`(`engine_type` ASC, `name` ASC, `is_del` ASC) USING BTREE,
+  INDEX `idx_ai_providers_status`(`status` ASC, `is_del` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI engine connection configs' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for ai_run_events
+-- ----------------------------
+DROP TABLE IF EXISTS `ai_run_events`;
+CREATE TABLE `ai_run_events`  (
+  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '事件ID',
+  `run_id` bigint UNSIGNED NOT NULL COMMENT 'ai_runs.id',
+  `seq` int UNSIGNED NOT NULL COMMENT '同一run内事件序号',
+  `event_type` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'start/completed/failed/canceled/timeout',
+  `message` varchar(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '事件说明或错误原因',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '事件时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_ai_run_events_run_seq`(`run_id` ASC, `seq` ASC) USING BTREE,
+  INDEX `idx_ai_run_events_run_id`(`run_id` ASC, `id` ASC) USING BTREE,
+  INDEX `idx_ai_run_events_type_created`(`event_type` ASC, `created_at` ASC, `id` ASC) USING BTREE,
+  CONSTRAINT `fk_ai_run_events_run` FOREIGN KEY (`run_id`) REFERENCES `ai_runs` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
+  CONSTRAINT `chk_ai_run_events_type` CHECK (`event_type` in (_utf8mb4'start',_utf8mb4'completed',_utf8mb4'failed',_utf8mb4'canceled',_utf8mb4'timeout'))
+) ENGINE = InnoDB AUTO_INCREMENT = 33 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI运行监控事件' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for ai_runs
+-- ----------------------------
+DROP TABLE IF EXISTS `ai_runs`;
+CREATE TABLE `ai_runs`  (
+  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '运行ID',
+  `conversation_id` int UNSIGNED NOT NULL COMMENT 'ai_conversations.id',
+  `request_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '客户端本轮请求ID',
+  `user_message_id` bigint UNSIGNED NOT NULL COMMENT '本轮用户消息ID',
+  `assistant_message_id` bigint UNSIGNED NULL DEFAULT NULL COMMENT '完成后写入的助手消息ID',
+  `user_id` int UNSIGNED NOT NULL COMMENT '发起用户ID',
+  `agent_id` bigint UNSIGNED NOT NULL COMMENT 'ai_agents.id',
+  `provider_id` bigint UNSIGNED NOT NULL COMMENT 'ai_providers.id',
+  `model_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '实际调用模型ID',
+  `model_display_name` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '实际调用模型展示名',
+  `status` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'queued/running/success/failed/canceled/timeout',
+  `prompt_tokens` int UNSIGNED NOT NULL DEFAULT 0 COMMENT '输入token',
+  `completion_tokens` int UNSIGNED NOT NULL DEFAULT 0 COMMENT '输出token',
+  `total_tokens` int UNSIGNED NOT NULL DEFAULT 0 COMMENT '总token',
+  `duration_ms` int UNSIGNED NULL DEFAULT NULL COMMENT '运行耗时毫秒，终态后写入',
+  `error_message` varchar(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '失败/取消/超时原因',
+  `started_at` datetime NULL DEFAULT NULL COMMENT '开始调用模型时间',
+  `finished_at` datetime NULL DEFAULT NULL COMMENT '进入终态时间',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_ai_runs_conversation_request`(`conversation_id` ASC, `request_id` ASC) USING BTREE,
+  UNIQUE INDEX `uk_ai_runs_user_message`(`user_message_id` ASC) USING BTREE,
+  INDEX `idx_ai_runs_created`(`created_at` ASC, `id` ASC) USING BTREE,
+  INDEX `idx_ai_runs_status_created`(`status` ASC, `created_at` ASC, `id` ASC) USING BTREE,
+  INDEX `idx_ai_runs_user_created`(`user_id` ASC, `created_at` ASC, `id` ASC) USING BTREE,
+  INDEX `idx_ai_runs_agent_created`(`agent_id` ASC, `created_at` ASC, `id` ASC) USING BTREE,
+  INDEX `idx_ai_runs_provider_created`(`provider_id` ASC, `created_at` ASC, `id` ASC) USING BTREE,
+  INDEX `idx_ai_runs_conversation_created`(`conversation_id` ASC, `created_at` ASC, `id` ASC) USING BTREE,
+  INDEX `fk_ai_runs_assistant_message`(`assistant_message_id` ASC) USING BTREE,
+  CONSTRAINT `fk_ai_runs_assistant_message` FOREIGN KEY (`assistant_message_id`) REFERENCES `ai_messages` (`id`) ON DELETE SET NULL ON UPDATE RESTRICT,
+  CONSTRAINT `fk_ai_runs_conversation` FOREIGN KEY (`conversation_id`) REFERENCES `ai_conversations` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
+  CONSTRAINT `fk_ai_runs_user_message` FOREIGN KEY (`user_message_id`) REFERENCES `ai_messages` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
+  CONSTRAINT `chk_ai_runs_status` CHECK (`status` in (_utf8mb4'running',_utf8mb4'success',_utf8mb4'failed',_utf8mb4'canceled',_utf8mb4'timeout'))
+) ENGINE = InnoDB AUTO_INCREMENT = 17 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI运行监控记录' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for ai_tool_calls
+-- ----------------------------
+DROP TABLE IF EXISTS `ai_tool_calls`;
+CREATE TABLE `ai_tool_calls`  (
+  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '工具调用ID',
+  `run_id` bigint UNSIGNED NOT NULL COMMENT 'ai_runs.id',
+  `tool_id` bigint UNSIGNED NOT NULL COMMENT 'ai_tools.id',
+  `tool_code` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '调用时工具编码快照',
+  `tool_name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '调用时工具名称快照',
+  `call_id` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '模型返回的tool_call_id/call_id，用于回传工具结果',
+  `status` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'running/success/failed/timeout',
+  `arguments_json` json NOT NULL COMMENT '模型传入参数',
+  `result_json` json NULL COMMENT '工具返回结果',
+  `error_message` varchar(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '失败或超时原因',
+  `duration_ms` int UNSIGNED NULL DEFAULT NULL COMMENT '执行耗时毫秒，终态后写入',
+  `started_at` datetime NOT NULL COMMENT '开始执行时间',
+  `finished_at` datetime NULL DEFAULT NULL COMMENT '结束时间',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_ai_tool_calls_run_call`(`run_id` ASC, `call_id` ASC) USING BTREE,
+  INDEX `idx_ai_tool_calls_run_id`(`run_id` ASC, `id` ASC) USING BTREE,
+  INDEX `idx_ai_tool_calls_tool_created`(`tool_id` ASC, `created_at` ASC, `id` ASC) USING BTREE,
+  INDEX `idx_ai_tool_calls_status_created`(`status` ASC, `created_at` ASC, `id` ASC) USING BTREE,
+  CONSTRAINT `fk_ai_tool_calls_run` FOREIGN KEY (`run_id`) REFERENCES `ai_runs` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
+  CONSTRAINT `fk_ai_tool_calls_tool` FOREIGN KEY (`tool_id`) REFERENCES `ai_tools` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
+  CONSTRAINT `chk_ai_tool_calls_status` CHECK (`status` in (_utf8mb4'running',_utf8mb4'success',_utf8mb4'failed',_utf8mb4'timeout'))
+) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI工具调用记录' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for ai_tools
+-- ----------------------------
+DROP TABLE IF EXISTS `ai_tools`;
+CREATE TABLE `ai_tools`  (
+  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '工具ID',
+  `name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '工具名称，管理页和运行监控展示',
+  `code` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '工具唯一编码，传给模型作为function name',
+  `description` varchar(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '工具说明，传给模型作为function description',
+  `parameters_json` json NOT NULL COMMENT '工具参数JSON Schema，传给模型并用于入参校验',
+  `result_schema_json` json NOT NULL COMMENT '工具返回JSON Schema，用于结果校验和运行监控展示',
+  `risk_level` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '风险等级：low/medium/high',
+  `timeout_ms` int UNSIGNED NOT NULL DEFAULT 3000 COMMENT '执行超时毫秒，运行时context timeout',
+  `status` tinyint UNSIGNED NOT NULL DEFAULT 1 COMMENT '1启用 2禁用',
+  `is_del` tinyint UNSIGNED NOT NULL DEFAULT 2 COMMENT '1删除 2正常',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_ai_tools_code`(`code` ASC) USING BTREE,
+  INDEX `idx_ai_tools_status_del`(`status` ASC, `is_del` ASC, `id` ASC) USING BTREE,
+  CONSTRAINT `chk_ai_tools_is_del` CHECK (`is_del` in (1,2)),
+  CONSTRAINT `chk_ai_tools_risk_level` CHECK (`risk_level` in (_utf8mb4'low',_utf8mb4'medium',_utf8mb4'high')),
+  CONSTRAINT `chk_ai_tools_status` CHECK (`status` in (1,2))
+) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI工具定义' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for auth_platforms
@@ -111,7 +569,7 @@ CREATE TABLE `cron_task`  (
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uniq_cron_task_name`(`name` ASC) USING BTREE,
   INDEX `idx_status_del`(`status` ASC, `is_del` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 13 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '定时任务配置表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 15 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '定时任务配置表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for cron_task_log
@@ -133,7 +591,7 @@ CREATE TABLE `cron_task_log`  (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_task_del_id`(`task_id` ASC, `is_del` ASC) USING BTREE,
   INDEX `idx_name_del_id`(`task_name` ASC, `is_del` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 49202 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '定时任务执行日志表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 50022 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '定时任务执行日志表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for export_tasks
@@ -158,6 +616,80 @@ CREATE TABLE `export_tasks`  (
   INDEX `idx_expire`(`expire_at` ASC) USING BTREE,
   INDEX `idx_created`(`created_at` ASC) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 117 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '导出任务记录' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for mail_configs
+-- ----------------------------
+DROP TABLE IF EXISTS `mail_configs`;
+CREATE TABLE `mail_configs`  (
+  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
+  `config_key` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'default',
+  `secret_id_enc` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `secret_id_hint` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '',
+  `secret_key_enc` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `secret_key_hint` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '',
+  `region` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'ap-guangzhou',
+  `endpoint` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'ses.tencentcloudapi.com',
+  `from_email` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `from_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '',
+  `reply_to` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '',
+  `status` tinyint UNSIGNED NOT NULL DEFAULT 2,
+  `is_del` tinyint UNSIGNED NOT NULL DEFAULT 2,
+  `last_test_at` datetime NULL DEFAULT NULL,
+  `last_test_error` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_mail_configs_config_key`(`config_key` ASC) USING BTREE,
+  INDEX `idx_mail_configs_status_del`(`status` ASC, `is_del` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for mail_logs
+-- ----------------------------
+DROP TABLE IF EXISTS `mail_logs`;
+CREATE TABLE `mail_logs`  (
+  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
+  `scene` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `template_id` bigint UNSIGNED NULL DEFAULT NULL,
+  `to_email` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `subject` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '',
+  `tencent_request_id` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '',
+  `tencent_message_id` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '',
+  `status` tinyint UNSIGNED NOT NULL,
+  `is_del` tinyint UNSIGNED NOT NULL DEFAULT 2,
+  `error_code` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '',
+  `error_message` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '',
+  `duration_ms` bigint UNSIGNED NOT NULL DEFAULT 0,
+  `sent_at` datetime NULL DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_mail_logs_scene_created`(`is_del` ASC, `scene` ASC, `created_at` ASC) USING BTREE,
+  INDEX `idx_mail_logs_status_created`(`is_del` ASC, `status` ASC, `created_at` ASC) USING BTREE,
+  INDEX `idx_mail_logs_to_email_created`(`is_del` ASC, `to_email` ASC, `created_at` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 6 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for mail_templates
+-- ----------------------------
+DROP TABLE IF EXISTS `mail_templates`;
+CREATE TABLE `mail_templates`  (
+  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
+  `scene` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `subject` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `tencent_template_id` bigint UNSIGNED NOT NULL,
+  `variables_json` json NOT NULL,
+  `sample_variables_json` json NOT NULL,
+  `status` tinyint UNSIGNED NOT NULL DEFAULT 1,
+  `is_del` tinyint UNSIGNED NOT NULL DEFAULT 2,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_mail_templates_scene`(`scene` ASC) USING BTREE,
+  INDEX `idx_mail_templates_status_del`(`status` ASC, `is_del` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for notification_task
@@ -226,277 +758,67 @@ CREATE TABLE `operation_logs`  (
   INDEX `idx_action`(`action` ASC) USING BTREE,
   INDEX `idx_created_at`(`created_at` ASC) USING BTREE,
   INDEX `idx_del_created_id`(`is_del` ASC, `created_at` ASC, `id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 101696 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '操作日志表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 102294 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '操作日志表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
--- Table structure for order_fulfillments
+-- Table structure for payment_configs
 -- ----------------------------
-DROP TABLE IF EXISTS `order_fulfillments`;
-CREATE TABLE `order_fulfillments`  (
-  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
-  `fulfill_no` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '履约单号',
-  `order_id` bigint UNSIGNED NOT NULL COMMENT '订单ID',
-  `order_no` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '订单号',
-  `user_id` int UNSIGNED NOT NULL COMMENT '用户ID',
-  `biz_type` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '业务类型',
-  `biz_id` int UNSIGNED NOT NULL DEFAULT 0 COMMENT '业务实体ID',
-  `action_type` tinyint UNSIGNED NOT NULL COMMENT '1充值入账 2消费履约 3商品回调',
-  `source_txn_id` bigint UNSIGNED NOT NULL DEFAULT 0 COMMENT '来源支付流水ID',
-  `idempotency_key` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '业务幂等键',
-  `status` tinyint UNSIGNED NOT NULL DEFAULT 1 COMMENT '1待执行 2执行中 3成功 4失败 5人工处理',
-  `retry_count` int UNSIGNED NOT NULL DEFAULT 0 COMMENT '重试次数',
-  `next_retry_at` datetime NULL DEFAULT NULL COMMENT '下次重试时间',
-  `executed_at` datetime NULL DEFAULT NULL COMMENT '执行成功时间',
-  `last_error` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '最后错误',
-  `request_payload` json NULL COMMENT '请求快照',
-  `result_payload` json NULL COMMENT '结果快照',
-  `is_del` tinyint UNSIGNED NOT NULL DEFAULT 2,
+DROP TABLE IF EXISTS `payment_configs`;
+CREATE TABLE `payment_configs`  (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `provider` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'alipay',
+  `code` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `app_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `private_key_enc` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `private_key_hint` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `app_cert_path` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `platform_cert_path` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `root_cert_path` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `notify_url` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `environment` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'sandbox',
+  `enabled_methods_json` json NOT NULL,
+  `status` tinyint NOT NULL DEFAULT 2,
+  `remark` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `is_del` tinyint NOT NULL DEFAULT 2,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`) USING BTREE,
-  UNIQUE INDEX `uk_fulfill_no`(`fulfill_no` ASC) USING BTREE,
-  UNIQUE INDEX `uk_idempotency_key`(`idempotency_key` ASC) USING BTREE,
-  INDEX `idx_order_action`(`order_id` ASC, `action_type` ASC) USING BTREE,
-  INDEX `idx_status_retry`(`status` ASC, `next_retry_at` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '支付后业务履约记录' ROW_FORMAT = Dynamic;
+  UNIQUE INDEX `uk_payment_configs_code`(`code` ASC) USING BTREE,
+  INDEX `idx_payment_configs_provider_status`(`provider` ASC, `status` ASC, `is_del` ASC) USING BTREE,
+  INDEX `idx_payment_configs_environment`(`environment` ASC, `is_del` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
--- Table structure for order_items
+-- Table structure for payment_orders
 -- ----------------------------
-DROP TABLE IF EXISTS `order_items`;
-CREATE TABLE `order_items`  (
-  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
-  `order_id` bigint UNSIGNED NOT NULL COMMENT '订单ID',
-  `item_type` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '项目类型',
-  `title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '标题快照',
-  `price` int UNSIGNED NOT NULL DEFAULT 0 COMMENT '单价(分)',
-  `quantity` int UNSIGNED NOT NULL DEFAULT 1 COMMENT '数量',
-  `amount` int UNSIGNED NOT NULL DEFAULT 0 COMMENT '小计(分)',
-  `is_del` tinyint UNSIGNED NOT NULL DEFAULT 2,
+DROP TABLE IF EXISTS `payment_orders`;
+CREATE TABLE `payment_orders`  (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `order_no` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `config_id` bigint NOT NULL,
+  `config_code` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `provider` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'alipay',
+  `pay_method` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `subject` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `amount_cents` bigint NOT NULL,
+  `status` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `pay_url` varchar(2048) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `return_url` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `alipay_trade_no` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `expired_at` datetime NOT NULL,
+  `paid_at` datetime NULL DEFAULT NULL,
+  `closed_at` datetime NULL DEFAULT NULL,
+  `failure_reason` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `is_del` tinyint NOT NULL DEFAULT 2,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`) USING BTREE,
-  INDEX `idx_order_id`(`order_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '订单明细' ROW_FORMAT = Dynamic;
-
--- ----------------------------
--- Table structure for orders
--- ----------------------------
-DROP TABLE IF EXISTS `orders`;
-CREATE TABLE `orders`  (
-  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
-  `order_no` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '订单号',
-  `user_id` int UNSIGNED NOT NULL COMMENT '用户ID',
-  `order_type` tinyint UNSIGNED NOT NULL COMMENT '1=充值 2=消费 3=商品',
-  `biz_type` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '业务类型',
-  `biz_id` int UNSIGNED NOT NULL DEFAULT 0 COMMENT '业务实体ID',
-  `title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '订单标题',
-  `item_count` int UNSIGNED NOT NULL DEFAULT 1 COMMENT '件数',
-  `total_amount` int UNSIGNED NOT NULL DEFAULT 0 COMMENT '订单总额(分)',
-  `discount_amount` int UNSIGNED NOT NULL DEFAULT 0 COMMENT '优惠金额(分)',
-  `pay_amount` int UNSIGNED NOT NULL DEFAULT 0 COMMENT '应付金额(分)',
-  `pay_status` tinyint UNSIGNED NOT NULL DEFAULT 1 COMMENT '1待支付 2支付中 3已支付 4已关闭 5支付异常',
-  `biz_status` tinyint UNSIGNED NOT NULL DEFAULT 1 COMMENT '1初始化 2待履约 3履约中 4履约成功 5履约失败 6人工处理',
-  `success_transaction_id` bigint UNSIGNED NOT NULL DEFAULT 0 COMMENT '成功支付流水ID',
-  `channel_id` int UNSIGNED NOT NULL DEFAULT 0 COMMENT '成功支付渠道ID',
-  `pay_method` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '支付方式',
-  `pay_time` datetime NULL DEFAULT NULL COMMENT '支付成功时间',
-  `expire_time` datetime NOT NULL COMMENT '支付过期时间',
-  `close_time` datetime NULL DEFAULT NULL COMMENT '关闭时间',
-  `biz_done_at` datetime NULL DEFAULT NULL COMMENT '业务履约成功时间',
-  `close_reason` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '关闭原因',
-  `fail_reason` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '失败原因',
-  `extra` json NULL COMMENT '扩展字段',
-  `admin_remark` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '管理员备注',
-  `ip` varchar(45) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '下单IP',
-  `is_del` tinyint UNSIGNED NOT NULL DEFAULT 2,
-  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`) USING BTREE,
-  UNIQUE INDEX `uk_order_no`(`order_no` ASC) USING BTREE,
-  INDEX `idx_user_pay_created`(`user_id` ASC, `pay_status` ASC, `created_at` ASC) USING BTREE,
-  INDEX `idx_biz`(`biz_type` ASC, `biz_id` ASC) USING BTREE,
-  INDEX `idx_expire`(`pay_status` ASC, `expire_time` ASC) USING BTREE,
-  INDEX `idx_txn`(`success_transaction_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '统一订单表' ROW_FORMAT = Dynamic;
-
--- ----------------------------
--- Table structure for pay_channel
--- ----------------------------
-DROP TABLE IF EXISTS `pay_channel`;
-CREATE TABLE `pay_channel`  (
-  `id` int UNSIGNED NOT NULL AUTO_INCREMENT,
-  `name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '渠道名称',
-  `channel` tinyint UNSIGNED NOT NULL COMMENT '1=微信 2=支付宝',
-  `mch_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '商户号',
-  `app_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '应用ID',
-  `notify_url` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '异步回调地址',
-  `app_private_key_enc` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '应用私钥密文',
-  `app_private_key_hint` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '私钥提示',
-  `public_cert_path` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '公钥证书路径',
-  `platform_cert_path` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '平台证书路径',
-  `root_cert_path` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '根证书路径',
-  `extra_config` json NULL COMMENT '扩展配置',
-  `is_sandbox` tinyint UNSIGNED NOT NULL DEFAULT 2 COMMENT '1=是 2=否',
-  `sort` int UNSIGNED NOT NULL DEFAULT 0,
-  `remark` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '',
-  `status` tinyint UNSIGNED NOT NULL DEFAULT 1 COMMENT '1=启用 2=禁用',
-  `is_del` tinyint UNSIGNED NOT NULL DEFAULT 2,
-  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`) USING BTREE,
-  UNIQUE INDEX `uk_channel_mch_app`(`channel` ASC, `mch_id` ASC, `app_id` ASC) USING BTREE,
-  INDEX `idx_channel_status_sort`(`channel` ASC, `status` ASC, `sort` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '支付渠道配置' ROW_FORMAT = Dynamic;
-
--- ----------------------------
--- Table structure for pay_notify_logs
--- ----------------------------
-DROP TABLE IF EXISTS `pay_notify_logs`;
-CREATE TABLE `pay_notify_logs`  (
-  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
-  `channel` tinyint UNSIGNED NOT NULL COMMENT '1=微信 2=支付宝',
-  `notify_type` tinyint UNSIGNED NOT NULL COMMENT '1=支付回调',
-  `transaction_no` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '系统支付流水号',
-  `trade_no` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '第三方交易号',
-  `headers` json NULL COMMENT '回调请求头',
-  `raw_data` json NOT NULL COMMENT '原始回调内容',
-  `process_status` tinyint UNSIGNED NOT NULL DEFAULT 1 COMMENT '1待处理 2成功 3失败 4忽略',
-  `process_msg` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '处理结果',
-  `ip` varchar(45) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '回调来源IP',
-  `is_del` tinyint UNSIGNED NOT NULL DEFAULT 2,
-  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`) USING BTREE,
-  INDEX `idx_txn_no`(`transaction_no` ASC) USING BTREE,
-  INDEX `idx_created`(`created_at` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '支付回调日志' ROW_FORMAT = Dynamic;
-
--- ----------------------------
--- Table structure for pay_reconcile_tasks
--- ----------------------------
-DROP TABLE IF EXISTS `pay_reconcile_tasks`;
-CREATE TABLE `pay_reconcile_tasks`  (
-  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
-  `reconcile_date` date NOT NULL COMMENT '对账日期',
-  `channel` tinyint UNSIGNED NOT NULL COMMENT '1=微信 2=支付宝',
-  `channel_id` int UNSIGNED NOT NULL DEFAULT 0 COMMENT '渠道ID',
-  `bill_type` tinyint UNSIGNED NOT NULL COMMENT '1支付',
-  `status` tinyint UNSIGNED NOT NULL DEFAULT 1 COMMENT '1待执行 2下载中 3对比中 4成功 5有差异 6失败',
-  `platform_count` int UNSIGNED NOT NULL DEFAULT 0 COMMENT '平台笔数',
-  `platform_amount` bigint UNSIGNED NOT NULL DEFAULT 0 COMMENT '平台金额(分)',
-  `local_count` int UNSIGNED NOT NULL DEFAULT 0 COMMENT '本地笔数',
-  `local_amount` bigint UNSIGNED NOT NULL DEFAULT 0 COMMENT '本地金额(分)',
-  `diff_count` int UNSIGNED NOT NULL DEFAULT 0 COMMENT '差异笔数',
-  `diff_amount` bigint NOT NULL DEFAULT 0 COMMENT '差异金额(分)',
-  `platform_file_url` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '平台账单文件URL',
-  `local_file_url` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '本地账单文件URL',
-  `diff_file_url` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '差异文件URL',
-  `started_at` datetime NULL DEFAULT NULL COMMENT '开始时间',
-  `finished_at` datetime NULL DEFAULT NULL COMMENT '结束时间',
-  `error_msg` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '失败信息',
-  `is_del` tinyint UNSIGNED NOT NULL DEFAULT 2,
-  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`) USING BTREE,
-  UNIQUE INDEX `uk_reconcile_unique`(`reconcile_date` ASC, `channel` ASC, `channel_id` ASC, `bill_type` ASC) USING BTREE,
-  INDEX `idx_status_date`(`status` ASC, `reconcile_date` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '支付对账任务' ROW_FORMAT = Dynamic;
-
--- ----------------------------
--- Table structure for pay_refunds
--- ----------------------------
-DROP TABLE IF EXISTS `pay_refunds`;
-CREATE TABLE `pay_refunds`  (
-  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
-  `refund_no` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '退款单号',
-  `order_id` bigint UNSIGNED NOT NULL COMMENT '订单ID',
-  `order_no` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '订单号',
-  `user_id` int UNSIGNED NOT NULL COMMENT '用户ID（冗余，用于钱包操作）',
-  `transaction_id` bigint UNSIGNED NOT NULL COMMENT '原支付流水ID',
-  `channel_id` int UNSIGNED NOT NULL COMMENT '渠道ID',
-  `channel` tinyint UNSIGNED NOT NULL COMMENT '1=微信 2=支付宝',
-  `refund_amount` int UNSIGNED NOT NULL COMMENT '退款金额(分)',
-  `wallet_freeze_amount` int UNSIGNED NOT NULL DEFAULT 0 COMMENT '钱包冻结金额(分)',
-  `trade_refund_no` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '第三方退款单号',
-  `status` tinyint UNSIGNED NOT NULL DEFAULT 1 COMMENT '1已创建 2退款中 3成功 4失败 5已关闭 6人工处理',
-  `reason` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '退款原因',
-  `fail_reason` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '失败原因',
-  `operator_id` int UNSIGNED NOT NULL DEFAULT 0 COMMENT '操作人',
-  `frozen_at` datetime NULL DEFAULT NULL COMMENT '冻结成功时间',
-  `refunded_at` datetime NULL DEFAULT NULL COMMENT '退款成功时间',
-  `raw_request` json NULL COMMENT '退款请求快照',
-  `raw_notify` json NULL COMMENT '退款回调快照',
-  `remark` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '',
-  `is_del` tinyint UNSIGNED NOT NULL DEFAULT 2,
-  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`) USING BTREE,
-  UNIQUE INDEX `uk_refund_no`(`refund_no` ASC) USING BTREE,
-  INDEX `idx_order_id`(`order_id` ASC) USING BTREE,
-  INDEX `idx_status_created`(`status` ASC, `created_at` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '退款记录' ROW_FORMAT = Dynamic;
-
--- ----------------------------
--- Table structure for pay_transactions
--- ----------------------------
-DROP TABLE IF EXISTS `pay_transactions`;
-CREATE TABLE `pay_transactions`  (
-  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
-  `transaction_no` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '系统支付流水号',
-  `order_id` bigint UNSIGNED NOT NULL COMMENT '订单ID',
-  `order_no` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '订单号',
-  `attempt_no` int UNSIGNED NOT NULL DEFAULT 1 COMMENT '第几次支付尝试',
-  `channel_id` int UNSIGNED NOT NULL COMMENT '渠道ID',
-  `channel` tinyint UNSIGNED NOT NULL COMMENT '1=微信 2=支付宝',
-  `pay_method` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '支付方式',
-  `amount` int UNSIGNED NOT NULL DEFAULT 0 COMMENT '支付金额(分)',
-  `trade_no` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '第三方交易号',
-  `trade_status` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '第三方原始状态',
-  `status` tinyint UNSIGNED NOT NULL DEFAULT 1 COMMENT '1已创建 2等待支付 3成功 4失败 5关闭',
-  `paid_at` datetime NULL DEFAULT NULL COMMENT '支付成功时间',
-  `closed_at` datetime NULL DEFAULT NULL COMMENT '关闭时间',
-  `channel_resp` json NULL COMMENT '第三方下单原始响应',
-  `raw_notify` json NULL COMMENT '原始回调数据',
-  `is_del` tinyint UNSIGNED NOT NULL DEFAULT 2,
-  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`) USING BTREE,
-  UNIQUE INDEX `uk_transaction_no`(`transaction_no` ASC) USING BTREE,
-  UNIQUE INDEX `uk_order_attempt`(`order_id` ASC, `attempt_no` ASC) USING BTREE,
-  INDEX `idx_order_id`(`order_id` ASC) USING BTREE,
-  INDEX `idx_trade_no`(`trade_no` ASC) USING BTREE,
-  INDEX `idx_status_created`(`status` ASC, `created_at` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '支付流水' ROW_FORMAT = Dynamic;
-
--- ----------------------------
--- Table structure for permission_backup_20260306_cleanup
--- ----------------------------
-DROP TABLE IF EXISTS `permission_backup_20260306_cleanup`;
-CREATE TABLE `permission_backup_20260306_cleanup`  (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `name` varchar(50) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL DEFAULT '' COMMENT '权限名',
-  `path` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NULL DEFAULT '' COMMENT '路由',
-  `icon` varchar(100) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NULL DEFAULT '' COMMENT '图标',
-  `parent_id` int NOT NULL DEFAULT -1 COMMENT '父级ID',
-  `component` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NULL DEFAULT NULL COMMENT '组件路径',
-  `platform` varchar(10) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL DEFAULT 'admin' COMMENT '平台：admin=PC后台, app=H5/APP',
-  `type` tinyint(1) NOT NULL DEFAULT 1 COMMENT '类型：1=目录, 2=页面, 3=按钮',
-  `sort` int NOT NULL DEFAULT 1 COMMENT '排序',
-  `code` varchar(100) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NULL DEFAULT NULL COMMENT '权限标识',
-  `i18n_key` varchar(128) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL DEFAULT '' COMMENT 'i18n键',
-  `keep_alive` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'keep-alive',
-  `show_menu` tinyint(1) NOT NULL DEFAULT 1 COMMENT '显示菜单：1=显示, 2=隐藏',
-  `status` tinyint(1) NOT NULL DEFAULT 1 COMMENT '状态',
-  `is_del` tinyint(1) NOT NULL DEFAULT 2 COMMENT '删除标记',
-  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`) USING BTREE,
-  UNIQUE INDEX `uniq_platform_code`(`platform` ASC, `code` ASC) USING BTREE,
-  INDEX `idx_platform`(`platform` ASC) USING BTREE,
-  INDEX `idx_parent_sort`(`parent_id` ASC, `sort` ASC) USING BTREE,
-  INDEX `idx_status_del`(`is_del` ASC, `status` ASC, `platform` ASC, `type` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 96 CHARACTER SET = utf8mb3 COLLATE = utf8mb3_general_ci COMMENT = '菜单权限表' ROW_FORMAT = Dynamic;
+  UNIQUE INDEX `uk_payment_order_no`(`order_no` ASC) USING BTREE,
+  INDEX `idx_payment_order_status_created`(`is_del` ASC, `status` ASC, `created_at` ASC) USING BTREE,
+  INDEX `idx_payment_order_config_created`(`config_id` ASC, `created_at` ASC, `is_del` ASC) USING BTREE,
+  CONSTRAINT `fk_payment_order_config` FOREIGN KEY (`config_id`) REFERENCES `payment_configs` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for permissions
@@ -524,7 +846,30 @@ CREATE TABLE `permissions`  (
   INDEX `idx_permissions_platform`(`platform` ASC) USING BTREE,
   INDEX `idx_permissions_parent_sort`(`parent_id` ASC, `sort` ASC) USING BTREE,
   INDEX `idx_permissions_status_del_platform_type`(`is_del` ASC, `status` ASC, `platform` ASC, `type` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 371 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '菜单权限表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 558 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '菜单权限表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for permissions_backup_payment_20260515
+-- ----------------------------
+DROP TABLE IF EXISTS `permissions_backup_payment_20260515`;
+CREATE TABLE `permissions_backup_payment_20260515`  (
+  `id` int UNSIGNED NOT NULL DEFAULT 0,
+  `name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '权限名',
+  `path` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT '' COMMENT '路由',
+  `icon` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT '' COMMENT '图标',
+  `parent_id` int UNSIGNED NOT NULL DEFAULT 0 COMMENT 'parent permission id; 0 means root',
+  `component` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '组件路径',
+  `platform` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'admin' COMMENT '平台：admin=PC后台, app=H5/APP',
+  `type` tinyint UNSIGNED NOT NULL DEFAULT 1 COMMENT 'type: 1 dir 2 page 3 button',
+  `sort` int UNSIGNED NOT NULL DEFAULT 0 COMMENT '排序',
+  `code` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '权限标识',
+  `i18n_key` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT 'i18n键',
+  `show_menu` tinyint UNSIGNED NOT NULL DEFAULT 1 COMMENT 'show menu: 1 yes 2 no',
+  `status` tinyint UNSIGNED NOT NULL DEFAULT 1,
+  `is_del` tinyint UNSIGNED NOT NULL DEFAULT 2,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for role_permissions
@@ -540,7 +885,20 @@ CREATE TABLE `role_permissions`  (
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uniq_role_permission`(`role_id` ASC, `permission_id` ASC) USING BTREE,
   INDEX `idx_role_permissions_permission_del_role`(`permission_id` ASC, `is_del` ASC, `role_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 525 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'role permission pivot' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 746 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'role permission pivot' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for role_permissions_backup_payment_20260515
+-- ----------------------------
+DROP TABLE IF EXISTS `role_permissions_backup_payment_20260515`;
+CREATE TABLE `role_permissions_backup_payment_20260515`  (
+  `id` int UNSIGNED NOT NULL DEFAULT 0,
+  `role_id` int UNSIGNED NOT NULL COMMENT 'role.id',
+  `permission_id` int UNSIGNED NOT NULL COMMENT 'permission.id',
+  `is_del` tinyint UNSIGNED NOT NULL DEFAULT 2,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for roles
@@ -575,7 +933,7 @@ CREATE TABLE `system_settings`  (
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uniq_setting_key`(`setting_key` ASC) USING BTREE,
   INDEX `idx_status_del`(`status` ASC, `is_del` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 14 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '系统设置（key-value）' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 15 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '系统设置（key-value）' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for test
@@ -632,7 +990,7 @@ CREATE TABLE `upload_driver`  (
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uniq_driver_bucket`(`driver` ASC, `bucket` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 17 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 35 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for upload_rule
@@ -648,7 +1006,7 @@ CREATE TABLE `upload_rule`  (
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 17 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 35 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for upload_setting
@@ -667,7 +1025,7 @@ CREATE TABLE `upload_setting`  (
   UNIQUE INDEX `uniq_driver_rule`(`driver_id` ASC, `rule_id` ASC) USING BTREE,
   INDEX `idx_status`(`status` ASC) USING BTREE,
   INDEX `idx_rule`(`rule_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 19 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '上传设置：驱动+规则组合与启用状态' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 37 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '上传设置：驱动+规则组合与启用状态' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for user_profiles
@@ -714,26 +1072,7 @@ CREATE TABLE `user_sessions`  (
   INDEX `idx_expires_at`(`expires_at` ASC) USING BTREE,
   INDEX `idx_refresh_expires_at`(`refresh_expires_at` ASC) USING BTREE,
   INDEX `idx_active_stats`(`is_del` ASC, `revoked_at` ASC, `expires_at` ASC, `platform` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 751 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户会话表' ROW_FORMAT = Dynamic;
-
--- ----------------------------
--- Table structure for user_wallets
--- ----------------------------
-DROP TABLE IF EXISTS `user_wallets`;
-CREATE TABLE `user_wallets`  (
-  `id` int UNSIGNED NOT NULL AUTO_INCREMENT,
-  `user_id` int UNSIGNED NOT NULL COMMENT '用户ID',
-  `balance` int UNSIGNED NOT NULL DEFAULT 0 COMMENT '可用余额(分)',
-  `frozen` int UNSIGNED NOT NULL DEFAULT 0 COMMENT '冻结余额(分)',
-  `total_recharge` int UNSIGNED NOT NULL DEFAULT 0 COMMENT '累计充值(分)',
-  `total_consume` int UNSIGNED NOT NULL DEFAULT 0 COMMENT '累计消费(分)',
-  `version` int UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
-  `is_del` tinyint UNSIGNED NOT NULL DEFAULT 2,
-  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`) USING BTREE,
-  UNIQUE INDEX `uk_user_id`(`user_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户钱包' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 893 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户会话表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for users
@@ -779,7 +1118,7 @@ CREATE TABLE `users_login_log`  (
   INDEX `idx_account_created`(`login_account` ASC, `created_at` DESC) USING BTREE,
   INDEX `idx_ip_created`(`ip` ASC, `created_at` DESC) USING BTREE,
   INDEX `idx_created`(`created_at` DESC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 778 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '登录日志' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 931 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '登录日志' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for users_quick_entry
@@ -796,41 +1135,6 @@ CREATE TABLE `users_quick_entry`  (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_user_del_sort`(`user_id` ASC, `is_del` ASC, `sort` ASC) USING BTREE,
   INDEX `idx_user_permission_del`(`user_id` ASC, `permission_id` ASC, `is_del` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 25 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户快捷入口' ROW_FORMAT = Dynamic;
-
--- ----------------------------
--- Table structure for wallet_transactions
--- ----------------------------
-DROP TABLE IF EXISTS `wallet_transactions`;
-CREATE TABLE `wallet_transactions`  (
-  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
-  `biz_action_no` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '业务幂等键',
-  `user_id` int UNSIGNED NOT NULL COMMENT '用户ID',
-  `wallet_id` int UNSIGNED NOT NULL COMMENT '钱包ID',
-  `type` tinyint UNSIGNED NOT NULL COMMENT '1充值入账 2消费扣款 3系统调账',
-  `available_delta` int NOT NULL DEFAULT 0 COMMENT '可用余额变化',
-  `frozen_delta` int NOT NULL DEFAULT 0 COMMENT '冻结余额变化',
-  `balance_before` int UNSIGNED NOT NULL COMMENT '变动前可用余额',
-  `balance_after` int UNSIGNED NOT NULL COMMENT '变动后可用余额',
-  `frozen_before` int UNSIGNED NOT NULL DEFAULT 0 COMMENT '变动前冻结余额',
-  `frozen_after` int UNSIGNED NOT NULL DEFAULT 0 COMMENT '变动后冻结余额',
-  `order_id` bigint UNSIGNED NOT NULL DEFAULT 0 COMMENT '关联订单ID',
-  `order_no` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '关联订单号',
-  `source_type` tinyint UNSIGNED NOT NULL DEFAULT 0 COMMENT '0未关联 1履约 2人工',
-  `source_id` bigint UNSIGNED NOT NULL DEFAULT 0 COMMENT '来源记录ID',
-  `title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '流水标题',
-  `remark` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '',
-  `operator_id` int UNSIGNED NOT NULL DEFAULT 0 COMMENT '操作人',
-  `ext` json NULL COMMENT '扩展信息',
-  `is_del` tinyint UNSIGNED NOT NULL DEFAULT 2,
-  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`) USING BTREE,
-  UNIQUE INDEX `uk_biz_action_no`(`biz_action_no` ASC) USING BTREE,
-  INDEX `idx_user_created`(`user_id` ASC, `created_at` ASC) USING BTREE,
-  INDEX `idx_order_id`(`order_id` ASC) USING BTREE,
-  INDEX `idx_source`(`source_type` ASC, `source_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 42 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '钱包流水' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 104 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户快捷入口' ROW_FORMAT = Dynamic;
 
 SET FOREIGN_KEY_CHECKS = 1;
-

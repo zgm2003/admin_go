@@ -2438,9 +2438,9 @@ DELETE /mail/logs/:id and /logs     -> system_mail_logDel, module=mail, action=d
 
 ## Payment
 
-状态：payment config rebuild v1 + payment order Alipay pay v1 implemented in Go backend, adapted in Vue frontend。
+状态：payment config rebuild v1 + recharge cashier v1 implemented in Go backend, adapted in Vue frontend。
 
-用途：当前 active scope 只做支付宝支付配置和第一版支付宝支付订单：配置 CRUD、私有证书上传、本地配置测试、后台订单创建、拉起 web/h5 支付、手动同步状态、关闭未支付订单、订单列表和详情。钱包、回调接收、事件流水、退款、提现、对账、微信和业务履约不属于本 slice。
+用途：当前 active scope 只做支付宝支付配置、充值收银台和充值记录：配置 CRUD、私有证书上传、本地配置测试、套餐充值、后端自动选择可用支付宝配置、创建底层支付单、拉起 web/h5 支付、手动同步状态、关闭未支付充值、钱包余额幂等入账。退款、提现、对账、微信、notify 回调、自动 close/sync cron、订阅权益和业务消费不属于本 slice。
 
 ### Shared Rules
 
@@ -2449,8 +2449,9 @@ resource prefix: /api/admin/v1/payment
 backend owner: internal/module/payment
 gateway boundary: internal/platform/payment/alipay
 provider scope: Alipay only
-active tables: payment_configs, payment_orders
-active pages: /payment/config, /payment/orders
+active tables: payment_configs, payment_orders, payment_recharge_packages, payment_recharges, user_wallets, wallet_transactions
+active pages: /payment/config, /payment/recharge
+internal/raw visibility page: /payment/orders is hidden from menu and has no raw create UX
 cert storage: runtime/payment/certs/alipay/<config_code>/<sha256>.crt
 ```
 
@@ -2459,10 +2460,12 @@ cert storage: runtime/payment/certs/alipay/<config_code>/<sha256>.crt
 ```text
 Alipay only.
 No active public notify endpoint in this slice.
-No wallet/refund/reconcile/WeChat/business-fulfillment runtime contract in this slice.
-provider is a real contract field and is currently fixed to alipay.
-payment_configs has no return_url; return_url belongs to each order create request.
+No refund/reconcile/WeChat/subscription/business-consumption runtime contract in this slice.
+payment_configs.sort selects the preferred enabled Alipay config; lower sort wins, then lower id.
+payment_configs has no return_url; recharge create computes return_url per payment.
+Users do not submit config_code, app_id, subject, amount_yuan, expire_minutes, or handwritten return_url on the recharge page.
 paid can only be written by Alipay query/sync in this slice.
+wallet credit is DB-transactional and idempotent through wallet_transactions(source_type, source_id).
 private_key_enc and plaintext app_private_key never appear in API response, operation log, smoke output, or frontend types.
 Certificate content is never returned; API only stores private relative cert paths.
 No cert public URL and no certificate download route.
@@ -2484,13 +2487,25 @@ POST   /api/admin/v1/payment/certificates
 POST   /api/admin/v1/payment/configs/:id/test
 ```
 
-Order routes:
+Recharge routes:
+
+```text
+GET    /api/admin/v1/payment/recharges/page-init
+GET    /api/admin/v1/payment/recharges
+GET    /api/admin/v1/payment/recharges/:id
+POST   /api/admin/v1/payment/recharges
+POST   /api/admin/v1/payment/recharges/:id/pay
+POST   /api/admin/v1/payment/recharges/:id/sync
+PATCH  /api/admin/v1/payment/recharges/:id/close
+```
+
+Low-level order routes remain for internal runtime/visibility and existing tests, but `/payment/orders` is not the product entry and the Vue page no longer exposes raw create:
 
 ```text
 GET    /api/admin/v1/payment/orders/page-init
 GET    /api/admin/v1/payment/orders
 GET    /api/admin/v1/payment/orders/:id
-POST   /api/admin/v1/payment/orders
+POST   /api/admin/v1/payment/orders              # backend/internal capability; not exposed by product UX
 POST   /api/admin/v1/payment/orders/:id/pay
 POST   /api/admin/v1/payment/orders/:id/sync
 PATCH  /api/admin/v1/payment/orders/:id/close
@@ -2500,7 +2515,7 @@ No order edit/delete endpoints exist in this slice.
 
 ### Config Contract
 
-`payment/configs` 管理 `payment_configs`。写入必须带 `provider=alipay`，可以接收 `app_private_key` 明文，但后端只加密保存 `private_key_enc` 和可展示的 `private_key_hint`。列表和详情返回 provider/provider_text、hint、证书私有相对路径、环境、启用方式、状态和备注。
+`payment/configs` 管理 `payment_configs`。写入必须带 `provider=alipay`，可以接收 `app_private_key` 明文，但后端只加密保存 `private_key_enc` 和可展示的 `private_key_hint`。列表返回 provider/provider_text、hint、证书私有相对路径、环境、启用方式、优先级、状态和备注。
 
 字段第一版用途固定：
 
@@ -2514,15 +2529,84 @@ private_key_hint: 展示“已配置私钥”的安全提示。
 app_cert_path / platform_cert_path / root_cert_path: 本地私有证书相对路径，启用和测试前必须能解析到文件。
 notify_url: 支付宝异步通知地址配置值；本 slice 不开放 notify 接收路由。
 environment: sandbox / production，构建支付宝客户端时使用。
-enabled_methods_json: 当前只允许 web / h5。
-status: 1 启用、2 禁用；启用前必须通过本地配置测试。
+enabled_methods_json: 当前只允许 web / h5；充值按设备选择 web/h5 后用它过滤配置。
+sort: 支付配置优先级，充值自动选择时按 sort ASC, id ASC。
+status: 1 启用、2 禁用；启用前必须通过本地配置测试；禁用配置不参与充值支付。
 remark: 后台备注。
 is_del / created_at / updated_at: 基础三字段。
 ```
 
+### Recharge Contract
+
+`payment/recharges` 管理用户充值单。用户看到的是套餐、支付宝、余额和充值记录；底层 `payment_orders` 只是网关支付单，不再作为用户手工创建入口。
+
+创建请求只允许：
+
+```json
+{
+  "package_code": "recharge_100",
+  "pay_method": "web",
+  "return_url": "http://localhost:8080/payment/recharge"
+}
+```
+
+明确没有：
+
+```text
+config_code
+app_id
+subject
+amount_yuan
+amount_cents
+expire_minutes
+user_id
+```
+
+`return_url` 是前端根据当前 `/payment/recharge` 路由自动生成的基准地址，不是表单字段。后端创建充值单后追加：
+
+```text
+?tab=records&recharge_no=<recharge_no>
+```
+
+充值状态：
+
+```text
+pending
+paying
+paid
+credited
+closed
+failed
+```
+
+状态写入规则：
+
+```text
+Create -> pending, then Pay -> paying or failed
+Pay pending/failed -> paying or failed
+Pay paying with pay_url -> return existing pay_url
+Sync paying + payment_order paid -> paid -> credited
+Sync paid -> credited
+Sync waiting -> still paying
+Sync closed -> closed
+Close pending/failed/paying -> closed
+Close paid/credited -> reject
+Repeat sync credited -> return credited, no second wallet credit
+```
+
+新增表字段第一版用途固定：
+
+```text
+payment_recharge_packages.code/name/amount_cents/badge/sort/status: page-init 套餐展示和创建充值单的金额事实源。
+payment_recharges.recharge_no/user_id/package_code/package_name/amount_cents/payment_order_id/status/paid_at/credited_at/failure_reason: 充值记录、return_url 回跳识别、状态机和入账审计。
+user_wallets.user_id/balance_cents/total_recharge_cents: 充值页余额展示，入账时原子增加。
+wallet_transactions.transaction_no/wallet_id/user_id/direction/amount_cents/balance_before_cents/balance_after_cents/source_type/source_id/remark: 钱包流水审计和 `(source_type, source_id)` 幂等约束。
+is_del / created_at / updated_at: 每张新增表都有并参与过滤、排序或审计展示。
+```
+
 ### Order Contract
 
-`payment/orders` 管理 `payment_orders`。后台订单只表达第一版真实支付动作：创建本地订单、拉起支付宝支付、手动同步支付宝状态、关闭未支付订单。订单金额创建后不能编辑，后台不能手工改成 paid。
+`payment/orders` 管理 `payment_orders`。它是底层支付订单 runtime：创建本地订单、拉起支付宝支付、手动同步支付宝状态、关闭未支付订单。充值服务会内部创建它；Vue 产品入口不再暴露“新增支付订单”表单。订单金额创建后不能编辑，后台不能手工改成 paid。
 
 订单状态：
 
@@ -2534,40 +2618,13 @@ closed
 failed
 ```
 
-字段第一版用途固定：
+关键字段用途：
 
 ```text
-id: 后台列表行、详情、pay/sync/close 路由主键。
 order_no: 本地支付订单号，同时作为支付宝 out_trade_no。
-config_id: 绑定 payment_configs.id，pay/sync/close 用它取证书和 app_id。
-config_code: 配置编码快照，支持列表搜索和展示。
-provider: 当前固定 alipay，用于筛选和 gateway 分发。
-pay_method: web / h5，决定 TradePagePay 或 TradeWapPay。
-subject: 支付宝订单标题。
-amount_cents: 金额，单位分；Go 和 TS 都不传浮点金额。
-status: pending / paying / paid / closed / failed 状态机。
-pay_url: 支付宝 SDK 返回跳转 URL；表格不做长列展示，详情和支付操作使用。
-return_url: 单次订单创建入参，pay 时传支付宝；不是支付配置字段。
-alipay_trade_no: 支付宝交易号，sync 查询成功后写入。
-expired_at: 订单过期时间，pay 时传支付宝 time_expire。
-paid_at: sync 查询到支付成功时写入。
-closed_at: close 或 sync 查询到关闭时写入。
-failure_reason: 拉起支付失败原因；再次拉起成功后清空。
+config_id/config_code: 绑定 payment_configs，pay/sync/close 用它取证书和 app_id。
+provider/pay_method/subject/amount_cents/status/pay_url/return_url/alipay_trade_no/expired_at/paid_at/closed_at/failure_reason: 支付宝支付闭环状态。
 is_del / created_at / updated_at: 基础三字段，repository 查询固定 is_del=2。
-```
-
-状态写入规则：
-
-```text
-Create -> pending
-Pay pending/failed -> paying or failed
-Pay paying with pay_url -> return existing pay_url
-Sync paying + TRADE_SUCCESS/TRADE_FINISHED -> paid
-Sync paying + TRADE_CLOSED -> closed
-Sync paying + WAIT_BUYER_PAY -> still paying
-Close pending/failed -> closed locally
-Close paying -> gateway close then closed
-Close paid -> reject
 ```
 
 ### Certificate Upload Contract
@@ -2593,7 +2650,7 @@ path, file_name, sha256, size
 ### Active Menu and Permission Codes
 
 ```text
-PAGE   payment_config_list         /payment/config view_key=payment/config
+PAGE   payment_config_list           /payment/config view_key=payment/config
 BUTTON payment_config_add
 BUTTON payment_config_edit
 BUTTON payment_config_status
@@ -2601,23 +2658,31 @@ BUTTON payment_config_del
 BUTTON payment_config_upload_cert
 BUTTON payment_config_test
 
-PAGE   payment_order_list          /payment/orders view_key=payment/orders
-BUTTON payment_order_add
-BUTTON payment_order_pay
-BUTTON payment_order_sync
-BUTTON payment_order_close
+PAGE   payment_recharge_list         /payment/recharge view_key=payment/recharge
+BUTTON payment_recharge_add
+BUTTON payment_recharge_pay
+BUTTON payment_recharge_sync
+BUTTON payment_recharge_close
+
+HIDDEN PAGE payment_order_list        /payment/orders view_key=payment/orders show_menu=2
+BUTTON      payment_order_pay
+BUTTON      payment_order_sync
+BUTTON      payment_order_close
 ```
 
-### Retired From Active Runtime
+### Retired From Active Product Runtime
 
 ```text
 payment_channel_* permissions and channel menu
 payment_event_* permissions and event menu
-old pay_* permissions and wallet menu
+old pay_* permissions and old wallet menu
+/payment/orders as user-facing raw create entry
+PaymentOrderFormDialog raw create UX
 /api/admin/v1/payment/channels*
 /api/admin/v1/payment/events*
 /api/payment/notify/alipay
 payment order cron registration
+refund / WeChat / subscription / reconcile / consume-wallet features
 ```
 
 ## Upload Config
