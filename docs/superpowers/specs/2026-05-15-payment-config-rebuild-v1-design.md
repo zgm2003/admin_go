@@ -57,7 +57,7 @@ extra_config   # 未使用的 JSON 垃圾桶
 第一版只做一个专门的支付宝配置表：
 
 ```text
-payment_alipay_configs
+payment_configs
 ```
 
 一张表表达一个真实概念。私钥加密入库，证书上传到后端私有目录，配置启用/测试时做本地校验。
@@ -106,23 +106,24 @@ admin_front_ts/src/api/payment/channel.ts
 admin_front_ts/src/views/Main/payment/channel
 ```
 
-当前合同仍写 `payment_channels, payment_channel_configs, payment_orders, payment_events`。本 slice 完成后，支付配置合同必须改成 `payment_alipay_configs`。
+当前合同仍写 `payment_channels, payment_channel_configs, payment_orders, payment_events`。本 slice 完成后，支付配置合同必须改成 `payment_configs`。
 
 ## 4. 第一版表设计
 
-### 4.1 新表：payment_alipay_configs
+### 4.1 新表：payment_configs
 
 ```sql
-CREATE TABLE `payment_alipay_configs` (
+CREATE TABLE `payment_configs` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `provider` VARCHAR(32) NOT NULL DEFAULT 'alipay',
   `code` VARCHAR(64) NOT NULL,
   `name` VARCHAR(128) NOT NULL,
   `app_id` VARCHAR(64) NOT NULL,
-  `app_private_key_enc` TEXT NOT NULL,
-  `app_private_key_hint` VARCHAR(64) NOT NULL DEFAULT '',
+  `private_key_enc` TEXT NOT NULL,
+  `private_key_hint` VARCHAR(64) NOT NULL DEFAULT '',
   `app_cert_path` VARCHAR(512) NOT NULL DEFAULT '',
-  `alipay_cert_path` VARCHAR(512) NOT NULL DEFAULT '',
-  `alipay_root_cert_path` VARCHAR(512) NOT NULL DEFAULT '',
+  `platform_cert_path` VARCHAR(512) NOT NULL DEFAULT '',
+  `root_cert_path` VARCHAR(512) NOT NULL DEFAULT '',
   `notify_url` VARCHAR(512) NOT NULL DEFAULT '',
   `return_url` VARCHAR(512) NOT NULL DEFAULT '',
   `environment` VARCHAR(16) NOT NULL DEFAULT 'sandbox',
@@ -133,9 +134,9 @@ CREATE TABLE `payment_alipay_configs` (
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_payment_alipay_configs_code` (`code`),
-  KEY `idx_payment_alipay_configs_status` (`status`, `is_del`),
-  KEY `idx_payment_alipay_configs_environment` (`environment`, `is_del`)
+  UNIQUE KEY `uk_payment_configs_code` (`code`),
+  KEY `idx_payment_configs_provider_status` (`provider`, `status`, `is_del`),
+  KEY `idx_payment_configs_environment` (`environment`, `is_del`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
 
@@ -153,14 +154,15 @@ enabled_methods_json: ["web", "h5"]
 | 字段 | 第一版用途 | 不用时处理 |
 | --- | --- | --- |
 | id | 后台 CRUD 主键、RBAC 操作对象 | 必用 |
+| provider | 支付供应商，当前固定 alipay，用于筛选/展示/测试分发 | 必用，不支持其他值 |
 | code | 稳定编码、证书目录名、后续订单引用候选 | 创建后不可改 |
 | name | 后台展示、选择配置 | 必用 |
 | app_id | 支付宝 SDK 初始化 | 必用 |
-| app_private_key_enc | 支付宝签名私钥，secretbox 加密 | 必用 |
-| app_private_key_hint | 前端展示私钥是否已配置，不泄漏明文 | 必用 |
+| private_key_enc | 支付宝签名私钥，secretbox 加密 | 必用 |
+| private_key_hint | 前端展示私钥是否已配置，不泄漏明文 | 必用 |
 | app_cert_path | SetCertSnByPath 应用公钥证书 | 必用 |
-| alipay_cert_path | 回调验签和 SetCertSnByPath 支付宝公钥证书 | 必用 |
-| alipay_root_cert_path | SetCertSnByPath 根证书 | 必用 |
+| platform_cert_path | 回调验签和 SetCertSnByPath 支付宝公钥证书 | 必用 |
+| root_cert_path | SetCertSnByPath 根证书 | 必用 |
 | notify_url | 支付宝异步通知地址 | 必用 |
 | return_url | web/h5 同步返回地址 | 必用，可为空字符串 |
 | environment | 沙箱/正式环境切换 | 必用 |
@@ -190,14 +192,14 @@ cert_url      # 证书不暴露公网 URL
 迁移策略：
 
 ```text
-1. 创建 payment_alipay_configs。
+1. 创建 payment_configs。
 2. 从 payment_channels + payment_channel_configs 迁移 provider=alipay 且 is_del=2 的配置。
 3. code/name/status/supported_methods/private_key/certs/notify/return/environment 做确定性映射。
 4. 迁移后执行 `20260515_payment_config_only_cleanup.sql`，删除旧 payment_channel/payment_order/payment_event 权限、旧 payment 订单 cron 行，并 drop 旧 payment channel/order/event 表。
 5. 执行前备份旧表和旧权限到 `.tmp/payment-config-only-cleanup-backup-*.json`，后续支付订单 slice 从新 spec 重新建表，不继承旧表结构。
 ```
 
-注意：这不是保留旧设计。旧表只在 rebuild migration 里作为迁移来源；cleanup 后 live DB 只保留 `payment_alipay_configs`。
+注意：这不是保留旧设计。旧表只在 rebuild migration 里作为迁移来源；cleanup 后 live DB 只保留 `payment_configs`。
 
 ## 5. 证书上传设计
 
@@ -211,7 +213,7 @@ POST /api/admin/v1/payment/certificates
 
 ```text
 cert_type: app_cert | alipay_cert | alipay_root_cert
-config_code: payment_alipay_configs.code，新增表单未保存时可用前端当前 code
+config_code: payment_configs.code，新增表单未保存时可用前端当前 code
 file: .crt / .pem 文本证书文件
 ```
 
@@ -332,7 +334,7 @@ payment_config_list
 payment_config_add
 payment_config_edit
 payment_config_status
-payment_config_delete
+payment_config_del
 payment_config_upload_cert
 payment_config_test
 ```
@@ -359,7 +361,7 @@ payment_event_list
 已有 payment_channel_add 授权 -> payment_config_add + payment_config_upload_cert + payment_config_test
 已有 payment_channel_edit 授权 -> payment_config_edit + payment_config_upload_cert + payment_config_test
 已有 payment_channel_status 授权 -> payment_config_status
-已有 payment_channel_del 授权 -> payment_config_delete
+已有 payment_channel_del 授权 -> payment_config_del
 ```
 
 超级管理员仍按现有 RBAC 规则拿全部权限。
@@ -369,7 +371,7 @@ payment_event_list
 仍在 `internal/module/payment`，但命名收口：
 
 ```text
-AlipayConfig model
+Config model
 ConfigHandler / config request DTO
 ConfigService
 ConfigRepository
@@ -423,7 +425,7 @@ src/views/Main/payment/channel/*
 展示规则：
 
 ```text
-私钥只显示 app_private_key_hint
+私钥只显示 private_key_hint
 编辑时私钥留空表示不修改
 证书显示相对路径/文件名，不展示正文
 上传证书后把返回 path 写入表单对应字段
@@ -477,7 +479,7 @@ admin_back_go/docs/architecture.md
 第一版完成后，后续按顺序做：
 
 ```text
-1. payment order v1：基于 payment_alipay_configs 创建本地支付订单并拉起支付宝 web/h5
+1. payment order v1：基于 payment_configs 创建本地支付订单并拉起支付宝 web/h5
 2. payment notify v1：支付宝回调验签、幂等事件、订单状态推进
 3. wallet recharge v1：用户钱包、充值单、支付成功入账
 ```

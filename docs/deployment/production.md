@@ -171,15 +171,15 @@ PAYMENT_CERT_BASE_DIR=/path/to/admin_back_go
 powershell -ExecutionPolicy Bypass -File .\scripts\check-payment-certs.ps1 -DisallowLegacyRoot
 ```
 
-该 gate 只允许输出 path/bytes/sha256。不要把证书正文、私钥明文、`payment_alipay_configs.app_private_key_enc` 导出到日志、CI artifact 或 git。
+该 gate 只允许输出 path/bytes/sha256。不要把证书正文、私钥明文、`payment_configs.private_key_enc` 导出到日志、CI artifact 或 git。
 
 生产运行事实源固定为：
 
 ```text
-payment_alipay_configs.app_private_key_enc
-payment_alipay_configs.app_cert_path
-payment_alipay_configs.alipay_cert_path
-payment_alipay_configs.alipay_root_cert_path
+payment_configs.private_key_enc
+payment_configs.app_cert_path
+payment_configs.platform_cert_path
+payment_configs.root_cert_path
 ```
 
 多后端节点时，本地证书目录必须用共享卷或部署同步保证每个 admin-api/admin-worker 节点都能解析同一批相对路径；否则启用/测试可能只在上传节点成功。

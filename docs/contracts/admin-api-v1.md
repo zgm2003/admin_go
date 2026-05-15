@@ -2449,7 +2449,7 @@ resource prefix: /api/admin/v1/payment
 backend owner: internal/module/payment
 gateway boundary: internal/platform/payment/alipay
 provider scope: Alipay only
-active table: payment_alipay_configs
+active table: payment_configs
 cert storage: runtime/payment/certs/alipay/<config_code>/<sha256>.crt
 ```
 
@@ -2459,10 +2459,11 @@ cert storage: runtime/payment/certs/alipay/<config_code>/<sha256>.crt
 Alipay config only.
 No active public notify endpoint in this slice.
 No wallet/refund/reconcile/WeChat/payment-order runtime contract in this slice.
-app_private_key_enc and plaintext app_private_key never appear in API response, operation log, smoke output, or frontend types.
+provider is a real contract field and is currently fixed to alipay.
+private_key_enc and plaintext app_private_key never appear in API response, operation log, smoke output, or frontend types.
 Certificate content is never returned; API only stores private relative cert paths.
 No cert public URL and no certificate download route.
-provider, merchant_id, sign_type, extra_config are banned from this active contract.
+merchant_id, sign_type, extra_config are banned from this active contract.
 ```
 
 ### Routes
@@ -2480,17 +2481,18 @@ POST   /api/admin/v1/payment/configs/:id/test
 
 ### Config Contract
 
-`payment/configs` 管理 `payment_alipay_configs`。写入可以接收 `app_private_key` 明文，但后端只加密保存 `app_private_key_enc` 和可展示的 `app_private_key_hint`。列表和详情只返回 hint、证书私有相对路径、环境、启用方式、状态和备注。
+`payment/configs` 管理 `payment_configs`。写入必须带 `provider=alipay`，可以接收 `app_private_key` 明文，但后端只加密保存 `private_key_enc` 和可展示的 `private_key_hint`。列表和详情返回 provider/provider_text、hint、证书私有相对路径、环境、启用方式、状态和备注。
 
 字段第一版用途固定：
 
 ```text
+provider: 支付供应商，当前只允许 alipay，参与列表筛选、展示和本地测试分发。
 code: 配置唯一编码，创建后不可改，证书私有目录也用它分桶。
 name: 后台展示名。
 app_id: 支付宝应用 ID，构建 SDK client 必需。
-app_private_key_enc: 服务端 secretbox 加密后的应用私钥，只写入和本地测试使用，永不返回。
-app_private_key_hint: 展示“已配置私钥”的安全提示。
-app_cert_path / alipay_cert_path / alipay_root_cert_path: 本地私有证书相对路径，启用和测试前必须能解析到文件。
+private_key_enc: 服务端 secretbox 加密后的应用私钥，只写入和本地测试使用，永不返回。
+private_key_hint: 展示“已配置私钥”的安全提示。
+app_cert_path / platform_cert_path / root_cert_path: 本地私有证书相对路径，启用和测试前必须能解析到文件。
 notify_url: 支付宝异步通知地址配置值；本 slice 不开放 notify 接收路由。
 return_url: 同步返回地址，可为空。
 environment: sandbox / production，构建支付宝客户端时使用。
@@ -2505,7 +2507,7 @@ is_del / created_at / updated_at: 基础三字段。
 `POST /api/admin/v1/payment/certificates` 是私有本地证书上传，不走 COS，不生成 public URL。multipart 字段：
 
 ```text
-config_code: payment_alipay_configs.code
+config_code: payment_configs.code
 cert_type: app_cert | alipay_cert | alipay_root_cert
 file: .crt 或 .pem 文件
 ```
@@ -2527,7 +2529,7 @@ PAGE   payment_config_list         /payment/config view_key=payment/config
 BUTTON payment_config_add
 BUTTON payment_config_edit
 BUTTON payment_config_status
-BUTTON payment_config_delete
+BUTTON payment_config_del
 BUTTON payment_config_upload_cert
 BUTTON payment_config_test
 ```

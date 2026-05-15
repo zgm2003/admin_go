@@ -4,7 +4,7 @@
 
 **Goal:** 重做支付第一版的唯一 active slice：支付宝支付配置、私有证书上传、配置测试、菜单权限和前端配置页。
 
-**Architecture:** `payment_alipay_configs` 成为支付配置唯一 active runtime 表；旧 `payment_channels/payment_channel_configs` 只作为迁移来源，不再被 Go/Vue runtime 读取。后端仍在 `internal/module/payment`，保持 `route -> handler -> service -> repository -> model`，支付宝 SDK 仍只允许在 `internal/platform/payment/alipay`；前端只保留 `/payment/config` 页面和 `src/api/payment/config.ts`。钱包、充值入账、订单、事件、退款、提现、对账、微信全部不进入第一版。
+**Architecture:** `payment_configs` 成为支付配置唯一 active runtime 表；旧 `payment_channels/payment_channel_configs` 只作为迁移来源，不再被 Go/Vue runtime 读取。后端仍在 `internal/module/payment`，保持 `route -> handler -> service -> repository -> model`，支付宝 SDK 仍只允许在 `internal/platform/payment/alipay`；前端只保留 `/payment/config` 页面和 `src/api/payment/config.ts`。钱包、充值入账、订单、事件、退款、提现、对账、微信全部不进入第一版。
 
 **Tech Stack:** Go, Gin, GORM, MySQL/InnoDB, existing secretbox, existing RBAC/OperationLog/route meta, go-pay/gopay behind platform boundary, Vue 3 + TypeScript + Element Plus + existing `request` client + Vitest.
 
@@ -15,7 +15,7 @@
 只做：
 
 ```text
-payment_alipay_configs schema
+payment_configs schema
 Alipay config CRUD
 private certificate upload into runtime/payment/certs/alipay/<config_code>/<sha256>.crt
 local config validation and test
@@ -150,7 +150,7 @@ payment_config_list
 payment_config_add
 payment_config_edit
 payment_config_status
-payment_config_delete
+payment_config_del
 payment_config_upload_cert
 payment_config_test
 ```
@@ -191,16 +191,17 @@ updated_by
 Create `admin_back_go/database/migrations/20260515_payment_config_rebuild_v1.sql` with this structure:
 
 ```sql
-CREATE TABLE IF NOT EXISTS `payment_alipay_configs` (
+CREATE TABLE IF NOT EXISTS `payment_configs` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `provider` VARCHAR(32) NOT NULL DEFAULT 'alipay',
   `code` VARCHAR(64) NOT NULL,
   `name` VARCHAR(128) NOT NULL,
   `app_id` VARCHAR(64) NOT NULL,
-  `app_private_key_enc` TEXT NOT NULL,
-  `app_private_key_hint` VARCHAR(64) NOT NULL DEFAULT '',
+  `private_key_enc` TEXT NOT NULL,
+  `private_key_hint` VARCHAR(64) NOT NULL DEFAULT '',
   `app_cert_path` VARCHAR(512) NOT NULL DEFAULT '',
-  `alipay_cert_path` VARCHAR(512) NOT NULL DEFAULT '',
-  `alipay_root_cert_path` VARCHAR(512) NOT NULL DEFAULT '',
+  `platform_cert_path` VARCHAR(512) NOT NULL DEFAULT '',
+  `root_cert_path` VARCHAR(512) NOT NULL DEFAULT '',
   `notify_url` VARCHAR(512) NOT NULL DEFAULT '',
   `return_url` VARCHAR(512) NOT NULL DEFAULT '',
   `environment` VARCHAR(16) NOT NULL DEFAULT 'sandbox',
@@ -211,18 +212,19 @@ CREATE TABLE IF NOT EXISTS `payment_alipay_configs` (
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_payment_alipay_configs_code` (`code`),
-  KEY `idx_payment_alipay_configs_status` (`status`, `is_del`),
-  KEY `idx_payment_alipay_configs_environment` (`environment`, `is_del`)
+  UNIQUE KEY `uk_payment_configs_code` (`code`),
+  KEY `idx_payment_configs_provider_status` (`provider`, `status`, `is_del`),
+  KEY `idx_payment_configs_environment` (`environment`, `is_del`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO `payment_alipay_configs` (
-  `code`, `name`, `app_id`, `app_private_key_enc`, `app_private_key_hint`,
-  `app_cert_path`, `alipay_cert_path`, `alipay_root_cert_path`,
+INSERT INTO `payment_configs` (
+  `provider`, `code`, `name`, `app_id`, `private_key_enc`, `private_key_hint`,
+  `app_cert_path`, `platform_cert_path`, `root_cert_path`,
   `notify_url`, `return_url`, `environment`, `enabled_methods_json`,
   `status`, `remark`, `is_del`, `created_at`, `updated_at`
 )
 SELECT
+  'alipay',
   ch.`code`,
   ch.`name`,
   cfg.`app_id`,
@@ -250,11 +252,11 @@ WHERE ch.`provider` = 'alipay'
 ON DUPLICATE KEY UPDATE
   `name` = VALUES(`name`),
   `app_id` = VALUES(`app_id`),
-  `app_private_key_enc` = VALUES(`app_private_key_enc`),
-  `app_private_key_hint` = VALUES(`app_private_key_hint`),
+  `private_key_enc` = VALUES(`private_key_enc`),
+  `private_key_hint` = VALUES(`private_key_hint`),
   `app_cert_path` = VALUES(`app_cert_path`),
-  `alipay_cert_path` = VALUES(`alipay_cert_path`),
-  `alipay_root_cert_path` = VALUES(`alipay_root_cert_path`),
+  `platform_cert_path` = VALUES(`platform_cert_path`),
+  `root_cert_path` = VALUES(`root_cert_path`),
   `notify_url` = VALUES(`notify_url`),
   `return_url` = VALUES(`return_url`),
   `environment` = VALUES(`environment`),
@@ -312,7 +314,7 @@ FROM (
   SELECT '新增支付配置' AS button_name, 'payment_config_add' AS button_code, 1 AS button_sort
   UNION ALL SELECT '编辑支付配置', 'payment_config_edit', 2
   UNION ALL SELECT '切换支付配置状态', 'payment_config_status', 3
-  UNION ALL SELECT '删除支付配置', 'payment_config_delete', 4
+  UNION ALL SELECT '删除支付配置', 'payment_config_del', 4
   UNION ALL SELECT '上传支付宝证书', 'payment_config_upload_cert', 5
   UNION ALL SELECT '测试支付配置', 'payment_config_test', 6
 ) AS payment_config_buttons
@@ -350,7 +352,7 @@ INSERT INTO `tmp_payment_config_permission_map` (`old_code`, `new_code`) VALUES
   ('payment_channel_edit', 'payment_config_upload_cert'),
   ('payment_channel_edit', 'payment_config_test'),
   ('payment_channel_status', 'payment_config_status'),
-  ('payment_channel_del', 'payment_config_delete');
+  ('payment_channel_del', 'payment_config_del');
 
 INSERT INTO `role_permissions` (`role_id`, `permission_id`, `is_del`)
 SELECT DISTINCT rp.`role_id`, new_p.`id`, 2
@@ -422,7 +424,7 @@ Run:
 
 ```powershell
 cd E:\admin_go
-Select-String -Path .\admin_back_go\database\migrations\20260515_payment_config_rebuild_v1.sql -Pattern 'payment_alipay_configs','payment_config_list','payment_config_upload_cert','payment_channel_list'
+Select-String -Path .\admin_back_go\database\migrations\20260515_payment_config_rebuild_v1.sql -Pattern 'payment_configs','payment_config_list','payment_config_upload_cert','payment_channel_list'
 Select-String -Path .\admin_back_go\database\migrations\20260515_payment_config_only_cleanup.sql -Pattern 'DROP TABLE IF EXISTS','payment_channels','payment_orders','payment_events'
 git -C admin_back_go diff --check -- database/migrations/20260515_payment_config_rebuild_v1.sql database/migrations/20260515_payment_config_only_cleanup.sql
 ```
@@ -455,9 +457,9 @@ package payment
 
 import "testing"
 
-func TestAlipayConfigTableName(t *testing.T) {
-	if (AlipayConfig{}).TableName() != "payment_alipay_configs" {
-		t.Fatalf("unexpected table name: %s", (AlipayConfig{}).TableName())
+func TestConfigTableName(t *testing.T) {
+	if (Config{}).TableName() != "payment_configs" {
+		t.Fatalf("unexpected table name: %s", (Config{}).TableName())
 	}
 }
 
@@ -474,26 +476,26 @@ Run:
 
 ```powershell
 cd E:\admin_go\admin_back_go
-go test ./internal/module/payment -run 'TestAlipayConfigTableName|TestConfigListQueryDefaults'
+go test ./internal/module/payment -run 'TestConfigTableName|TestConfigListQueryDefaults'
 ```
 
-Expected: fail until `AlipayConfig` and config query types exist.
+Expected: fail until `Config` and config query types exist.
 
 - [x] **Step 2: Replace channel-shaped model with config model**
 
 In `model.go`, add the active config model and remove active reads from `Channel` / `ChannelConfig`:
 
 ```go
-type AlipayConfig struct {
+type Config struct {
 	ID                 int64     `gorm:"column:id;primaryKey"`
 	Code               string    `gorm:"column:code"`
 	Name               string    `gorm:"column:name"`
 	AppID              string    `gorm:"column:app_id"`
-	AppPrivateKeyEnc   string    `gorm:"column:app_private_key_enc"`
-	AppPrivateKeyHint  string    `gorm:"column:app_private_key_hint"`
+	PrivateKeyEnc   string    `gorm:"column:private_key_enc"`
+	PrivateKeyHint  string    `gorm:"column:private_key_hint"`
 	AppCertPath        string    `gorm:"column:app_cert_path"`
-	AlipayCertPath     string    `gorm:"column:alipay_cert_path"`
-	AlipayRootCertPath string    `gorm:"column:alipay_root_cert_path"`
+	PlatformCertPath     string    `gorm:"column:platform_cert_path"`
+	RootCertPath string    `gorm:"column:root_cert_path"`
 	NotifyURL          string    `gorm:"column:notify_url"`
 	ReturnURL          string    `gorm:"column:return_url"`
 	Environment        string    `gorm:"column:environment"`
@@ -505,7 +507,7 @@ type AlipayConfig struct {
 	UpdatedAt          time.Time `gorm:"column:updated_at"`
 }
 
-func (AlipayConfig) TableName() string { return "payment_alipay_configs" }
+func (Config) TableName() string { return "payment_configs" }
 ```
 
 Keep `Order` and `Event` structs only if a later compile step still needs them for temporary code removal. They must not be exposed through active routes in this plan.
@@ -539,10 +541,10 @@ type ConfigListItem struct {
 	Code               string   `json:"code"`
 	Name               string   `json:"name"`
 	AppID              string   `json:"app_id"`
-	AppPrivateKeyHint  string   `json:"app_private_key_hint"`
+	PrivateKeyHint  string   `json:"private_key_hint"`
 	AppCertPath        string   `json:"app_cert_path"`
-	AlipayCertPath     string   `json:"alipay_cert_path"`
-	AlipayRootCertPath string   `json:"alipay_root_cert_path"`
+	PlatformCertPath     string   `json:"platform_cert_path"`
+	RootCertPath string   `json:"root_cert_path"`
 	NotifyURL          string   `json:"notify_url"`
 	ReturnURL          string   `json:"return_url"`
 	Environment        string   `json:"environment"`
@@ -563,8 +565,8 @@ type ConfigMutationInput struct {
 	AppID              string
 	AppPrivateKey      string
 	AppCertPath        string
-	AlipayCertPath     string
-	AlipayRootCertPath string
+	PlatformCertPath     string
+	RootCertPath string
 	NotifyURL          string
 	ReturnURL          string
 	Environment        string
@@ -595,7 +597,7 @@ type ConfigTestResponse struct {
 }
 ```
 
-Use concrete typed maps for labels. Do not return `app_private_key_enc` or plaintext private key.
+Use concrete typed maps for labels. Do not return `private_key_enc` or plaintext private key.
 
 - [x] **Step 4: Add request structs**
 
@@ -616,8 +618,8 @@ type configMutationRequest struct {
 	AppID              string   `json:"app_id" binding:"required,max=64"`
 	AppPrivateKey      string   `json:"app_private_key"`
 	AppCertPath        string   `json:"app_cert_path" binding:"required,max=512"`
-	AlipayCertPath     string   `json:"alipay_cert_path" binding:"required,max=512"`
-	AlipayRootCertPath string   `json:"alipay_root_cert_path" binding:"required,max=512"`
+	PlatformCertPath     string   `json:"platform_cert_path" binding:"required,max=512"`
+	RootCertPath string   `json:"root_cert_path" binding:"required,max=512"`
 	NotifyURL          string   `json:"notify_url" binding:"required,max=512"`
 	ReturnURL          string   `json:"return_url" binding:"max=512"`
 	Environment        string   `json:"environment" binding:"required,oneof=sandbox production"`
@@ -639,11 +641,11 @@ In `repository.go`, replace active channel methods with config methods:
 
 ```go
 type Repository interface {
-	ListConfigs(ctx context.Context, query ConfigListQuery) ([]AlipayConfig, int64, error)
-	GetConfig(ctx context.Context, id int64) (*AlipayConfig, error)
-	GetConfigByCode(ctx context.Context, code string) (*AlipayConfig, error)
-	CreateConfig(ctx context.Context, cfg AlipayConfig) (int64, error)
-	UpdateConfig(ctx context.Context, cfg AlipayConfig, keepPrivateKey bool) error
+	ListConfigs(ctx context.Context, query ConfigListQuery) ([]Config, int64, error)
+	GetConfig(ctx context.Context, id int64) (*Config, error)
+	GetConfigByCode(ctx context.Context, code string) (*Config, error)
+	CreateConfig(ctx context.Context, cfg Config) (int64, error)
+	UpdateConfig(ctx context.Context, cfg Config, keepPrivateKey bool) error
 	ChangeConfigStatus(ctx context.Context, id int64, status int) error
 	DeleteConfig(ctx context.Context, id int64) error
 }
@@ -654,7 +656,7 @@ Rules:
 ```text
 All read paths filter is_del = 2.
 Create writes is_del = 2.
-Update never overwrites app_private_key_enc/app_private_key_hint when keepPrivateKey is true.
+Update never overwrites private_key_enc/private_key_hint when keepPrivateKey is true.
 Delete is a soft delete that sets is_del = 1 and status = 2.
 ```
 
@@ -664,7 +666,7 @@ Run:
 
 ```powershell
 cd E:\admin_go\admin_back_go
-go test ./internal/module/payment -run 'TestAlipayConfigTableName|TestConfigListQueryDefaults'
+go test ./internal/module/payment -run 'TestConfigTableName|TestConfigListQueryDefaults'
 ```
 
 Expected: pass.
@@ -798,12 +800,12 @@ Also add this method to the payment gateway interface used by the service. This 
 Create `admin_back_go/internal/module/payment/config_service_test.go` with cases:
 
 ```text
-CreateConfig encrypts app_private_key and stores app_private_key_hint.
+CreateConfig encrypts app_private_key and stores private_key_hint.
 UpdateConfig with empty app_private_key keeps existing encrypted key.
 ChangeConfigStatus to enabled runs TestConfig before updating status.
 UploadCertificate delegates to LocalCertStore and maps cert_type to the correct path field.
 ConfigTest decrypts key, resolves three cert paths, validates environment and enabled_methods.
-ListConfigs never exposes app_private_key_enc.
+ListConfigs never exposes private_key_enc.
 ```
 
 Use fake repository, fake secretbox, fake cert resolver, fake cert store, and fake gateway. Keep tests local and deterministic.
@@ -975,7 +977,7 @@ GET    /api/admin/v1/payment/configs                -> payment_config_list
 POST   /api/admin/v1/payment/configs                -> payment_config_add
 PUT    /api/admin/v1/payment/configs/:id            -> payment_config_edit
 PATCH  /api/admin/v1/payment/configs/:id/status     -> payment_config_status
-DELETE /api/admin/v1/payment/configs/:id            -> payment_config_delete
+DELETE /api/admin/v1/payment/configs/:id            -> payment_config_del
 POST   /api/admin/v1/payment/certificates           -> payment_config_upload_cert
 POST   /api/admin/v1/payment/configs/:id/test       -> payment_config_test
 ```
@@ -991,7 +993,7 @@ module=payment_config action=upload_cert title=上传支付宝证书
 module=payment_config action=test title=测试支付配置
 ```
 
-Existing operation-log masking already covers `app_private_key` and `app_private_key_enc`; add a focused assertion if the route meta test does not cover this path.
+Existing operation-log masking already covers `app_private_key` and `private_key_enc`; add a focused assertion if the route meta test does not cover this path.
 
 - [x] **Step 5: Retire payment cron registration**
 
@@ -1092,8 +1094,8 @@ export interface PaymentConfigMutationPayload {
   app_id: string
   app_private_key?: string
   app_cert_path: string
-  alipay_cert_path: string
-  alipay_root_cert_path: string
+  platform_cert_path: string
+  root_cert_path: string
   notify_url: string
   return_url: string
   environment: 'sandbox' | 'production'
@@ -1103,7 +1105,7 @@ export interface PaymentConfigMutationPayload {
 }
 ```
 
-No frontend type may include `app_private_key_enc`.
+No frontend type may include `private_key_enc`.
 
 - [x] **Step 3: Implement the composable**
 
@@ -1143,7 +1145,7 @@ Use RBAC:
 userStore.can('payment_config_add')
 userStore.can('payment_config_edit')
 userStore.can('payment_config_status')
-userStore.can('payment_config_delete')
+userStore.can('payment_config_del')
 userStore.can('payment_config_upload_cert')
 userStore.can('payment_config_test')
 ```
@@ -1204,10 +1206,10 @@ In `docs/contracts/admin-api-v1.md`, replace the active Payment section with:
 
 ```text
 Payment V1 active scope: Alipay config only.
-Active table: payment_alipay_configs.
+Active table: payment_configs.
 Active admin routes: /api/admin/v1/payment/configs/* and /api/admin/v1/payment/certificates.
 No wallet/refund/reconcile/WeChat/payment-order/notify route is active in this slice.
-Secrets: app_private_key_enc never appears in API responses, frontend types, operation log payloads, or smoke output.
+Secrets: private_key_enc never appears in API responses, frontend types, operation log payloads, or smoke output.
 Certificates: stored as private relative paths under runtime/payment/certs/alipay/<config_code>/<sha256>.crt; no public URL and no download route.
 ```
 
@@ -1216,7 +1218,7 @@ Certificates: stored as private relative paths under runtime/payment/certs/alipa
 In `docs/status/current-status.md`, change the payment row to:
 
 ```text
-payment config rebuild v1 | implemented after this plan execution: payment_alipay_configs, config CRUD, certificate upload, local config test, /payment/config frontend | order/event/wallet/refund/reconcile/WeChat are not active in this slice
+payment config rebuild v1 | implemented after this plan execution: payment_configs, config CRUD, certificate upload, local config test, /payment/config frontend | order/event/wallet/refund/reconcile/WeChat are not active in this slice
 ```
 
 Do not claim order, notify, wallet, or payment runtime completion in this row.
@@ -1230,18 +1232,18 @@ GET /api/admin/v1/payment/configs/page-init
 GET /api/admin/v1/payment/configs?current_page=1&page_size=20
 users/init has /payment/config with view_key payment/config
 users/init does not require /payment/channel, /payment/order, /payment/event
-responses do not expose app_private_key_enc or app_private_key
+responses do not expose private_key_enc or app_private_key
 ```
 
 Default smoke must not upload certificates, call `configs/:id/test` against real credentials, create payment orders, or call Alipay.
 
 - [x] **Step 4: Update cert script**
 
-In `scripts/check-payment-certs.ps1`, query `payment_alipay_configs`:
+In `scripts/check-payment-certs.ps1`, query `payment_configs`:
 
 ```sql
-SELECT code, app_cert_path, alipay_cert_path, alipay_root_cert_path
-FROM payment_alipay_configs
+SELECT code, app_cert_path, platform_cert_path, root_cert_path
+FROM payment_configs
 WHERE status = 1 AND is_del = 2
 ORDER BY id
 LIMIT 1;
@@ -1356,9 +1358,8 @@ No generated certificate files under runtime/ are staged.
 ```text
 Spec coverage: schema, cert upload, CRUD, enable-before-test, menu/RBAC, frontend page, docs and smoke are covered.
 Scope control: no wallet, order, notify, refund, withdraw, reconcile, WeChat, or product billing.
-Field control: every new table field has first-version behavior; provider/merchant_id/sign_type/extra_config are banned.
+Field control: every new table field has first-version behavior; provider is used and limited to alipay; merchant_id/sign_type/extra_config are banned.
 Runtime truth: old channel/order/event routes, menus, cron rows, and tables are removed from the active slice.
 Security: private key is write-only; cert files are private local files; operation logs must not expose secrets.
 Verification: backend tests, frontend tests, contract check, smoke script checks, and diff checks are explicit.
 ```
-

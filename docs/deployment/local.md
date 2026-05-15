@@ -159,4 +159,4 @@ runtime/payment/certs/alipay/<config_code>/<sha256>.crt
 powershell -ExecutionPolicy Bypass -File .\scripts\check-payment-certs.ps1 -DisallowLegacyRoot
 ```
 
-支付配置运行事实源是 `payment_alipay_configs`。私钥字段只允许以 `app_private_key_enc` 加密保存，API、日志、smoke 和前端类型都不能返回私钥明文或密文。
+支付配置运行事实源是 `payment_configs`。私钥字段只允许以 `private_key_enc` 加密保存，API、日志、smoke 和前端类型都不能返回私钥明文或密文。
