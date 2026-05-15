@@ -2494,7 +2494,7 @@ private_key_enc: 服务端 secretbox 加密后的应用私钥，只写入和本�
 private_key_hint: 展示“已配置私钥”的安全提示。
 app_cert_path / platform_cert_path / root_cert_path: 本地私有证书相对路径，启用和测试前必须能解析到文件。
 notify_url: 支付宝异步通知地址配置值；本 slice 不开放 notify 接收路由。
-return_url: 同步返回地址，可为空。
+return_url 不属于支付配置；后续创建具体支付请求时按单次支付入参传入。
 environment: sandbox / production，构建支付宝客户端时使用。
 enabled_methods_json: 当前只允许 web / h5。
 status: 1 启用、2 禁用；启用前必须通过本地配置测试。

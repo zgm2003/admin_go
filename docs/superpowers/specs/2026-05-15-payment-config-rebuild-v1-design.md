@@ -125,7 +125,6 @@ CREATE TABLE `payment_configs` (
   `platform_cert_path` VARCHAR(512) NOT NULL DEFAULT '',
   `root_cert_path` VARCHAR(512) NOT NULL DEFAULT '',
   `notify_url` VARCHAR(512) NOT NULL DEFAULT '',
-  `return_url` VARCHAR(512) NOT NULL DEFAULT '',
   `environment` VARCHAR(16) NOT NULL DEFAULT 'sandbox',
   `enabled_methods_json` JSON NOT NULL,
   `status` TINYINT NOT NULL DEFAULT 2,
@@ -164,7 +163,6 @@ enabled_methods_json: ["web", "h5"]
 | platform_cert_path | 回调验签和 SetCertSnByPath 支付宝公钥证书 | 必用 |
 | root_cert_path | SetCertSnByPath 根证书 | 必用 |
 | notify_url | 支付宝异步通知地址 | 必用 |
-| return_url | web/h5 同步返回地址 | 必用，可为空字符串 |
 | environment | 沙箱/正式环境切换 | 必用 |
 | enabled_methods_json | web/h5 支付方式开关 | 必用 |
 | status | 是否允许作为支付配置使用 | 必用 |
@@ -417,7 +415,7 @@ src/views/Main/payment/channel/*
 
 ```text
 基础信息：code、name、environment、status、enabled_methods_json、remark
-支付宝参数：app_id、app_private_key、notify_url、return_url
+支付宝参数：app_id、app_private_key、notify_url
 证书上传：app_cert、alipay_cert、alipay_root_cert
 操作：保存、启用/禁用、测试配置
 ```

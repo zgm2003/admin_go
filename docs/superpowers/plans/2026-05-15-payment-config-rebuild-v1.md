@@ -203,7 +203,6 @@ CREATE TABLE IF NOT EXISTS `payment_configs` (
   `platform_cert_path` VARCHAR(512) NOT NULL DEFAULT '',
   `root_cert_path` VARCHAR(512) NOT NULL DEFAULT '',
   `notify_url` VARCHAR(512) NOT NULL DEFAULT '',
-  `return_url` VARCHAR(512) NOT NULL DEFAULT '',
   `environment` VARCHAR(16) NOT NULL DEFAULT 'sandbox',
   `enabled_methods_json` JSON NOT NULL,
   `status` TINYINT NOT NULL DEFAULT 2,
@@ -220,7 +219,7 @@ CREATE TABLE IF NOT EXISTS `payment_configs` (
 INSERT INTO `payment_configs` (
   `provider`, `code`, `name`, `app_id`, `private_key_enc`, `private_key_hint`,
   `app_cert_path`, `platform_cert_path`, `root_cert_path`,
-  `notify_url`, `return_url`, `environment`, `enabled_methods_json`,
+  `notify_url`, `environment`, `enabled_methods_json`,
   `status`, `remark`, `is_del`, `created_at`, `updated_at`
 )
 SELECT
@@ -234,7 +233,6 @@ SELECT
   cfg.`alipay_cert_path`,
   cfg.`alipay_root_cert_path`,
   cfg.`notify_url`,
-  cfg.`return_url`,
   CASE WHEN cfg.`is_sandbox` = 1 THEN 'sandbox' ELSE 'production' END,
   CASE
     WHEN JSON_VALID(ch.`supported_methods`) AND JSON_LENGTH(ch.`supported_methods`) > 0 THEN ch.`supported_methods`
@@ -258,7 +256,6 @@ ON DUPLICATE KEY UPDATE
   `platform_cert_path` = VALUES(`platform_cert_path`),
   `root_cert_path` = VALUES(`root_cert_path`),
   `notify_url` = VALUES(`notify_url`),
-  `return_url` = VALUES(`return_url`),
   `environment` = VALUES(`environment`),
   `enabled_methods_json` = VALUES(`enabled_methods_json`),
   `status` = VALUES(`status`),
@@ -497,7 +494,6 @@ type Config struct {
 	PlatformCertPath     string    `gorm:"column:platform_cert_path"`
 	RootCertPath string    `gorm:"column:root_cert_path"`
 	NotifyURL          string    `gorm:"column:notify_url"`
-	ReturnURL          string    `gorm:"column:return_url"`
 	Environment        string    `gorm:"column:environment"`
 	EnabledMethodsJSON string    `gorm:"column:enabled_methods_json"`
 	Status             int       `gorm:"column:status"`
@@ -546,7 +542,6 @@ type ConfigListItem struct {
 	PlatformCertPath     string   `json:"platform_cert_path"`
 	RootCertPath string   `json:"root_cert_path"`
 	NotifyURL          string   `json:"notify_url"`
-	ReturnURL          string   `json:"return_url"`
 	Environment        string   `json:"environment"`
 	EnvironmentText    string   `json:"environment_text"`
 	EnabledMethods     []string `json:"enabled_methods"`
@@ -568,7 +563,6 @@ type ConfigMutationInput struct {
 	PlatformCertPath     string
 	RootCertPath string
 	NotifyURL          string
-	ReturnURL          string
 	Environment        string
 	EnabledMethods     []string
 	Status             int
@@ -621,7 +615,6 @@ type configMutationRequest struct {
 	PlatformCertPath     string   `json:"platform_cert_path" binding:"required,max=512"`
 	RootCertPath string   `json:"root_cert_path" binding:"required,max=512"`
 	NotifyURL          string   `json:"notify_url" binding:"required,max=512"`
-	ReturnURL          string   `json:"return_url" binding:"max=512"`
 	Environment        string   `json:"environment" binding:"required,oneof=sandbox production"`
 	EnabledMethods     []string `json:"enabled_methods" binding:"required,min=1"`
 	Status             int      `json:"status" binding:"required"`
@@ -1097,7 +1090,6 @@ export interface PaymentConfigMutationPayload {
   platform_cert_path: string
   root_cert_path: string
   notify_url: string
-  return_url: string
   environment: 'sandbox' | 'production'
   enabled_methods: Array<'web' | 'h5'>
   status: number
