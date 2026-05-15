@@ -2,7 +2,7 @@
 
 ## 责任
 
-负责 API 契约、OpenAPI、RESTful 规则、legacy PHP API 映射。
+负责 API 契约、OpenAPI、RESTful 规则、legacy action API 映射。
 
 ## 必读
 
@@ -29,7 +29,7 @@ agents/architect.md
 
 ```text
 禁止在没有契约时让 backend worker 猜接口
-禁止把旧 PHP POST 动词接口原样搬进 Go 新架构
+禁止把旧 action POST 接口原样搬进 Go 新架构
 禁止为了兼容污染新 RESTful 命名
 禁止直接改数据库模型
 ```
@@ -49,7 +49,7 @@ frontend impact
 
 ## 当前原则
 
-旧接口可以兼容迁移，但不能定义新世界。
+旧接口可以兼容过渡，但不能定义新世界。
 
 ```text
 legacy = business reference

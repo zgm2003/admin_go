@@ -11,4 +11,4 @@ E:/admin_go/docs/superpowers/archive    # 历史计划归档，只能用于考�
 E:/admin_go/admin_back_go/docs          # Go 后端运行时文档，不再保存 superpowers plan/spec
 ```
 
-这些文件不能覆盖 `docs/migration/current-status.md`、`docs/contracts/*.md`、smoke 输出或 live runtime 行为。
+这些文件不能覆盖 `docs/status/current-status.md`、`docs/contracts/*.md`、smoke 输出或 live runtime 行为。

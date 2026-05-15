@@ -1,6 +1,6 @@
 # Admin API v1 Contract
 
-状态：partially implemented。本文只记录 Go 新接口已经明确落地或正在本阶段收口的契约；旧 PHP 全 POST 接口只作为 legacy adapter，不定义新契约。
+状态：partially implemented。本文只记录 Go 新接口已经明确落地或正在本阶段收口的契约；旧 all POST 接口只作为 legacy adapter，不定义新契约。
 
 统一响应：
 
@@ -39,7 +39,7 @@ data 里的业务内容不自动翻译。
 新 Go API 只能使用 /api/admin/v1 或 /api/app/v1 命名空间。
 新 Go API 使用 RESTful resource，不允许 /api/admin/Xxx/list、/api/admin/Xxx/add、/api/admin/Xxx/edit、/api/admin/Xxx/del 这种 legacy action path。
 init/page-init 属于页面字典或 bootstrap contract，必须显式写清用途和 enum/dict 来源。
-旧 PHP 兼容入口必须标注 legacy adapter，不得伪装成新契约。
+旧接口兼容入口必须标注 legacy adapter，不得伪装成新契约。
 ```
 
 本地 contract gate：
@@ -200,7 +200,7 @@ Response:
 验证码继续复用 POST /api/admin/v1/auth/send-code，scene 必须是 forget。
 account 必须是当前 users.email 或 users.phone 中存在且未删除的账号。
 用户必须处于启用状态。
-成功后写入 users.password 的 PHP-compatible bcrypt hash，并消费 Redis 验证码。
+成功后写入 users.password 的 bcrypt $2y$ hash，并消费 Redis 验证码。
 前端必须使用 Go request 调用本接口，不允许再走 legacy /api/Users/forgetPassword。
 新 Go 契约不接受 legacy 字段：newpassword、respassword、account_type。
 ```
@@ -890,7 +890,7 @@ already revoked sessions are skipped.
 only newly revoked sessions have Redis token/pointer cleanup attempted.
 ```
 
-Legacy PHP `UserSession/kick` and `UserSession/batchKick` are no longer active frontend contracts. Do not reintroduce legacy POST action paths under Go REST.
+Legacy `UserSession/kick` and `UserSession/batchKick` are no longer active frontend contracts. Do not reintroduce legacy POST action paths under Go REST.
 
 ## Export Tasks
 
@@ -2194,7 +2194,7 @@ mutating routes 显式注册 operation log rule。
 
 ### Queue Monitor Config Cleanup
 
-`devtools_queue_monitor_queues` 是旧 PHP 队列监控配置项。Go 队列监控已经采用官方 `asynqmon`、Asynq Redis lane 和 `QUEUE_*` env；系统设置 CRUD 不再读取或维护该 key。
+`devtools_queue_monitor_queues` 是旧队列监控配置项。Go 队列监控已经采用官方 `asynqmon`、Asynq Redis lane 和 `QUEUE_*` env；系统设置 CRUD 不再读取或维护该 key。
 
 迁移时应将该行软删或标记删除，不删除队列监控功能本身。
 
@@ -2415,7 +2415,7 @@ DELETE /mail/logs/:id and /logs     -> system_mail_logDel, module=mail, action=d
 
 状态：implemented in Go backend, adapted in Vue frontend for the project-native payment bounded context。
 
-用途：替换旧 PHP-shaped `pay/*`、`wallet/*`、`recharge-orders`、`pay-reconcile` 合同。Payment 只负责支付渠道、支付订单、支付事件、支付宝 Web/H5 支付和支付宝 notify；wallet、refund、reconcile、WeChat 不在本阶段。
+用途：替换旧 action-shaped `pay/*`、`wallet/*`、`recharge-orders`、`pay-reconcile` 合同。Payment 只负责支付渠道、支付订单、支付事件、支付宝 Web/H5 支付和支付宝 notify；wallet、refund、reconcile、WeChat 不在本阶段。
 
 ### Shared Rules
 
@@ -2524,7 +2524,7 @@ upload config CRUD supports cos/oss records because existing data may contain bo
 upload runtime is implemented separately as COS-first upload token signing.
 Default in-repo backend/frontend dependencies include COS runtime only.
 Aliyun OSS SDK must not be added to default go.mod/package.json.
-If OSS runtime is requested without the optional OSS implementation/dependency, return an explicit unsupported/not-configured error; do not silently fallback to COS, legacy PHP, or fake success.
+If OSS runtime is requested without the optional OSS implementation/dependency, return an explicit unsupported/not-configured error; do not silently fallback to COS, legacy runtime, or fake success.
 ```
 
 ### Upload Drivers
@@ -2830,7 +2830,7 @@ status=2 只禁用当前项，不自动启用其他项。
 
 状态：implemented in Go backend, adapted in shared Vue upload client。
 
-用途：给浏览器直传腾讯云 COS 签发临时凭证和服务端生成的 object key。它不是服务端上传接口，也不是旧 PHP `/api/getUploadToken` 的兼容兜底。
+用途：给浏览器直传腾讯云 COS 签发临时凭证和服务端生成的 object key。它不是服务端上传接口，也不是旧 `/api/getUploadToken` 的兼容兜底。
 
 ```text
 POST /api/admin/v1/upload-tokens
@@ -3212,7 +3212,7 @@ dict/init 是否写明 enum 来源：internal/enum -> internal/dict。
 
 ## System Cron Tasks
 
-状态：implemented in this slice。系统管理定时任务从 legacy `/api/admin/CronTask/*` 迁到 Go REST。`handler` 不是 Go 运行时执行入口；已接入 Go registry 的任务返回/保存版本化 Asynq task type，未迁 Go 的旧 PHP 字符串只作为 legacy provenance 展示。
+状态：implemented in this slice。系统管理定时任务已经从 legacy `/api/admin/CronTask/*` 收口到 Go REST。`handler` 不是 Go 运行时执行入口；已接入 Go registry 的任务返回/保存版本化 Asynq task type，未注册到 Go registry 的旧 handler 字符串只作为 legacy provenance 展示。
 
 ### Runtime rule
 
@@ -3313,7 +3313,7 @@ interface CronTaskItem {
 
 ```text
 name 是 Go registry key，新增后不允许编辑修改。
-registered 任务的 handler 由 Go registry task type 覆盖，前端不能把 PHP class 当“处理类”展示。
+registered 任务的 handler 由 Go registry task type 覆盖，前端不能把旧 class string 当“处理类”展示。
 registry_status 是 Go 根据 DB row + registry + cron 表达式派生；支持筛选，并在服务端筛选后重新分页。
 ```
 
@@ -3321,7 +3321,7 @@ registry_status 是 Go 根据 DB row + registry + cron 表达式派生；支持�
 
 ## Client Versions
 
-状态：implemented. 业务名称是“客户端版本”；Go REST 使用 `ClientVersionApi`，DB 表统一为 `client_versions`，前端视图目录和 i18n key 使用 `clientVersion`，mutation 权限 code 统一为 `system_clientVersion_*`。旧 Tauri 表名/权限名只允许出现在迁移 SQL 的 source condition 或 legacy PHP 参考说明里，不是新契约。菜单 PAGE route/component/i18n_key 通过 `20260507_client_version_permission_route_cleanup.sql` 迁到 `system/clientVersion`。
+状态：implemented. 业务名称是“客户端版本”；Go REST 使用 `ClientVersionApi`，DB 表统一为 `client_versions`，前端视图目录和 i18n key 使用 `clientVersion`，mutation 权限 code 统一为 `system_clientVersion_*`。旧 Tauri 表名/权限名只允许出现在cleanup SQL 的 source condition 或 legacy source reference说明里，不是新契约。菜单 PAGE route/component/i18n_key 通过 `20260507_client_version_permission_route_cleanup.sql` 收口到 `system/clientVersion`。
 
 ### Shared Rules
 

@@ -16,7 +16,7 @@ docs/superpowers = spec/plan 总入口，包含当前计划和历史归档
 
 ```text
 architect.md        # 架构调研、开源对标、阶段边界
-api-contract.md     # REST/OpenAPI/current API contract；historical PHP mapping 只作考古
+api-contract.md     # REST/OpenAPI/current API contract；historical action mapping 只作考古
 backend-worker.md   # Go 后端实现
 frontend-adapter.md # 前端适配 Go API
 reviewer.md         # 越界、质量、验证审查
@@ -70,7 +70,7 @@ Next step
 接手任务时先看：
 
 ```text
-docs/migration/current-status.md
+docs/status/current-status.md
 docs/contracts/admin-api-v1.md
 docs/contracts/admin-realtime-v1.md
 admin_back_go/docs/architecture.md
@@ -90,7 +90,7 @@ admin_back_go/docs/architecture.md
 ```text
 绕过 current-status 直接猜进度
 绕过 API contract 让前后端互猜字段
-把 historical PHP 路由风格搬进 Go 新接口
+把历史 action 路由风格搬进 Go 新接口
 一次改一堆业务模块
 安装未调研、未记录取舍、未验证的依赖
 ```

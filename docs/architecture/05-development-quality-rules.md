@@ -4,7 +4,7 @@
 
 这个项目不允许靠“兜底字段”“兼容猜测”“全 POST”“any TS”堆出一个看似能跑、实际不可维护的 admin。
 
-要重构，就写清楚契约；要兼容，就显式写 adapter；要迁移，就一条真实链路一条真实链路迁。
+要重构，就写清楚契约；要兼容，就显式写 adapter；要替换旧链路，就一条真实链路一条真实链路收。
 
 ## Linus 三问
 
@@ -36,7 +36,7 @@
 ```text
 业务上明确的默认值，例如新增根菜单 parent_id=0
 显式 legacy adapter，例如 /api/Users/init -> service -> repository
-迁移期双客户端，例如 request 调 Go、legacyRequest 调 PHP
+显式兼容边界，例如新页面走 request，保留 adapter 只服务未收口旧调用
 对外部不可信输入做严格校验后拒绝
 ```
 
@@ -73,7 +73,7 @@ DELETE /api/admin/v1/permissions/:id         delete one
 让前端先定义后端契约
 ```
 
-旧 PHP POST 接口只能作为 legacy mapping 文档或显式 adapter，不能污染新 REST 设计。
+旧 action POST 接口只能作为 legacy mapping 文档或显式 adapter，不能污染新 REST 设计。
 
 ## TypeScript 规则
 

@@ -4,7 +4,7 @@
 
 `admin_back_go` 采用 **Gin modular monolith**。
 
-不是 Java 式分层，也不是微服务，也不是闭门造车。它是一个能承接当前 admin 系统、RBAC、AI 应用接入、WebSocket realtime、队列和未来模块迁移的 Go 后端骨架。
+不是 Java 式分层，也不是微服务，也不是闭门造车。它是一个能承接当前 admin 系统、RBAC、AI 应用接入、WebSocket realtime、队列和未来模块演进的 Go 后端骨架。
 
 一句话：
 
@@ -24,7 +24,7 @@ route -> handler -> service -> repository -> model
 
 ### 真问题
 
-我们要迁移的是已有 admin 系统，不是写 demo。
+我们要承接的是已有 admin 系统，不是写 demo。
 
 它必须承接：
 
@@ -35,7 +35,7 @@ route -> handler -> service -> repository -> model
 平台隔离 admin/app
 WebSocket / AI streaming
 队列和定时任务
-业务模块渐进迁移
+业务模块渐进演进
 ```
 
 ### 简单做法
@@ -53,7 +53,7 @@ WebSocket / AI streaming
 
 不破坏现有前端，不破坏现有 RBAC 语义，不破坏用户登录路径。
 
-旧 PHP 提供业务事实和契约。Go 重新实现，但不重新发明权限模型。
+现有产品事实和契约是输入。Go 运行时按当前契约实现，但不重新发明权限模型。
 
 ## 顶层目录
 
@@ -61,7 +61,7 @@ WebSocket / AI streaming
 admin_back_go/
   cmd/admin-api/              # HTTP 进程入口，只负责启动 API
   cmd/admin-worker/           # 后台进程入口，只负责队列消费和定时调度
-  docs/                       # 本仓库架构和迁移文档
+  docs/                       # 本仓库架构、状态和契约文档
   internal/bootstrap/         # 应用装配：config/logger/server/resources
   internal/config/            # 配置读取和默认值
   internal/server/            # Gin engine、全局 middleware、路由挂载
@@ -131,7 +131,7 @@ handler 直接查 DB/Redis
 
 ## 旧接口与新接口
 
-为了不破坏前端，Go 迁移初期允许存在 legacy-compatible adapter：
+为了不破坏前端，允许存在边界明确的 compatibility adapter：
 
 ```text
 /api/Users/init
@@ -152,11 +152,11 @@ legacy route adapter -> module service -> repository
 未来 app   = /api/app/v1/...
 ```
 
-旧接口是迁移桥，不是新世界规则。
+旧接口兼容层不是新世界规则。
 
 ## RBAC 决策
 
-采用现有 RBAC 契约作为 Go 迁移基线。
+采用现有 RBAC 契约作为 Go runtime 基线。
 
 必须保留的语义：
 
@@ -257,7 +257,7 @@ internal/jobs/slow
 
 ### Go concurrency model
 
-Go 不是 PHP-FPM 那种“一请求一卡住就容易把进程池占死”的模型。Go 的基本单位是 goroutine：
+Go 的基本单位是 goroutine：
 
 ```text
 goroutine          # 很轻量，由 Go runtime 调度
@@ -342,9 +342,9 @@ Phase A: 架构骨架文档和目录边界
 Phase B: 整理当前最小 system 模块到 route/handler/service
 Phase C: 接入 config/log/response/error/middleware 基线
 Phase D: 接入 MySQL/Redis platform 层
-Phase E: 迁移 RBAC read path: CheckToken / CheckPermission / Users/init
-Phase F: 迁移 RBAC write path: Permission / Role / AuthPlatform
-Phase G: 业务模块迁移
+Phase E: 接入 RBAC read path: CheckToken / CheckPermission / Users/init
+Phase F: 接入 RBAC write path: Permission / Role / AuthPlatform
+Phase G: 业务模块演进
 ```
 
 当前只做 Phase A。不要偷跑。

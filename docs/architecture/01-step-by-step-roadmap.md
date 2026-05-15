@@ -1,19 +1,19 @@
 # Step By Step Roadmap
 
-状态更新时间：2026-05-13
+状态更新时间：2026-05-15
 
 ## 目标
 
-记录 `E:\admin_go` 从低到高搭建的历史阶段，并固定当前 post-migration Go/Vue 演进口径。每次仍只解决一个真实问题。
+记录 `E:\admin_go` 从低到高搭建的历史阶段，并固定当前 Go/Vue 运行时演进口径。每次仍只解决一个真实问题。
 
 ## 当前状态
 
-这份 roadmap 是历史推进顺序，不是说项目还停在 Phase 0，也不是说 active runtime 仍依赖 PHP。
+这份 roadmap 是历史推进顺序，不是说项目还停在 Phase 0。当前 active runtime 已经收束到 Go/Vue。
 
 当前真实进度看：
 
 ```text
-docs/migration/current-status.md
+docs/status/current-status.md
 docs/contracts/admin-api-v1.md
 docs/contracts/admin-realtime-v1.md
 admin_back_go/docs/architecture.md
@@ -23,7 +23,7 @@ admin_back_go/docs/architecture.md
 
 ```text
 implemented / partially implemented / planned 以 current-status 为准。
-Phase 6 的 PHP active runtime cutover 已经收口；后续如果发现历史 PHP 事实，只作为业务考古输入。
+Phase 6 的 active runtime closure 已经收口；后续默认只按 Go/Vue 运行时继续演进。
 当前进入 Phase 7：按 Go/Vue runtime 做模块演进、产品补齐和质量 hardening，不允许大撒网。
 ```
 
@@ -90,13 +90,13 @@ health endpoint 可访问
 
 ## Phase 3: Database Baseline
 
-只做数据库连接、迁移约束、基础模型规范。
+只做数据库连接、schema 变更约束、基础模型规范。
 
 成功标准：
 
 ```text
 能连接 MySQL
-迁移方式明确
+schema 变更方式明确
 表字段约束明确
 不写业务模块
 ```
@@ -132,22 +132,22 @@ API 权限能拦截
 
 ```text
 前端登录、菜单、权限、用户管理能走 Go API
-旧 PHP API 不被新适配层污染
+旧 action API 不被新适配层污染
 ```
 
-## Phase 6: Legacy Runtime Cutover Closure
+## Phase 6: Go/Vue Active Runtime Closure
 
-历史目标是把旧 PHP active runtime 入口按模块切到 Go/Vue。现在不再把项目理解为“正在依赖 PHP 的半迁移系统”。
+历史目标是把 active runtime 收束到 Go/Vue。现在不再把项目理解为半成品切换线。
 
 成功标准：
 
 ```text
 Go/Vue active runtime 能承接后台主链路
-旧 PHP 只作为业务事实、历史迁移和 rollback provenance
-新接口不继承旧 PHP all POST/action path 风格
+历史系统资料只作为明确任务下的考古输入
+新接口不继承旧 all POST/action path 风格
 ```
 
-## Phase 7: Post-migration Go/Vue Module Evolution
+## Phase 7: Go/Vue Module Evolution
 
 当前阶段按 Go/Vue runtime 继续做产品模块、质量 hardening、部署和真实第三方接入。每个切片仍然必须先看 current-status、contract、runtime docs，再改代码。
 

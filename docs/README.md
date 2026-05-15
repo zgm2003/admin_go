@@ -21,7 +21,7 @@
 ```text
 1. AGENTS.md
 2. docs/README.md
-3. docs/migration/current-status.md
+3. docs/status/current-status.md
 4. docs/architecture/00-open-source-first.md
 5. docs/architecture/01-step-by-step-roadmap.md
 6. docs/architecture/02-agent-framework.md
@@ -43,8 +43,8 @@
 agents/*.md                              # agent 分工
 docs/open-source/*.md                    # 开源调研和取舍
 docs/deployment/*.md                     # 本地、生产、分布式 readiness 运行边界
-docs/superpowers/plans/*.md              # 当前长计划和阶段任务；历史计划不是运行时真相
-docs/superpowers/archive/**/*.md         # 已归档历史计划，只能用于考古，不覆盖 current-status
+docs/superpowers/plans/*.md              # 只读与当前任务直接相关的 spec/plan；不要扫全部旧计划
+docs/superpowers/archive/**/*.md         # 已归档历史计划，只能在用户明确要求考古时读取，不覆盖 current-status
 admin_back_go/docs/architecture.md       # Go 后端运行时架构
 admin_back_go/scripts/*.ps1              # smoke/contract 脚本
 ```
@@ -73,7 +73,7 @@ admin_front_ts/   # Vue 前端，独立 Git 仓库
 看这里，不要猜：
 
 ```text
-docs/migration/current-status.md
+docs/status/current-status.md
 ```
 
 规则：
@@ -91,7 +91,7 @@ planned = 只计划，不许说成已完成
 live runtime behavior > smoke output > served assets/API > process config > docs > comments
 ```
 
-## PHP / legacy 边界
+## 运行时边界
 
 当前 active runtime 是：
 
@@ -100,15 +100,15 @@ admin_back_go    # Go backend runtime
 admin_front_ts   # Vue frontend runtime
 ```
 
-历史 PHP 只允许作为：
+历史项目默认不是冷启动事实源。只有用户明确要求考古，或当前 Go/Vue 运行时证据缺失且必须追溯来源时，才允许作为辅助输入：
 
 ```text
 业务事实来源
 字段/权限/流程考古
-历史迁移记录或 rollback provenance
+rollback provenance
 ```
 
-禁止把 PHP 当作当前运行依赖，禁止把旧 PHP 全 POST action path 带进新的 Go REST 契约。
+禁止把历史系统当作当前运行依赖，禁止把旧 all POST action path 带进新的 Go REST 契约。
 
 所有 Superpowers spec/plan 统一归总控 `docs/superpowers`；`admin_back_go/docs` 只放 Go 后端运行时文档。
 
@@ -131,7 +131,7 @@ Realtime：WebSocket-only，不新增 SSE
 不在 handler 直连 DB/Redis
 不让 service 依赖 gin.Context
 不在前端 touched code 引入 any / as any / Record<string, any>
-不把 historical PHP 架构搬进 Go
+不把历史系统架构搬进 Go
 不把 planned 写成 implemented
 不跳过验证就说完成
 ```
@@ -181,7 +181,7 @@ race detector 需要 gcc；如果报 cgo: C compiler "gcc" not found，不准声
 每次完成一个阶段，至少检查：
 
 ```text
-docs/migration/current-status.md
+docs/status/current-status.md
 docs/contracts/*.md
 docs/architecture/*.md
 docs/testing/*.md

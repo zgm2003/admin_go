@@ -2,7 +2,7 @@
 
 这里记录 Phase 1 的开源调研结果。
 
-Go 实现阶段已经开始，当前 Go/Vue 迁移状态以 `docs/migration/current-status.md` 为准。
+Go/Vue active runtime 已经成型，当前实现状态以 `docs/status/current-status.md` 为准。
 
 本目录仍然有用：任何新的架构、RBAC、前端权限、WebSocket、队列、存储、AI 集成选型，都必须先在这里或对应 architecture 文档里写清来源、取舍和最小采用方式。
 

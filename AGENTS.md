@@ -2,7 +2,7 @@
 
 ## 核心判断
 
-这是一个 **open-source-first Go/Vue admin workspace**。旧 PHP 已退出 active runtime，只作为业务事实、历史迁移和考古参考；不要再把本项目当成 PHP 迁移半成品。
+这是一个 **open-source-first Go/Vue admin workspace**。当前事实源是 Go 后端、Vue 前端、契约文档、smoke 和运行时行为；不要再把本项目当成旧系统收尾半成品。
 
 冷启动判断顺序固定：
 
@@ -13,7 +13,7 @@
 4. 最后才改代码、跑验证、同步文档
 ```
 
-历史推进顺序是：
+工程建设顺序是：
 
 ```text
 Phase 0: Agent framework and rules
@@ -22,8 +22,8 @@ Phase 2: Minimal Go service skeleton
 Phase 3: Database and config baseline
 Phase 4: Auth and RBAC core
 Phase 5: Admin frontend API adaptation
-Phase 6: Legacy PHP runtime cutover closure
-Phase 7: Post-migration Go/Vue module evolution
+Phase 6: Go/Vue active runtime closure
+Phase 7: Go/Vue module evolution
 ```
 
 ## Linus 三问
@@ -48,7 +48,7 @@ Phase 7: Post-migration Go/Vue module evolution
 
 ```text
 代码质量：简单、明确、可测、无隐藏兜底、无无主 goroutine
-架构质量：边界清楚、职责单一、尊重既定分层、不把 Go 写成 Java 或 PHP
+架构质量：边界清楚、职责单一、尊重既定分层、不把 Go 写成别的语言
 文档质量：API、枚举、缓存、队列、部署、验证命令和运行时事实同步更新
 ```
 
@@ -84,23 +84,22 @@ Phase 7: Post-migration Go/Vue module evolution
 推荐阶段和当前口径：
 
 ```text
-Phase 0-5: 已经有基线实现，具体状态以 docs/migration/current-status.md 为准
-Phase 6: PHP active runtime cutover 已收口；历史 PHP 只作为业务事实参考
+Phase 0-5: 已经有基线实现，具体状态以 docs/status/current-status.md 为准
+Phase 6: active runtime closure 已收口；默认只看 Go/Vue 当前事实
 Phase 7: 后续按 Go/Vue runtime 做模块演进、产品补齐和质量 hardening，每次只做一个窄切片
 ```
 
 禁止跨阶段偷跑。比如 RBAC 或契约没验明，就别写业务模块；Go skeleton 或 smoke 没验证，就别声称基建完成。
 
-### 3. Historical PHP 只提供业务事实，不提供新架构规则
+### 3. 历史系统不提供新架构规则
 
-历史项目可以参考：
+历史项目默认不读。只有用户明确要求考古，或当前运行时证据缺失且必须追溯来源时，才允许作为辅助输入。
 
 ```text
-E:\admin\admin_back       # historical PHP backend reference only
 E:\admin_go\admin_front_ts # current Vue frontend workspace
 ```
 
-但旧 PHP 的路由风格、分层、命名、历史兼容，不自动成为 Go 新项目规则；不得把 PHP 当成 active runtime 依赖。
+历史系统的路由风格、分层、命名、兼容逻辑，不自动成为 Go 新项目规则；不得把历史系统当成 active runtime 依赖。
 
 ### 4. Agent 分工优先于“全能 AI”
 
@@ -131,7 +130,7 @@ docs/architecture/02-agent-framework.md
 docs/architecture/03-technology-decision.md
 docs/architecture/04-go-backend-framework.md
 docs/architecture/05-development-quality-rules.md
-docs/migration/current-status.md
+docs/status/current-status.md
 ```
 
 按角色继续读：

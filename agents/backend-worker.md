@@ -67,7 +67,7 @@ architecture boundary check
 Go 项目已经存在。执行本 agent 前必须确认：
 
 ```text
-docs/migration/current-status.md 里该模块不是 planned 冒充 implemented
+docs/status/current-status.md 里该模块不是 planned 冒充 implemented
 docs/contracts/admin-api-v1.md 或 admin-realtime-v1.md 已写清接口
 admin_back_go/docs/architecture.md 没有被本次改动破坏
 ```

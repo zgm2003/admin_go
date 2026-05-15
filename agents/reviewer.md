@@ -20,7 +20,7 @@ docs/architecture/02-agent-framework.md
 是否跳过开源调研
 是否跨阶段偷跑
 是否破坏前端现有路径
-是否把 legacy PHP 风格带进 Go 新架构
+是否把 legacy action 风格带进 Go 新架构
 是否新增了没验证的依赖
 是否 handler/service/repo 边界混乱
 是否测试和验证缺失

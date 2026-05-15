@@ -116,7 +116,7 @@ Go API 的 token refresh 也必须走 Go base URL：
 VITE_GO_API_BASE_URL + /api/admin/v1/auth/refresh
 ```
 
-不能走 legacy `VITE_SOME_KEY`。如果 refresh 打到旧 PHP，浏览器 CORS 报错只是症状，根因是前端新 API client 的 refresh baseURL 错了。
+不能走 legacy `VITE_SOME_KEY`。如果 refresh 打到旧接口域名，浏览器 CORS 报错只是症状，根因是前端新 API client 的 refresh baseURL 错了。
 
 ## Message envelope
 

@@ -77,7 +77,7 @@ route -> handler -> service -> repository -> model
 当前事实看：
 
 ```text
-docs/migration/current-status.md
+docs/status/current-status.md
 admin_back_go/docs/architecture.md
 ```
 
@@ -87,5 +87,5 @@ admin_back_go/docs/architecture.md
 不重新争论 Java / Go / Python。
 不因为未来分布式就提前拆微服务。
 不因为 AI 业务要接入就把 admin 主后端改成 Python。
-继续用 Go 承接 REST / RBAC / queue / WebSocket 基建，再按窄切片迁业务。
+继续用 Go 承接 REST / RBAC / queue / WebSocket 基建，再按窄切片演进业务。
 ```
