@@ -1486,14 +1486,39 @@ Rules:
 - `provider_id` points to the local provider row
 - create/update require a concrete `model_id` selected from enabled `ai_provider_models` under the selected provider
 - `model_display_name` is denormalized from the selected provider model for list display
-- list query supports `scene=chat` and `scene=agent_generate`; there is no agent code or agent type filter in the MVP
-- MVP scene field is `scenes`; current allowed values are `chat` and `agent_generate`; empty internal input normalizes to `["chat"]`
+- list query supports `scene=chat`, `scene=agent_generate`, and `scene=image_generate`; there is no agent code or agent type filter in the MVP
+- MVP scene field is `scenes`; current allowed values are `chat`, `agent_generate`, and `image_generate`; empty internal input normalizes to `["chat"]`
 - MVP form fields are name, model cascader, scenes, status, optional system prompt, and optional avatar
 - `ai_agents` deliberately does not store agent code, agent type, per-agent external app ids, per-agent API keys, response mode, runtime config JSON, model snapshot JSON, `created_by`, or `updated_by`; those are future contracts, not MVP columns
 - runtime uses the selected agent plus its provider credentials; per-agent credential override is not part of this slice
-- `GET /ai-agents/options` feeds chat/runtime selectors and returns only enabled `chat` scene agent id/name/avatar/system_prompt facts; `agent_generate` is for the next AI-generated-agent flow and does not enter the chat selector by default
+- `GET /ai-agents/options` feeds runtime selectors and accepts optional `scene`; blank defaults to enabled `chat` scene agents, `scene=image_generate` is used by the image playground
 - `GET /ai-agents/page-init` returns `scene_arr` and `provider_model_options`; `GET /ai-agents/provider-models/:id` refreshes enabled models for a provider
 - `agent_id` / `agent_name` are the canonical AI runtime selector fields; old app aliases must not drive new DB queries or new Vue state
+
+## AI Images / Image Playground
+
+状态：implemented as an agent-driven `gpt-image-2` image playground. It is not a provider/model configuration page.
+
+```text
+GET    /api/admin/v1/ai-images/page-init
+GET    /api/admin/v1/ai-images
+GET    /api/admin/v1/ai-images/:id
+POST   /api/admin/v1/ai-images/assets
+POST   /api/admin/v1/ai-images
+PATCH  /api/admin/v1/ai-images/:id/favorite
+DELETE /api/admin/v1/ai-images/:id
+```
+
+Rules:
+
+- tables: `ai_image_tasks`, `ai_image_assets`, `ai_image_task_assets`
+- runtime selector is only `agent_id`; frontend must not ask for provider id, model id, API key, or a separate model selector
+- selected agent must be enabled, include `image_generate`, use an enabled OpenAI-compatible provider, and have `model_id = gpt-image-2`
+- `POST /ai-images` is async: it writes a pending task, links registered input/mask assets, enqueues `ai:image-generate:v1`, and returns immediately
+- worker claims `pending -> running`, calls the image adapter, persists generated assets, then finalizes `success` or `failed`
+- `POST /ai-images/assets` registers already-uploaded COS image assets; frontend uploads through the existing upload-token/COS runtime first
+- prompt text, image URLs, base64 payloads, and provider raw response are not captured by OperationLog; image mutation route metadata uses `SkipRequestPayload` and `SkipResponsePayload`
+- `raw_response_json` stays server-side only; API list/detail return task facts and grouped assets, not raw provider payloads
 
 ## AI Conversations
 
@@ -2413,80 +2438,112 @@ DELETE /mail/logs/:id and /logs     -> system_mail_logDel, module=mail, action=d
 
 ## Payment
 
-状态：implemented in Go backend, adapted in Vue frontend for the project-native payment bounded context。
+状态：payment config rebuild v1 implemented in Go backend, adapted in Vue frontend。
 
-用途：替换旧 action-shaped `pay/*`、`wallet/*`、`recharge-orders`、`pay-reconcile` 合同。Payment 只负责支付渠道、支付订单、支付事件、支付宝 Web/H5 支付和支付宝 notify；wallet、refund、reconcile、WeChat 不在本阶段。
+用途：当前 active scope 只做支付宝支付配置：配置 CRUD、私有证书上传、本地配置测试、菜单权限和 `/payment/config` 页面。钱包、订单、回调、事件、退款、提现、对账、微信和产品计费不属于本 slice。
 
 ### Shared Rules
 
 ```text
 resource prefix: /api/admin/v1/payment
-public notify prefix: /api/payment/notify
 backend owner: internal/module/payment
 gateway boundary: internal/platform/payment/alipay
 provider scope: Alipay only
-tables: payment_channels, payment_channel_configs, payment_orders, payment_events
-cron: payment:close-expired-order:v1, payment:sync-pending-order:v1
+active table: payment_alipay_configs
+cert storage: runtime/payment/certs/alipay/<config_code>/<sha256>.crt
 ```
 
 硬规则：
 
 ```text
-Alipay only.
-No wallet/refund/reconcile/WeChat in this phase.
-No old admin pay, wallet, or recharge-orders active contract.
-POST /api/payment/notify/alipay returns text/plain success or text/plain fail.
-private_key_enc and plaintext private key never appear in API response, operation log, smoke output, or frontend types.
-order_no is the order route key; do not expose a second /:id order route that conflicts with Gin wildcard names.
-Legacy `pay_*_legacy_20260508`, wallet, reconcile/refund, fulfillment, and old `orders`/`order_items` prototype tables are not active contract tables and are removed from the launch schema after live code-reference verification.
+Alipay config only.
+No active public notify endpoint in this slice.
+No wallet/refund/reconcile/WeChat/payment-order runtime contract in this slice.
+app_private_key_enc and plaintext app_private_key never appear in API response, operation log, smoke output, or frontend types.
+Certificate content is never returned; API only stores private relative cert paths.
+No cert public URL and no certificate download route.
+provider, merchant_id, sign_type, extra_config are banned from this active contract.
 ```
 
 ### Routes
 
 ```text
-GET    /api/admin/v1/payment/channels/page-init
-GET    /api/admin/v1/payment/channels
-POST   /api/admin/v1/payment/channels
-PUT    /api/admin/v1/payment/channels/:id
-PATCH  /api/admin/v1/payment/channels/:id/status
-DELETE /api/admin/v1/payment/channels/:id
-
-GET    /api/admin/v1/payment/orders/page-init
-GET    /api/admin/v1/payment/orders
-POST   /api/admin/v1/payment/orders
-GET    /api/admin/v1/payment/orders/:order_no
-GET    /api/admin/v1/payment/orders/:order_no/result
-POST   /api/admin/v1/payment/orders/:order_no/pay
-PATCH  /api/admin/v1/payment/orders/:order_no/cancel
-PATCH  /api/admin/v1/payment/orders/:order_no/close
-
-GET    /api/admin/v1/payment/events
-GET    /api/admin/v1/payment/events/:id
-
-POST   /api/payment/notify/alipay
+GET    /api/admin/v1/payment/configs/page-init
+GET    /api/admin/v1/payment/configs
+POST   /api/admin/v1/payment/configs
+PUT    /api/admin/v1/payment/configs/:id
+PATCH  /api/admin/v1/payment/configs/:id/status
+DELETE /api/admin/v1/payment/configs/:id
+POST   /api/admin/v1/payment/certificates
+POST   /api/admin/v1/payment/configs/:id/test
 ```
 
-### Channel Contract
+### Config Contract
 
-`payment/channels` 管理支付宝渠道配置。创建/更新可以接收私钥明文用于加密写入；读取、列表、详情、操作日志和前端类型都不得返回 `private_key_enc` 或私钥明文。删除必须受订单/事件引用保护，不能破坏已有支付事实。
+`payment/configs` 管理 `payment_alipay_configs`。写入可以接收 `app_private_key` 明文，但后端只加密保存 `app_private_key_enc` 和可展示的 `app_private_key_hint`。列表和详情只返回 hint、证书私有相对路径、环境、启用方式、状态和备注。
 
-### Order Contract
+字段第一版用途固定：
 
-`payment/orders` 使用 `order_no` 作为路由 key。创建订单、发起支付、查询结果、取消和关闭都围绕 `order_no`，不得再增加 `/payment/orders/:id` 这种和 Gin wildcard 冲突、且破坏前端路由语义的第二套订单路由。
+```text
+code: 配置唯一编码，创建后不可改，证书私有目录也用它分桶。
+name: 后台展示名。
+app_id: 支付宝应用 ID，构建 SDK client 必需。
+app_private_key_enc: 服务端 secretbox 加密后的应用私钥，只写入和本地测试使用，永不返回。
+app_private_key_hint: 展示“已配置私钥”的安全提示。
+app_cert_path / alipay_cert_path / alipay_root_cert_path: 本地私有证书相对路径，启用和测试前必须能解析到文件。
+notify_url: 支付宝异步通知地址配置值；本 slice 不开放 notify 接收路由。
+return_url: 同步返回地址，可为空。
+environment: sandbox / production，构建支付宝客户端时使用。
+enabled_methods_json: 当前只允许 web / h5。
+status: 1 启用、2 禁用；启用前必须通过本地配置测试。
+remark: 后台备注。
+is_del / created_at / updated_at: 基础三字段。
+```
 
-订单只表达支付事实：创建、支付尝试、结果查询、取消、关闭。钱包入账、退款、对账、微信支付、履约补偿都不是本合同的一部分。
+### Certificate Upload Contract
 
-### Event Contract
+`POST /api/admin/v1/payment/certificates` 是私有本地证书上传，不走 COS，不生成 public URL。multipart 字段：
 
-`payment/events` 是支付事件/回调审计读取接口。事件可以记录 notify 原文、验签结果、平台交易号和处理状态，但不得泄漏渠道私钥密文或明文。
+```text
+config_code: payment_alipay_configs.code
+cert_type: app_cert | alipay_cert | alipay_root_cert
+file: .crt 或 .pem 文件
+```
 
-### Alipay Notify Contract
+响应只返回：
 
-`POST /api/payment/notify/alipay` 是 public raw notify endpoint。它必须完成支付宝验签、幂等事件写入和订单状态推进；HTTP body 只返回 `success` 或 `fail`，Content-Type 为 `text/plain`。
+```text
+path, file_name, sha256, size
+```
 
-### Retired Legacy Contracts
+### Config Test Contract
 
-旧 pay channels、pay transactions、pay notify logs、pay orders、wallet、pay runtime、pay reconcile 文档段落在 payment domain rebuild 后不再作为 active contract 保留。
+`POST /api/admin/v1/payment/configs/:id/test` 只做本地配置校验：解密私钥、解析三份证书路径、构建支付宝 SDK client。默认 smoke 不调用真实支付宝网关，不创建订单，不上传证书。
+
+### Active Menu and Permission Codes
+
+```text
+PAGE   payment_config_list         /payment/config view_key=payment/config
+BUTTON payment_config_add
+BUTTON payment_config_edit
+BUTTON payment_config_status
+BUTTON payment_config_delete
+BUTTON payment_config_upload_cert
+BUTTON payment_config_test
+```
+
+### Retired From Active Runtime
+
+```text
+payment_channel_* permissions and /payment/channel menu
+payment_order_* permissions and /payment/order menu
+payment_event_* permissions and /payment/event menu
+/api/admin/v1/payment/channels*
+/api/admin/v1/payment/orders*
+/api/admin/v1/payment/events*
+/api/payment/notify/alipay
+payment order cron registration
+```
 
 ## Upload Config
 
@@ -3230,17 +3287,11 @@ queue handler = 真正业务执行
 name: notification_task_scheduler
 Asynq task type: notification:dispatch-due:v1
 
-name: payment_close_expired_order
-Asynq task type: payment:close-expired-order:v1
-
-name: payment_sync_pending_order
-Asynq task type: payment:sync-pending-order:v1
-
 name: ai_run_timeout
 Asynq task type: ai:run-timeout:v1
 ```
 
-未迁 Go 的 legacy handler 不注册假任务；列表返回 `registry_status=missing`。禁用行返回 `disabled`，表达式错误返回 `invalid_cron`。Payment 只保留 Alipay close-expired/sync-pending 两个补偿任务；wallet/refund/reconcile/WeChat 没有本阶段 registry 合同。
+未迁 Go 的 legacy handler 不注册假任务；列表返回 `registry_status=missing`。禁用行返回 `disabled`，表达式错误返回 `invalid_cron`。当前 payment-config-only slice 不注册支付订单补偿任务；wallet/refund/reconcile/WeChat 没有本阶段 registry 合同。
 
 当前数据迁移：
 
@@ -3248,9 +3299,8 @@ Asynq task type: ai:run-timeout:v1
 database/migrations/20260506_cron_task_go_handler_cleanup.sql
 notification_task_scheduler.handler = notification:dispatch-due:v1
 
-payment domain rebuild migration
-payment_close_expired_order.handler = payment:close-expired-order:v1
-payment_sync_pending_order.handler = payment:sync-pending-order:v1
+payment config rebuild v1 migration
+payment_close_expired_order and payment_sync_pending_order are disabled/retired until a payment-order slice reintroduces them with a new spec.
 
 AI runtime migration (2026-05-08)
 ai_run_timeout.handler = ai:run-timeout:v1

@@ -153,22 +153,17 @@ AccessLog middleware
 
 ## Payment runtime certs
 
-生产发布不能依赖 legacy PHP 目录。支付证书必须随 Go backend runtime 部署到：
+生产发布不能依赖历史目录。支付宝证书通过后台 `/payment/config` 页面上传，Go 后端把文件写入私有本地目录：
 
 ```text
-admin_back_go/runtime/cert/alipay/appPublicCert.crt
-admin_back_go/runtime/cert/alipay/alipayPublicCert.crt
-admin_back_go/runtime/cert/alipay/alipayRootCert.crt
+runtime/payment/certs/alipay/<config_code>/<sha256>.crt
 ```
 
 生产 env 必须显式配置：
 
 ```text
 PAYMENT_CERT_BASE_DIR=/path/to/admin_back_go
-LEGACY_ADMIN_BACK_ROOT=
 PAYMENT_ALIPAY_TIMEOUT=10s
-PAYMENT_NOTIFY_LOCK_TTL=30s
-PAYMENT_ATTEMPT_LOCK_TTL=30s
 ```
 
 发布 gate：
@@ -177,16 +172,15 @@ PAYMENT_ATTEMPT_LOCK_TTL=30s
 powershell -ExecutionPolicy Bypass -File .\scripts\check-payment-certs.ps1 -DisallowLegacyRoot
 ```
 
-该 gate 只允许输出 path/bytes/sha256。不要把证书正文、私钥明文或 `payment_channel_configs.private_key_enc` 导出到日志、CI artifact 或 git。
+该 gate 只允许输出 path/bytes/sha256。不要把证书正文、私钥明文、`payment_alipay_configs.app_private_key_enc` 导出到日志、CI artifact 或 git。
 
-生产运行事实源固定为新 payment 域：
+生产运行事实源固定为：
 
 ```text
-payment_channels
-payment_channel_configs.private_key_enc
-payment_channel_configs.app_cert_path
-payment_channel_configs.alipay_cert_path
-payment_channel_configs.alipay_root_cert_path
+payment_alipay_configs.app_private_key_enc
+payment_alipay_configs.app_cert_path
+payment_alipay_configs.alipay_cert_path
+payment_alipay_configs.alipay_root_cert_path
 ```
 
-不要回退读取旧渠道表。
+多后端节点时，本地证书目录必须用共享卷或部署同步保证每个 admin-api/admin-worker 节点都能解析同一批相对路径；否则启用/测试可能只在上传节点成功。

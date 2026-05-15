@@ -1,154 +1,140 @@
-# AI Image Playground（gpt-image-2）Admin Integration Design
+# AI Image Playground（Agent-Driven, gpt-image-2）Admin Design
 
 日期：2026-05-15  
-状态：accepted for implementation  
-范围：`admin_back_go`、`admin_front_ts`、`docs/contracts/admin-api-v1.md`
+状态：implemented（automated verification passed；manual provider/worker smoke pending）  
+范围：`admin_back_go`、`admin_front_ts`、`docs/contracts/admin-api-v1.md`、`docs/status/current-status.md`
 
-## 1. 你这次真正要表达的产品规则
+## 1. 这次真正要做什么
 
-1. 这不是把 `E:\cine\gpt_image_playground` 原样搬进来。
-   - 这个仓库是纯前端、IndexedDB 本地存储、前端直连 provider 的玩具形态。
-   - admin 里必须变成后端托管、DB 入库、账号配置归 admin 管的正式模块。
+1. 不再单独造一套 provider / playground 体系。
+   - 现有 `ai_providers` / `ai_provider_models` 继续做账号和模型事实源。
+   - 现有 `ai_agents` 继续做智能体事实源。
+   - 图片工作台只复用一个已启用的智能体，不直接让前端选 provider 或 model。
 
-2. 第一版只做 **gpt-image-2**。
-   - 不做 fal。
-   - 不做自定义 provider manifest。
-   - 不做多模型自由切换。
-   - 只吃已经在 `ai_providers` / `ai_provider_models` 里配置好的 OpenAI-compatible provider，且模型必须是 `gpt-image-2`。
+2. 新增一个专用智能体场景：`image_generate`。
+   - `ai_agents.scenes_json` 继续是场景数组。
+   - 第一版图片工作台只消费 `scene=image_generate` 的智能体。
+   - 这个智能体的模型仍然必须由现有模型配置选出，第一版只接受 `gpt-image-2`。
 
-3. API Key 只能留在后端。
-   - 继续沿用 `ai_providers.api_key_enc` / `api_key_hint`。
-   - 前端永远拿不到明文 key。
-   - 图片任务页只消费 provider 配置，不负责保存账号秘密。
+3. 图片工作台是 admin 原生的图片任务面。
+   - 前端负责交互、上传、预览、历史操作。
+   - 后端负责任务入库、资产入库、provider 调用、结果归档。
+   - 历史数据必须进数据库，不再把 IndexedDB 当主存储。
 
-4. Playground 的核心是“生成 + 历史 + 复用”。
-   - 文生图 / 图生图 / 遮罩编辑。
-   - 任务历史、详情、收藏、删除、重新复用。
-   - 输出图片、参考图、遮罩图都要入库。
-
-5. 本地 IndexedDB 不再是主存储。
-   - 前端只负责交互、上传、展示。
-   - 任务、资产、状态、历史都进数据库。
+4. 这不是 AI 全家桶扩张。
+   - 不碰 chat / tool / knowledge / run monitor 的语义。
+   - 不碰 fal / custom provider / 多 provider 工作台。
+   - 不把图片能力塞进现有 chat 页面。
 
 ## 2. Linus 三问
 
 ### 1）这是真问题吗？
 
-是。现在 admin 已经有：
+是。`gpt_image_playground` 已经证明图片工作流本身成立，但它把核心状态和历史放在浏览器里，密钥和历史边界都太脆。
 
-```text
-ai_providers / ai_provider_models
-upload-tokens / COS 上传
-operation log
-WebSocket / queue / worker / 运行态
-```
+### 2）更简单的方法是什么？
 
-但没有一个正式的“图像生成工作台”。而 gpt-image-2 这种能力如果还留在纯前端本地配置里，就是把真实业务交给浏览器保存，脆得很。
+复用现有智能体配置，新增一个 `image_generate` 场景，然后单独做一个图片工作台。
 
-### 2）有更简单的方法吗？
-
-有：只做一个 **admin 原生的图片 playground**，直接复用现有 provider 配置和上传能力。
-
-```text
-provider 配置 = 现有 ai_providers
-模型 = 只认 gpt-image-2
-参考图上传 = 现有 upload-tokens + COS
-任务历史 = 新表
-输出图片 = 新表 + 对象存储
-```
-
-不要在这个阶段发明新的账号系统，也不要把 React 那套状态机搬进 Vue。
+- agent 负责 provider / model 绑定
+- task 负责历史
+- asset 负责图片文件
+- playground 只管操作
 
 ### 3）会破坏什么吗？
 
-会，前提是你乱搬。
+会，前提是你乱改。
 
-```text
-如果继续前端直连 provider：会破坏密钥边界
-如果继续 IndexedDB 当主库：会破坏历史一致性
-如果把 fal/custom provider 一起塞进来：会破坏第一版复杂度
-如果把大 base64 塞进操作日志：会破坏可维护性
-```
-
-所以第一版必须收口到 gpt-image-2 + 后端托管。
+- 如果再造 provider/playground 配置，会和现有 `ai_providers` 重叠
+- 如果让浏览器直接持有 API key，会破坏密钥边界
+- 如果把图片历史塞回 IndexedDB，会破坏 admin 侧一致性
 
 ## 3. 范围锁定
 
 ### In
 
-- 只支持 `gpt-image-2`
-- OpenAI-compatible **Images API** 图像生成 / 编辑
-- 参考图上传、拖拽、粘贴
+- `ai_agents` 新增 `image_generate` 场景
+- 图片工作台按 `agent_id` 运行
+- 任务、资产、历史、收藏、删除、复用、下载
+- 参考图上传
 - 遮罩编辑
-- 任务历史
-- 任务详情
-- 收藏 / 删除 / 复用
-- 输出图下载
-- 当前用户维度的任务归属
-- provider / model 继续复用现有 admin 配置
+- 输出图持久化
+- 只支持 `gpt-image-2`
 
 ### Out
 
-- fal
-- custom provider manifest
-- ZIP 导入导出
-- PWA / service worker
-- React 组件移植
-- IndexedDB 作为主存储
+- 新 provider 管理面
+- fal / custom provider
+- 多模型自由切换
+- chat / tool / knowledge 语义改造
 - SSE / streamable
-- chat / tool / RAG
-- 批量运维型大屏
+- IndexedDB 主存储
+- PWA / 导入导出
 
 ## 4. 架构决策
 
-### 4.1 业务边界
+### 4.1 配置边界
 
-新模块建议叫：
+现有智能体仍然是唯一入口：
 
 ```text
-backend: internal/module/aiimage
-frontend: /ai/image-playground
-menu code: ai_image_playground
+ai_providers -> ai_provider_models -> ai_agents
 ```
 
-它不接管 provider 配置，也不改 agent/chat/run 的既有语义。
+图片工作台只挑一个启用的 image scene 智能体，不自己再收集 provider 配置。
 
-### 4.2 运行时边界
+`GET /api/admin/v1/ai-agents/options` 需要支持 scene 过滤，图片工作台用 `scene=image_generate`。
+
+### 4.2 运行边界
 
 ```text
 Vue -> admin_back_go REST
-admin_back_go -> provider config / upload runtime / COS / OpenAI-compatible Images API
-worker -> 处理图片任务
-browser -> 只负责上传和展示
+admin_back_go -> ai agent config -> OpenAI-compatible Images API
+admin_back_go -> COS / upload runtime
+admin_back_go -> DB task/asset tables
+browser -> 只负责上传、编辑、预览
+cmd/admin-api -> Redis-backed Asynq -> cmd/admin-worker
 ```
 
-### 4.3 为什么不用 Responses API
+图片生成是慢任务，不能把 provider 调用压在 HTTP 请求里。HTTP 只创建 `pending`
+任务并投递 `ai:image-generate:v1`；真正调用 Images API、保存输出、更新终态由
+`cmd/admin-worker` 消费 Asynq 完成。
 
-因为这一版只做 gpt-image-2。
+### 4.3 为什么用 `image_generate`
 
-```text
-Images API 足够直接
-参数更少
-编辑语义更清楚
-比把图片能力硬塞到 Responses API 里更干净
-```
+`agent_generate` 现在已经有工具草稿语义，不能拿来再混图片工作流。新场景单独叫 `image_generate`，边界最清楚，也最不容易把后续功能搅成一锅粥。
 
-如果未来要扩展别的 OpenAI-compatible 图片服务，再在平台层补 adapter，不改这次的业务表。
+### 4.4 任务主键是什么
 
-## 5. 表设计
+任务入口必须是 `agent_id`，不是 `provider_id`。
 
-### 5.1 `ai_image_tasks`
+原因很简单：
 
-一条任务对应一次图片生成/编辑请求。
+- 智能体已经绑定 provider / model
+- 历史任务要保留快照
+- playground 只应关心“用哪个图片智能体”，不该让前端手动拼 provider 和 model
+
+## 5. 数据模型
+
+### 5.1 `ai_agents` 扩展
+
+`scenes_json` 增加 `image_generate`。  
+现有 `chat` / `agent_generate` 保持不变。
+
+### 5.2 `ai_image_tasks`
+
+一条记录是一轮图片生成或编辑请求。
 
 建议字段：
 
 ```text
 id
 user_id
-provider_id
+agent_id
+agent_name_snapshot
+provider_id_snapshot
 provider_name_snapshot
-model_id
+model_id_snapshot
 model_display_name_snapshot
 prompt
 size
@@ -169,26 +155,16 @@ updated_at
 is_del
 ```
 
-字段用途：
+作用：
 
-| 字段 | 用途 |
-| --- | --- |
-| `user_id` | 当前用户归属，任务历史只看自己的。 |
-| `provider_id` | 关联现有 `ai_providers.id`。 |
-| `provider_name_snapshot` | 历史快照，避免 provider 改名后看不懂旧任务。 |
-| `model_id` | 只允许 `gpt-image-2`。 |
-| `model_display_name_snapshot` | 历史展示名。 |
-| `prompt` | 任务主提示词。 |
-| `size/quality/output_format/output_compression/moderation/n` | 请求参数快照。 |
-| `status` | `running/success/failed/canceled/timeout`。 |
-| `actual_params_json` | provider 实际生效参数。 |
-| `raw_response_json` | 只在解析失败或需要排障时保留。 |
-| `is_favorite` | 历史收藏。 |
-| `elapsed_ms` | 前端列表/详情展示。 |
+- 保存当前用户历史
+- 保存 agent / provider / model 快照
+- 保存请求参数和终态
+- 保存失败信息，但不保存密钥
 
-### 5.2 `ai_image_assets`
+### 5.3 `ai_image_assets`
 
-一条资产对应一个图片文件。
+一条记录是一张图，不管它是上传图、遮罩图还是生成图。
 
 建议字段：
 
@@ -208,19 +184,15 @@ updated_at
 is_del
 ```
 
-字段用途：
+作用：
 
-| 字段 | 用途 |
-| --- | --- |
-| `storage_provider` | 当前第一版只会是 `cos`。 |
-| `storage_key` | 对象存储主键。 |
-| `storage_url` | 前端预览/下载使用。 |
-| `source_type` | `upload/generated/mask`。 |
-| `width/height/size_bytes` | 列表与详情展示。 |
+- 图片文件入库
+- 任务输出图可复用
+- 参考图和遮罩图也用同一张资产表
 
-### 5.3 `ai_image_task_assets`
+### 5.4 `ai_image_task_assets`
 
-一条任务可以挂多个输入、一个 mask、多个输出。
+一条记录表示任务和资产的关系。
 
 建议字段：
 
@@ -230,6 +202,7 @@ task_id
 asset_id
 role
 sort_order
+related_asset_id
 actual_params_json
 revised_prompt
 created_at
@@ -237,85 +210,83 @@ updated_at
 is_del
 ```
 
-字段用途：
+作用：
 
-| 字段 | 用途 |
-| --- | --- |
-| `role` | `input/mask/output`。 |
-| `sort_order` | 参考图顺序。 |
-| `actual_params_json` | 输出图片实际参数快照。 |
-| `revised_prompt` | provider 返回的修正提示词。 |
-
-这套结构比把一堆数组和 base64 硬塞进任务表干净。
+- `role=input/mask/output`
+- `sort_order` 保持参考图顺序
+- `related_asset_id` 让 mask 能指向被编辑的输入图
+- `revised_prompt` 保存 provider 返回的改写提示词
 
 ## 6. 运行流
 
-### 6.1 页面初始化
+### 6.1 智能体配置
 
-`page-init` 返回：
+管理员先在 `ai_agents` 里建一个图片智能体：
 
-```text
-provider options
-gpt-image-2 model options
-status options
-size / quality / format / moderation options
-```
+- provider 选现有 OpenAI-compatible 账号
+- model 选 `gpt-image-2`
+- scenes 勾选 `image_generate`
 
-规则：
+### 6.2 页面初始化
 
-- 只显示已启用 provider
-- 只显示拥有 `gpt-image-2` 模型的 provider
-- 如果没有可用 provider，页面给出明确空态
+图片工作台打开时：
 
-### 6.2 创建任务
+1. 取 `scene=image_generate` 的启用智能体选项
+2. 取图片任务参数字典
+3. 初始化当前用户历史列表
+
+### 6.3 资产注册
+
+前端先把参考图 / 遮罩图上传到现有上传体系，再调用图片资产入库接口注册成 `ai_image_assets`。
+
+这样任务复用时只需要引用资产 ID，不需要重传原图。
+
+### 6.4 创建任务
 
 前端提交：
 
 ```text
+agent_id
 prompt
-provider_id
-model_id = gpt-image-2
-params
-reference images
-mask asset
+size / quality / output_format / output_compression / moderation / n
+input_asset_ids[]
+mask_asset_id
+mask_target_asset_id
 ```
 
 后端做：
 
-1. 校验当前用户权限
-2. 校验 provider / model
-3. 校验参考图数量、尺寸、格式
-4. 写 `ai_image_tasks`
-5. 写 `ai_image_assets`
-6. 写 `ai_image_task_assets`
-7. 入队执行
-
-### 6.3 执行任务
+1. 校验当前用户
+2. 校验 agent 存在、启用、且包含 `image_generate`
+3. 校验 agent 绑定的 provider / model 存在且启用
+4. 校验 model_id = `gpt-image-2`
+5. 校验资产归属和数量
+6. 创建 task 记录
+7. 投递 Redis-backed Asynq 任务 `ai:image-generate:v1`
+8. 立即返回 task id 和 `pending` 状态
 
 worker 做：
 
-1. 读 provider 明文 key
-2. 组装 OpenAI Images API 请求
-3. 上传或获取 reference / mask 资源
-4. 调用 provider
-5. 把输出图存对象存储
-6. 写 output assets 和 task 终态
+1. 幂等 claim `pending` task 为 `running`
+2. 重新加载 agent / provider / model / assets 运行时事实
+3. 调用 OpenAI-compatible Images API
+4. 保存输出图资产
+5. 写 task / task_assets 终态
 
-### 6.4 历史展示
+### 6.5 历史和复用
 
-前端只看数据库。
+列表、详情、收藏、删除、复用都只读数据库。前端通过轮询列表/详情看到
+`pending -> running -> success/failed`，不走 SSE，不走 WebSocket。
 
-```text
-task list -> task detail -> asset preview -> download / reuse / favorite
-```
+复用不需要新 provider 配置，只是把旧 task 的参数和资产重新塞回 composer 再生成一次。
 
 ## 7. 前端 UX
 
 第一版保留这些：
 
+- agent 选择器
 - prompt 编辑器
-- 参考图上传 / 粘贴 / 拖拽
-- 参考图排序
+- 参考图上传 / 排序
 - 遮罩编辑
 - 参数栏
 - 任务网格
@@ -324,9 +295,10 @@ task list -> task detail -> asset preview -> download / reuse / favorite
 - 收藏
 - 重新使用配置
 
-第一版先不做：
+第一版不要这些：
 
-- batch 大批量管理
+- provider 选择器
+- model 选择器
 - 导入导出
 - prompt gallery
 - 独立 PWA
@@ -339,6 +311,7 @@ task list -> task detail -> asset preview -> download / reuse / favorite
 
 ```text
 ai_image_playground_page
+ai_image_asset_add
 ai_image_task_add
 ai_image_task_favorite
 ai_image_task_del
@@ -349,12 +322,14 @@ ai_image_task_del
 要记：
 
 - 创建任务
-- 收藏/取消收藏
+- 注册资产
+- 收藏 / 取消收藏
 - 删除任务
 
 不要记：
 
 - 图片 bytes
+- prompt 全文
 - provider 明文 key
 - 超大 raw response
 
@@ -376,10 +351,11 @@ fal / custom provider
 
 至少满足：
 
-1. 管理员能在后台配置好 provider，并选到 `gpt-image-2`。
-2. 能上传参考图并生成图片。
-3. 任务刷新后仍在 DB 中。
-4. 输出图可预览、下载、复用。
-5. 收藏和删除能工作。
-6. API Key 从不出后端。
-7. 没有 React / IndexedDB 依赖混进 admin 正式运行时。
+1. 管理员能创建一个 `image_generate` 智能体。
+2. 图片工作台只认 `scene=image_generate` 的 agent。
+3. 能上传参考图并生成图片。
+4. 任务刷新后仍在 DB 中。
+5. 输出图可预览、下载、复用。
+6. 收藏和删除能工作。
+7. API Key 从不出后端。
+8. 没有 React / IndexedDB 依赖混进 admin 正式运行时。

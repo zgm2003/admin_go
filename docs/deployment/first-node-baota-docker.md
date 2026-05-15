@@ -39,7 +39,7 @@ admin-worker   队列消费者 + 定时任务，不暴露公网端口
 ```bash
 mkdir -p /www/project
 mkdir -p /www/docker/admin-go/runtime/logs
-mkdir -p /www/docker/admin-go/runtime/cert/alipay
+mkdir -p /www/docker/admin-go/runtime/payment/certs/alipay
 mkdir -p /www/docker/admin-go/exports
 ```
 
@@ -113,18 +113,16 @@ HTTPS SSL 证书：放宝塔 Nginx，也就是机器 A 的 www.zgm2003.cn 站点
 数据库机器 C：不跑后端就不需要支付证书。
 ```
 
-如果启用支付宝，机器 A 和机器 B 都放这里：
+如果启用支付宝，通过 `/payment/config` 上传后，机器 A 和机器 B 都必须能读到这里的私有证书文件：
 
 ```text
-/www/docker/admin-go/runtime/cert/alipay/appPublicCert.crt
-/www/docker/admin-go/runtime/cert/alipay/alipayPublicCert.crt
-/www/docker/admin-go/runtime/cert/alipay/alipayRootCert.crt
+/www/docker/admin-go/runtime/payment/certs/alipay/<config_code>/<sha256>.crt
 ```
 
 容器内对应：
 
 ```text
-/app/runtime/cert/alipay/*.crt
+/app/runtime/payment/certs/alipay/<config_code>/<sha256>.crt
 ```
 
 所以 env 使用：
@@ -133,9 +131,9 @@ HTTPS SSL 证书：放宝塔 Nginx，也就是机器 A 的 www.zgm2003.cn 站点
 PAYMENT_CERT_BASE_DIR=/app
 ```
 
-如果暂时不用支付，也先保留空目录，不要把 legacy PHP 目录塞进生产 env。
+如果暂时不用支付，也先保留空目录。不要把历史目录塞进生产 env。
 
-证书跟着后端运行节点走，不跟着 MySQL/Redis 状态节点走。也就是说：A 有后端就放 A，B 有后端就放 B，C 只跑数据库/Redis 就不放。
+证书跟着后端运行节点走，不跟着 MySQL/Redis 状态节点走。也就是说：A 有后端就放 A，B 有后端就放 B，C 只跑数据库/Redis 就不放。多后端节点要用共享卷或部署同步，不能只让上传节点有证书。
 
 ## 3.1 系统日志跟着后端节点走
 

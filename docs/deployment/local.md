@@ -133,18 +133,24 @@ powershell -ExecutionPolicy Bypass -File .\scripts\full-admin-smoke.ps1 -Account
 
 支付证书属于 Go runtime，不再依赖 `E:/admin/admin_back`。本地首次配置或 PHP teardown 前必须执行：
 
-```powershell
-cd E:\admin_go\admin_back_go
-powershell -ExecutionPolicy Bypass -File .\scripts\migrate-payment-certs.ps1 `
-  -SourceRoot E:/admin/admin_back `
-  -TargetRoot E:/admin_go/admin_back_go
+本地支付宝证书不再从历史目录迁移。进入后台 `/payment/config` 页面后，用“证书上传”分别上传：
+
+```text
+应用公钥证书：app_cert
+支付宝公钥证书：alipay_cert
+支付宝根证书：alipay_root_cert
 ```
 
-`.env` 必须保持：
+`.env` 的证书根目录必须是本地文件系统目录，不是 URL：
 
 ```text
 PAYMENT_CERT_BASE_DIR=E:/admin_go/admin_back_go
-LEGACY_ADMIN_BACK_ROOT=
+```
+
+上传后服务端只保存私有相对路径，形如：
+
+```text
+runtime/payment/certs/alipay/<config_code>/<sha256>.crt
 ```
 
 验证只能输出 path/bytes/sha256，不输出证书正文或私钥：
@@ -153,15 +159,4 @@ LEGACY_ADMIN_BACK_ROOT=
 powershell -ExecutionPolicy Bypass -File .\scripts\check-payment-certs.ps1 -DisallowLegacyRoot
 ```
 
-`runtime/cert/alipay/*.crt` 是部署文件，已被 `.gitignore` 的 `runtime/` 排除；支付运行事实源是 `payment_channels` 与 `payment_channel_configs`。
-
-证书和私钥字段只读这些新 payment 域字段：
-
-```text
-payment_channel_configs.private_key_enc
-payment_channel_configs.app_cert_path
-payment_channel_configs.alipay_cert_path
-payment_channel_configs.alipay_root_cert_path
-```
-
-私钥不落文件，不再读取旧 pay channel 私钥字段。
+支付配置运行事实源是 `payment_alipay_configs`。私钥字段只允许以 `app_private_key_enc` 加密保存，API、日志、smoke 和前端类型都不能返回私钥明文或密文。
