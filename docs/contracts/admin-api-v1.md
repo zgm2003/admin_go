@@ -2438,9 +2438,9 @@ DELETE /mail/logs/:id and /logs     -> system_mail_logDel, module=mail, action=d
 
 ## Payment
 
-状态：payment config rebuild v1 implemented in Go backend, adapted in Vue frontend。
+状态：payment config rebuild v1 + payment order Alipay pay v1 implemented in Go backend, adapted in Vue frontend。
 
-用途：当前 active scope 只做支付宝支付配置：配置 CRUD、私有证书上传、本地配置测试、菜单权限和 `/payment/config` 页面。钱包、订单、回调、事件、退款、提现、对账、微信和产品计费不属于本 slice。
+用途：当前 active scope 只做支付宝支付配置和第一版支付宝支付订单：配置 CRUD、私有证书上传、本地配置测试、后台订单创建、拉起 web/h5 支付、手动同步状态、关闭未支付订单、订单列表和详情。钱包、回调接收、事件流水、退款、提现、对账、微信和业务履约不属于本 slice。
 
 ### Shared Rules
 
@@ -2449,17 +2449,20 @@ resource prefix: /api/admin/v1/payment
 backend owner: internal/module/payment
 gateway boundary: internal/platform/payment/alipay
 provider scope: Alipay only
-active table: payment_configs
+active tables: payment_configs, payment_orders
+active pages: /payment/config, /payment/orders
 cert storage: runtime/payment/certs/alipay/<config_code>/<sha256>.crt
 ```
 
 硬规则：
 
 ```text
-Alipay config only.
+Alipay only.
 No active public notify endpoint in this slice.
-No wallet/refund/reconcile/WeChat/payment-order runtime contract in this slice.
+No wallet/refund/reconcile/WeChat/business-fulfillment runtime contract in this slice.
 provider is a real contract field and is currently fixed to alipay.
+payment_configs has no return_url; return_url belongs to each order create request.
+paid can only be written by Alipay query/sync in this slice.
 private_key_enc and plaintext app_private_key never appear in API response, operation log, smoke output, or frontend types.
 Certificate content is never returned; API only stores private relative cert paths.
 No cert public URL and no certificate download route.
@@ -2467,6 +2470,8 @@ merchant_id, sign_type, extra_config are banned from this active contract.
 ```
 
 ### Routes
+
+Config routes:
 
 ```text
 GET    /api/admin/v1/payment/configs/page-init
@@ -2478,6 +2483,20 @@ DELETE /api/admin/v1/payment/configs/:id
 POST   /api/admin/v1/payment/certificates
 POST   /api/admin/v1/payment/configs/:id/test
 ```
+
+Order routes:
+
+```text
+GET    /api/admin/v1/payment/orders/page-init
+GET    /api/admin/v1/payment/orders
+GET    /api/admin/v1/payment/orders/:id
+POST   /api/admin/v1/payment/orders
+POST   /api/admin/v1/payment/orders/:id/pay
+POST   /api/admin/v1/payment/orders/:id/sync
+PATCH  /api/admin/v1/payment/orders/:id/close
+```
+
+No order edit/delete endpoints exist in this slice.
 
 ### Config Contract
 
@@ -2494,12 +2513,61 @@ private_key_enc: 服务端 secretbox 加密后的应用私钥，只写入和本�
 private_key_hint: 展示“已配置私钥”的安全提示。
 app_cert_path / platform_cert_path / root_cert_path: 本地私有证书相对路径，启用和测试前必须能解析到文件。
 notify_url: 支付宝异步通知地址配置值；本 slice 不开放 notify 接收路由。
-return_url 不属于支付配置；后续创建具体支付请求时按单次支付入参传入。
 environment: sandbox / production，构建支付宝客户端时使用。
 enabled_methods_json: 当前只允许 web / h5。
 status: 1 启用、2 禁用；启用前必须通过本地配置测试。
 remark: 后台备注。
 is_del / created_at / updated_at: 基础三字段。
+```
+
+### Order Contract
+
+`payment/orders` 管理 `payment_orders`。后台订单只表达第一版真实支付动作：创建本地订单、拉起支付宝支付、手动同步支付宝状态、关闭未支付订单。订单金额创建后不能编辑，后台不能手工改成 paid。
+
+订单状态：
+
+```text
+pending
+paying
+paid
+closed
+failed
+```
+
+字段第一版用途固定：
+
+```text
+id: 后台列表行、详情、pay/sync/close 路由主键。
+order_no: 本地支付订单号，同时作为支付宝 out_trade_no。
+config_id: 绑定 payment_configs.id，pay/sync/close 用它取证书和 app_id。
+config_code: 配置编码快照，支持列表搜索和展示。
+provider: 当前固定 alipay，用于筛选和 gateway 分发。
+pay_method: web / h5，决定 TradePagePay 或 TradeWapPay。
+subject: 支付宝订单标题。
+amount_cents: 金额，单位分；Go 和 TS 都不传浮点金额。
+status: pending / paying / paid / closed / failed 状态机。
+pay_url: 支付宝 SDK 返回跳转 URL；表格不做长列展示，详情和支付操作使用。
+return_url: 单次订单创建入参，pay 时传支付宝；不是支付配置字段。
+alipay_trade_no: 支付宝交易号，sync 查询成功后写入。
+expired_at: 订单过期时间，pay 时传支付宝 time_expire。
+paid_at: sync 查询到支付成功时写入。
+closed_at: close 或 sync 查询到关闭时写入。
+failure_reason: 拉起支付失败原因；再次拉起成功后清空。
+is_del / created_at / updated_at: 基础三字段，repository 查询固定 is_del=2。
+```
+
+状态写入规则：
+
+```text
+Create -> pending
+Pay pending/failed -> paying or failed
+Pay paying with pay_url -> return existing pay_url
+Sync paying + TRADE_SUCCESS/TRADE_FINISHED -> paid
+Sync paying + TRADE_CLOSED -> closed
+Sync paying + WAIT_BUYER_PAY -> still paying
+Close pending/failed -> closed locally
+Close paying -> gateway close then closed
+Close paid -> reject
 ```
 
 ### Certificate Upload Contract
@@ -2520,7 +2588,7 @@ path, file_name, sha256, size
 
 ### Config Test Contract
 
-`POST /api/admin/v1/payment/configs/:id/test` 只做本地配置校验：解密私钥、解析三份证书路径、构建支付宝 SDK client。默认 smoke 不调用真实支付宝网关，不创建订单，不上传证书。
+`POST /api/admin/v1/payment/configs/:id/test` 只做本地配置校验：解密私钥、解析三份证书路径、构建支付宝 SDK client。默认 smoke 不调用真实支付宝网关，不上传证书。
 
 ### Active Menu and Permission Codes
 
@@ -2532,16 +2600,21 @@ BUTTON payment_config_status
 BUTTON payment_config_del
 BUTTON payment_config_upload_cert
 BUTTON payment_config_test
+
+PAGE   payment_order_list          /payment/orders view_key=payment/orders
+BUTTON payment_order_add
+BUTTON payment_order_pay
+BUTTON payment_order_sync
+BUTTON payment_order_close
 ```
 
 ### Retired From Active Runtime
 
 ```text
-payment_channel_* permissions and /payment/channel menu
-payment_order_* permissions and /payment/order menu
-payment_event_* permissions and /payment/event menu
+payment_channel_* permissions and channel menu
+payment_event_* permissions and event menu
+old pay_* permissions and wallet menu
 /api/admin/v1/payment/channels*
-/api/admin/v1/payment/orders*
 /api/admin/v1/payment/events*
 /api/payment/notify/alipay
 payment order cron registration
@@ -3293,7 +3366,7 @@ name: ai_run_timeout
 Asynq task type: ai:run-timeout:v1
 ```
 
-未迁 Go 的 legacy handler 不注册假任务；列表返回 `registry_status=missing`。禁用行返回 `disabled`，表达式错误返回 `invalid_cron`。当前 payment-config-only slice 不注册支付订单补偿任务；wallet/refund/reconcile/WeChat 没有本阶段 registry 合同。
+未迁 Go 的 legacy handler 不注册假任务；列表返回 `registry_status=missing`。禁用行返回 `disabled`，表达式错误返回 `invalid_cron`。当前 payment order Alipay pay v1 slice 只做手动 sync/close，不注册支付订单自动补偿任务；wallet/refund/reconcile/WeChat 没有本阶段 registry 合同。
 
 当前数据迁移：
 
@@ -3302,7 +3375,7 @@ database/migrations/20260506_cron_task_go_handler_cleanup.sql
 notification_task_scheduler.handler = notification:dispatch-due:v1
 
 payment config rebuild v1 migration
-payment_close_expired_order and payment_sync_pending_order are removed from the live config-only slice until a payment-order slice reintroduces them with a new spec.
+payment_close_expired_order and payment_sync_pending_order remain absent until an automatic close/sync slice reintroduces them with a new spec.
 
 AI runtime migration (2026-05-08)
 ai_run_timeout.handler = ai:run-timeout:v1
