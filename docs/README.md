@@ -28,13 +28,15 @@
 7. docs/architecture/03-technology-decision.md
 8. docs/architecture/04-go-backend-framework.md
 9. docs/architecture/05-development-quality-rules.md
-10. docs/contracts/admin-api-v1.md
-11. docs/contracts/admin-realtime-v1.md
-12. docs/testing/test-strategy.md
-13. docs/testing/smoke-matrix.md
-14. docs/deployment/local.md
-15. docs/deployment/production.md
-16. docs/deployment/distributed-readiness.md
+10. docs/architecture/07-documentation-governance.md
+11. docs/contracts/admin-api-v1.md
+12. docs/contracts/admin-realtime-v1.md
+13. docs/testing/test-strategy.md
+14. docs/testing/pre-push-gates.md
+15. docs/testing/smoke-matrix.md
+16. docs/deployment/local.md
+17. docs/deployment/production.md
+18. docs/deployment/distributed-readiness.md
 ```
 
 按任务再读：

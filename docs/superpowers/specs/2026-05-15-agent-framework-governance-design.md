@@ -595,7 +595,7 @@ AGENTS.md
 
 ### 8.1 轻量默认检查
 
-这些适合 pre-push 默认跑：
+这些适合在 Task 3/4 落地 checker 和 hook 后作为 pre-push 默认检查：
 
 ```powershell
 git diff --check
@@ -666,7 +666,7 @@ skipped because unrelated dirty workspace
 
 ### 9.1 第一版边界
 
-第一版 pre-push 只做轻量检查：
+本治理切片完成后，第一版 pre-push 只做轻量检查：
 
 ```text
 1. git diff --check
@@ -693,7 +693,7 @@ skipped because unrelated dirty workspace
 
 ### 9.2 脚本入口
 
-建议新增：
+Task 3 will create：
 
 ```text
 scripts/check-agent-governance.ps1
@@ -714,7 +714,7 @@ scripts/check-agent-governance.ps1
   严格模式。模块完成或发布前使用。
 ```
 
-第一版可以只实现：
+Task 3 落地后，第一版可以只实现：
 
 ```powershell
 scripts/check-agent-governance.ps1 -Mode working
@@ -723,14 +723,14 @@ scripts/check-agent-governance.ps1 -Mode range
 
 ### 9.3 Hook 安装
 
-建议新增：
+Task 4 will create：
 
 ```text
 scripts/install-git-hooks.ps1
 .githooks/pre-push
 ```
 
-安装逻辑：
+Task 4 落地后可用的安装逻辑：
 
 ```powershell
 git config core.hooksPath .githooks
@@ -971,14 +971,14 @@ docs/governance/ignore-rules.md
 建议新增：
 
 ```text
-docs/architecture/06-documentation-governance.md
+docs/architecture/07-documentation-governance.md
 docs/testing/pre-push-gates.md
 ```
 
 职责：
 
 ```text
-06-documentation-governance.md
+07-documentation-governance.md
   文档真相源、状态口径、改动到 docs sync 矩阵、归档规则。
 
 pre-push-gates.md
@@ -1031,7 +1031,7 @@ pre-push-gates.md
 docs/superpowers/specs/2026-05-15-agent-framework-governance-design.md
 docs/superpowers/plans/2026-05-15-agent-framework-governance.md
 docs/architecture/02-agent-framework.md
-docs/architecture/06-documentation-governance.md
+docs/architecture/07-documentation-governance.md
 docs/testing/pre-push-gates.md
 scripts/check-agent-governance.ps1
 scripts/install-git-hooks.ps1

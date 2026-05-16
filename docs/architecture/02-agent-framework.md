@@ -51,6 +51,26 @@ Frontend Adapter 按契约适配
 Reviewer 查越界和证据
 ```
 
+## Documentation governance
+
+文档真相源、状态口径、同步矩阵和归档规则统一放在：
+
+```text
+docs/architecture/07-documentation-governance.md
+```
+
+agent 不准靠旧计划或聊天记录覆盖当前运行时事实；文档冲突时先按 governance 的真相源顺序判断。
+
+## Pre-push gate rules
+
+轻量 pre-push gate 的默认规则、strict gate、skip 规则和输出格式统一放在：
+
+```text
+docs/testing/pre-push-gates.md
+```
+
+pre-push 不是 full smoke，也不要求 DB/Redis/backend/frontend 默认在线。
+
 ## 输出格式
 
 每个 agent 完成任务时输出：

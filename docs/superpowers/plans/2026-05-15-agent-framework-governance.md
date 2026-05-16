@@ -4,7 +4,7 @@
 
 **Goal:** 把项目的 agent 规则做成可执行治理层：冷启动入口清楚、角色边界清楚、文档真相源清楚、pre-push 轻量 gate 清楚，并且不碰任何 Go/Vue 业务 runtime。
 
-**Architecture:** 只做治理，不做业务。第一层是 root onboarding 文档（`AGENTS.md`、`docs/README.md`、`docs/architecture/02-agent-framework.md`、`agents/README.md`），第二层是治理说明文档（`docs/architecture/06-documentation-governance.md`、`docs/testing/pre-push-gates.md`），第三层是可执行检查脚本和 git hook（`scripts/check-agent-governance.ps1`、`scripts/install-git-hooks.ps1`、`.githooks/pre-push`）。检查只读、离线、轻量，默认不跑 full smoke，不依赖 DB/Redis/后端/前端服务。
+**Architecture:** 只做治理，不做业务。第一层是 root onboarding 文档（`AGENTS.md`、`docs/README.md`、`docs/architecture/02-agent-framework.md`、`agents/README.md`），第二层是治理说明文档（`docs/architecture/07-documentation-governance.md`、`docs/testing/pre-push-gates.md`），第三层是在本治理切片完成后具备的可执行检查脚本和 git hook（Task 3 will create `scripts/check-agent-governance.ps1`; Task 4 will create `scripts/install-git-hooks.ps1` and `.githooks/pre-push`）。检查只读、离线、轻量，默认不跑 full smoke，不依赖 DB/Redis/后端/前端服务。
 
 **Tech Stack:** Markdown, PowerShell, Git hooks, `git diff --check`, existing repo docs. No backend/frontend runtime dependency.
 
@@ -24,9 +24,9 @@ docs/superpowers/specs/2026-05-15-agent-framework-governance-design.md
 冷启动入口和 agent 框架文档收口
 文档真相源、状态口径、同步矩阵
 pre-push 轻量 gate 文档
-check-agent-governance.ps1
-install-git-hooks.ps1
-.githooks/pre-push
+check-agent-governance.ps1 (Task 3 will create)
+install-git-hooks.ps1 (Task 4 will create)
+.githooks/pre-push (Task 4 will create)
 docs/README.md / AGENTS.md / agents/README.md / 02-agent-framework.md 的治理入口更新
 ```
 
@@ -58,7 +58,7 @@ What breaks: 不能碰 admin_back_go / admin_front_ts 业务链路，不能把 p
 ### Create
 
 ```text
-docs/architecture/06-documentation-governance.md
+docs/architecture/07-documentation-governance.md
 docs/testing/pre-push-gates.md
 scripts/check-agent-governance.ps1
 scripts/install-git-hooks.ps1
@@ -112,17 +112,17 @@ Make these exact structural changes:
 
 ```text
 AGENTS.md
-  - add docs/architecture/06-documentation-governance.md to the default read list
+  - add docs/architecture/07-documentation-governance.md to the default read list
   - add docs/testing/pre-push-gates.md to the default read list
   - keep the rest of the order unchanged
 
 docs/README.md
-  - insert docs/architecture/06-documentation-governance.md after docs/architecture/05-development-quality-rules.md
+  - insert docs/architecture/07-documentation-governance.md after docs/architecture/05-development-quality-rules.md
   - insert docs/testing/pre-push-gates.md after docs/testing/test-strategy.md and before docs/testing/smoke-matrix.md
   - keep the existing cold-start intent: read order first, task-specific docs second
 
 docs/architecture/02-agent-framework.md
-  - add a section that says documentation governance lives in docs/architecture/06-documentation-governance.md
+  - add a section that says documentation governance lives in docs/architecture/07-documentation-governance.md
   - add a section that says pre-push gate rules live in docs/testing/pre-push-gates.md
   - keep the one-agent-one-role rule and the output template
 
@@ -156,12 +156,12 @@ git diff --check returns clean
 ### Task 2: Write the governance documents themselves
 
 **Files:**
-- Create: `docs/architecture/06-documentation-governance.md`
+- Create: `docs/architecture/07-documentation-governance.md`
 - Create: `docs/testing/pre-push-gates.md`
 
 - [ ] **Step 1: Write the failing skeleton in your head, then commit the real doc content**
 
-`docs/architecture/06-documentation-governance.md` must contain these sections:
+`docs/architecture/07-documentation-governance.md` must contain these sections:
 
 ```text
 Purpose
@@ -211,7 +211,7 @@ pre-push must not run full smoke by default
 
 - [ ] **Step 2: Write concrete command examples**
 
-Use exact examples like these in the new doc:
+Use exact examples like these in the new doc, but label the checker commands as available after Task 3 creates `scripts/check-agent-governance.ps1`:
 
 ```powershell
 git diff --check
@@ -360,7 +360,7 @@ Do not run this negative test in the main workspace.
 - Create: `scripts/install-git-hooks.ps1`
 - Create: `.githooks/pre-push`
 
-- [ ] **Step 1: Install hook path through a dedicated script**
+- [x] **Step 1: Install hook path through a dedicated script**
 
 `scripts/install-git-hooks.ps1` must:
 
@@ -376,7 +376,7 @@ The command it must run is:
 git config core.hooksPath .githooks
 ```
 
-- [ ] **Step 2: Add the pre-push wrapper**
+- [x] **Step 2: Add the pre-push wrapper**
 
 `.githooks/pre-push` must:
 
@@ -389,7 +389,7 @@ avoid DB/Redis/backend/frontend runtime dependencies
 
 The wrapper should keep the logic thin. The checker stays in `scripts/check-agent-governance.ps1`.
 
-- [ ] **Step 3: Verify hook registration**
+- [x] **Step 3: Verify hook registration**
 
 Run:
 
@@ -404,7 +404,7 @@ Expected:
 .githooks
 ```
 
-- [ ] **Step 4: Verify the hook path actually executes the checker**
+- [x] **Step 4: Verify the hook path actually executes the checker**
 
 Run:
 
@@ -421,7 +421,7 @@ governance check output is visible before any network push completes
 
 If the repo has no remote configured, invoke the wrapper in the same shell session and document that exception.
 
-- [ ] **Step 5: Verify the skip path**
+- [x] **Step 5: Verify the skip path**
 
 Run:
 
@@ -483,9 +483,8 @@ both commands succeed
 Use a commit message that names the actual work, for example:
 
 ```bash
-git add AGENTS.md docs/README.md docs/architecture/02-agent-framework.md docs/testing/test-strategy.md agents/README.md docs/architecture/06-documentation-governance.md docs/testing/pre-push-gates.md scripts/check-agent-governance.ps1 scripts/install-git-hooks.ps1 .githooks/pre-push
+git add AGENTS.md docs/README.md docs/architecture/02-agent-framework.md docs/testing/test-strategy.md agents/README.md docs/architecture/07-documentation-governance.md docs/testing/pre-push-gates.md scripts/check-agent-governance.ps1 scripts/install-git-hooks.ps1 .githooks/pre-push
 git commit -m "docs: add agent governance framework and pre-push gate"
 ```
 
 Do not add any runtime files to this commit.
-

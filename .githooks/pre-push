@@ -1,0 +1,27 @@
+#!/bin/sh
+
+if [ "${SKIP_AGENT_GOVERNANCE_CHECK:-}" = "1" ]; then
+  echo "SKIPPED: SKIP_AGENT_GOVERNANCE_CHECK=1; pre-push agent governance check was not run."
+  exit 0
+fi
+
+hook_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_root=$(CDPATH= cd -- "$hook_dir/.." && pwd)
+cd "$repo_root" || exit 1
+
+if command -v powershell.exe >/dev/null 2>&1; then
+  ps_cmd="powershell.exe"
+elif command -v powershell >/dev/null 2>&1; then
+  ps_cmd="powershell"
+else
+  echo "ERROR: powershell.exe was not found; cannot run scripts/check-agent-governance.ps1" >&2
+  exit 127
+fi
+
+echo "pre-push hook: running scripts/check-agent-governance.ps1 -Mode range"
+"$ps_cmd" -NoProfile -ExecutionPolicy Bypass -File "./scripts/check-agent-governance.ps1" -Mode range
+status=$?
+if [ "$status" -ne 0 ]; then
+  echo "pre-push hook: agent governance check failed with exit code $status" >&2
+fi
+exit "$status"

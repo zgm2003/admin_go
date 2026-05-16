@@ -56,6 +56,8 @@ feature 子组件放 components/。
 
 ## Smoke policy
 
+Smoke is not pre-push. Smoke 证明真实运行链路，pre-push 只做轻量 hook gate；默认 pre-push 规则见 `docs/testing/pre-push-gates.md`。
+
 Basic smoke 保持快，只证明 admin 基础链路没断：
 
 ```powershell

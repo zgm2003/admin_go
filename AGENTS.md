@@ -130,7 +130,9 @@ docs/architecture/02-agent-framework.md
 docs/architecture/03-technology-decision.md
 docs/architecture/04-go-backend-framework.md
 docs/architecture/05-development-quality-rules.md
+docs/architecture/07-documentation-governance.md
 docs/status/current-status.md
+docs/testing/pre-push-gates.md
 ```
 
 按角色继续读：

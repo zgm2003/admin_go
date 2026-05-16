@@ -1,0 +1,125 @@
+# Pre-push Gates
+
+## Default gate
+
+Default gate = git diff --check + governance check only.
+
+The default pre-push gate is intentionally light:
+
+```text
+1. run git diff --check
+2. run the agent governance checker when it exists
+3. print changed files, evidence, risks, and next step
+```
+
+Pre-push must not require DB/Redis/backend/frontend to be online. Pre-push must not run full smoke by default.
+
+Default gate catches whitespace drift and obvious governance/path drift. It does not prove the application works.
+
+## Strict gate
+
+Strict gate = heavier checks for release or module finish.
+
+Use Strict when a module is being closed, a release is being prepared, or a reviewer explicitly asks for blocking governance checks.
+
+Strict may require targeted tests, contract checks, smoke evidence, or module-specific commands, but those checks are chosen by the task scope. Strict is not the default hook behavior.
+
+## Skip rule
+
+The explicit skip variable is:
+
+```powershell
+$env:SKIP_AGENT_GOVERNANCE_CHECK='1'
+```
+
+For POSIX shells:
+
+```sh
+SKIP_AGENT_GOVERNANCE_CHECK=1 git push
+```
+
+When `SKIP_AGENT_GOVERNANCE_CHECK=1` is set, the hook/checker must print a visible skip message. Skipping is allowed for emergencies or broken local tooling, but the final report must say it was skipped.
+
+## Output format
+
+Gate output should use this shape:
+
+```text
+Outcome
+Working changed files or Range changed files
+Working dirty files when Mode=range and the workspace is dirty
+Key evidence
+Verification
+Known risks
+Next step
+```
+
+For a clean default gate, `Verification` should explicitly say:
+
+```text
+working diff check passed
+cached diff check passed
+no blocking governance violations found
+```
+
+## Examples
+
+Run the whitespace gate directly:
+
+```powershell
+git diff --check
+```
+
+Run the governance checker against the current workspace:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\check-agent-governance.ps1 -Mode working
+```
+
+Run the governance checker for the committed diff from the resolved base to `HEAD`. Dirty/staged files are reported separately; cached and working whitespace is still checked:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\check-agent-governance.ps1 -Mode range
+```
+
+Run the blocking release/module-finish version:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\check-agent-governance.ps1 -Mode range -Base origin/master -Strict
+```
+
+Mode meanings:
+
+```text
+working = current workspace
+range = committed diff from resolved base to HEAD; dirty/staged files are reported separately, and cached/working whitespace is still checked
+Strict = blocking mode for release or module completion
+```
+
+Install the lightweight root hook:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\install-git-hooks.ps1
+git config --get core.hooksPath
+```
+
+Expected hook path:
+
+```text
+.githooks
+```
+
+## Why this is not smoke
+
+Smoke proves a real runtime chain with real dependencies. Pre-push only protects the repo from cheap, local mistakes.
+
+Therefore:
+
+```text
+pre-push must not require DB/Redis/backend/frontend to be online
+pre-push must not run full smoke by default
+pre-push must not pretend a runtime path is verified
+pre-push can remind the worker which smoke or tests are still needed
+```
+
+If a task needs smoke, run the smoke command explicitly and report the result. A passing pre-push gate is not a smoke pass.

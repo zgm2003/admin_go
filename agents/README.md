@@ -10,7 +10,9 @@
 3. Read docs/architecture/01-step-by-step-roadmap.md
 4. Read docs/architecture/02-agent-framework.md
 5. Read docs/architecture/03-technology-decision.md
-6. Pick exactly one role below
+6. Read docs/architecture/07-documentation-governance.md
+7. Read docs/testing/pre-push-gates.md
+8. Pick exactly one role below
 ```
 
 ## Roles
