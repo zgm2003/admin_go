@@ -208,6 +208,69 @@ function Get-MatchingPaths {
     return @($matches)
 }
 
+function Get-SubrepoWorkingChangedPaths {
+    param(
+        [string]$Path,
+        [string]$Prefix
+    )
+
+    $paths = New-Object System.Collections.ArrayList
+    if (-not (Test-Path -LiteralPath $Path)) { return @() }
+
+    $inside = & git -C $Path rev-parse --is-inside-work-tree 2>$null
+    if ($LASTEXITCODE -ne 0 -or ($inside | Select-Object -First 1) -ne 'true') { return @() }
+
+    $statusLines = & git -C $Path status --porcelain 2>$null
+    foreach ($line in $statusLines) {
+        $parsed = Parse-PorcelainPath $line
+        if ($parsed) { Add-Unique $paths "$Prefix/$parsed" }
+    }
+
+    $diffNames = & git -C $Path diff --name-only 2>$null
+    foreach ($name in $diffNames) { Add-Unique $paths "$Prefix/$name" }
+
+    $cachedNames = & git -C $Path diff --cached --name-only 2>$null
+    foreach ($name in $cachedNames) { Add-Unique $paths "$Prefix/$name" }
+
+    $otherNames = & git -C $Path ls-files --others --exclude-standard 2>$null
+    foreach ($name in $otherNames) { Add-Unique $paths "$Prefix/$name" }
+
+    return @(Filter-ChangedPaths $paths)
+}
+
+function Merge-UniquePaths {
+    param([object[]]$PathSets)
+
+    $paths = New-Object System.Collections.ArrayList
+    foreach ($set in $PathSets) {
+        foreach ($path in $set) { Add-Unique $paths $path }
+    }
+    return @($paths)
+}
+
+function Test-FrontendDeploymentStub {
+    param(
+        [string]$RepoRoot,
+        [string]$Path
+    )
+
+    $relativePath = (Normalize-PathText $Path)
+    if (-not $relativePath) { return $false }
+    $nativeRelativePath = $relativePath -replace '/', [System.IO.Path]::DirectorySeparatorChar
+    $fullPath = Join-Path $RepoRoot $nativeRelativePath
+    if (-not (Test-Path -LiteralPath $fullPath -PathType Leaf)) { return $false }
+
+    $content = Get-Content -LiteralPath $fullPath -Raw
+    $lineCount = (($content -split "`r?`n") | Where-Object { $_ -ne '' }).Count
+
+    return (
+        $content -match '(?m)^# Moved\s*$' -and
+        $content -match 'Canonical doc:' -and
+        $content -match 'docs/deployment/' -and
+        $lineCount -le 8
+    )
+}
+
 function Invoke-RangeNameOnly {
     param([string]$ResolvedBase)
 
@@ -254,7 +317,12 @@ try {
     $reminders = New-Object System.Collections.ArrayList
 
     $resolvedBase = $null
-    $workingDirtyPaths = @(Get-WorkingChangedPaths)
+    $rootWorkingDirtyPaths = @(Get-WorkingChangedPaths)
+    $subrepoWorkingDirtyPaths = @(
+        Get-SubrepoWorkingChangedPaths -Path 'admin_back_go' -Prefix 'admin_back_go'
+        Get-SubrepoWorkingChangedPaths -Path 'admin_front_ts' -Prefix 'admin_front_ts'
+    )
+    $workingDirtyPaths = @(Merge-UniquePaths @($rootWorkingDirtyPaths, $subrepoWorkingDirtyPaths))
     if ($Mode -eq 'range') {
         $baseInfo = Get-RangeBase $Base
         $resolvedBase = $baseInfo.Ref
@@ -312,7 +380,8 @@ try {
         [void]$verification.Add("cached diff check: git diff --cached --check -- . ':(exclude)**/node_modules/**' passed")
     }
 
-    foreach ($path in $changedPaths) {
+    $pathGovernancePaths = @(Merge-UniquePaths @($changedPaths, $workingDirtyPaths))
+    foreach ($path in $pathGovernancePaths) {
         if ($path -match '^docs/superpowers/specs/([^/]+)$') {
             $name = $Matches[1]
             if ($name -notmatch '^\d{4}-\d{2}-\d{2}-[A-Za-z0-9][A-Za-z0-9._-]*-design\.md$') {
@@ -327,6 +396,11 @@ try {
         }
         if ($path -match '^admin_back_go/docs/superpowers/(specs|plans)/' -and $path -notmatch '^admin_back_go/docs/superpowers/archive/') {
             [void]$blocking.Add("active backend-local superpowers spec/plan is not allowed: $path")
+        }
+        if ($path -match '^admin_front_ts/docs/deployment/[^/]+\.md$') {
+            if (-not (Test-FrontendDeploymentStub -RepoRoot $repoRoot -Path $path)) {
+                [void]$blocking.Add("frontend deployment docs must be root-owned with a moved stub only: $path")
+            }
         }
     }
 

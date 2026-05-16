@@ -79,6 +79,52 @@ spec/plan history does not override current-status.
 old paths must not be resurrected as current onboarding paths without verification.
 ```
 
+## Documentation location ownership
+
+This workspace uses root-first documentation, not root-only documentation.
+
+Canonical root docs:
+
+```text
+docs/status/current-status.md
+docs/contracts/*
+docs/testing/*
+docs/deployment/*
+docs/architecture/*
+docs/superpowers/specs/*
+docs/superpowers/plans/*
+docs/superpowers/archive/*
+```
+
+Allowed subrepo docs:
+
+```text
+admin_back_go/docs/architecture.md
+```
+
+That file stays next to Go runtime code because it records backend runtime architecture. Moving it to root would create longer edit loops without improving truth.
+
+Frontend deployment docs are different. Deployment is a workspace/release concern, so the canonical frontend deploy runbook lives at:
+
+```text
+docs/deployment/frontend-github-actions-scp.md
+```
+
+The old frontend path may exist only as a moved stub:
+
+```text
+admin_front_ts/docs/deployment/github-actions-scp.md
+```
+
+Rules:
+
+```text
+do not add active spec/plan docs under admin_back_go/docs/superpowers or admin_front_ts/docs/superpowers.
+do not keep long-lived deployment runbooks under admin_front_ts/docs/deployment.
+frontend deployment stubs must point to the canonical root docs/deployment path.
+root docs index subrepo docs; subrepo docs must not become a second current-status, contract, smoke, or deployment truth source.
+```
+
 ## Multi-repo rules
 
 `E:\admin_go` is the governance/root workspace. `admin_back_go` and `admin_front_ts` are separate runtime repos.

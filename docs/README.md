@@ -37,6 +37,7 @@
 16. docs/deployment/local.md
 17. docs/deployment/production.md
 18. docs/deployment/distributed-readiness.md
+19. docs/deployment/frontend-github-actions-scp.md
 ```
 
 按任务再读：
@@ -44,7 +45,7 @@
 ```text
 agents/*.md                              # agent 分工
 docs/open-source/*.md                    # 开源调研和取舍
-docs/deployment/*.md                     # 本地、生产、分布式 readiness 运行边界
+docs/deployment/*.md                     # 本地、生产、分布式 readiness、前端发布运行边界
 docs/superpowers/plans/*.md              # 只读与当前任务直接相关的 spec/plan；不要扫全部旧计划
 docs/superpowers/archive/**/*.md         # 已归档历史计划，只能在用户明确要求考古时读取，不覆盖 current-status
 admin_back_go/docs/architecture.md       # Go 后端运行时架构
@@ -112,7 +113,16 @@ rollback provenance
 
 禁止把历史系统当作当前运行依赖，禁止把旧 all POST action path 带进新的 Go REST 契约。
 
-所有 Superpowers spec/plan 统一归总控 `docs/superpowers`；`admin_back_go/docs` 只放 Go 后端运行时文档。
+所有 Superpowers spec/plan 统一归总控 `docs/superpowers`；部署、契约、状态、测试和跨仓治理文档统一归总控 `docs`。
+
+子仓文档只保留贴近代码的运行时说明或旧链接 stub：
+
+```text
+admin_back_go/docs/architecture.md                     # Go 后端运行时架构，合法
+admin_front_ts/docs/deployment/github-actions-scp.md   # 旧链接 stub，真实部署文档在 root docs/deployment
+```
+
+不准在 `admin_front_ts/docs/deployment` 继续维护第二份长期部署 runbook。
 
 ## 当前工程方向
 
