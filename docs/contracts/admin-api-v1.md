@@ -2436,6 +2436,208 @@ DELETE /mail/templates/:id          -> system_mail_templateDel, module=mail, act
 DELETE /mail/logs/:id and /logs     -> system_mail_logDel, module=mail, action=delete_log/delete_logs
 ```
 
+
+## SMS Tencent Cloud
+
+状态：implemented in Go backend, adapted in Vue frontend。
+
+用途：后台“系统管理 / 短信管理”维护腾讯云短信发送配置、本地验证码场景到腾讯云模板 ID 的映射、发送日志，并提供独立测试发送能力。本切片不接入 `auth/send-code`；手机号验证码仍固定 `123456`。
+
+### Shared Rules
+
+```text
+Only Tencent Cloud SMS SendSms.
+No sign application API.
+No template application API.
+No callback/webhook receipt.
+No automatic retry queue.
+No multi-provider abstraction.
+No marketing SMS, international/HK/Macau/Taiwan SMS, or batch send in phase one.
+Tencent SecretId / SecretKey are encrypted in sms_configs by APP_SECRET-derived secretbox.
+HTTP responses never return secret_id_enc / secret_key_enc or plaintext secrets.
+sms_configs / sms_templates / sms_logs all include is_del; every read path filters is_del=2.
+sms_logs never store SMS body, verification plaintext, template params, raw request, or raw response.
+Tencent Cloud SDK imports are confined to internal/platform/sms/tencentcloudsms.
+SendSms uses SmsSdkAppId, SignName, TemplateId, TemplateParamSet, PhoneNumberSet, Region, and Endpoint.
+Tencent SDK calls use context plus a default 10s timeout.
+Each send creates one pending log before the Tencent call and finishes the same log as success or failed.
+Verification-code templates must include exactly code and ttl_minutes.
+ttl_minutes comes from system_settings.auth.verify_code.ttl_minutes and is shared by email and SMS management.
+```
+
+### Page Init
+
+`GET /api/admin/v1/sms/page-init`
+
+Response `data.dict`:
+
+```ts
+interface SmsPageInitDict {
+  common_status_arr: Array<{ label: string; value: 1 | 2 }>
+  sms_scene_arr: Array<{ label: string; value: 'login' | 'forget' | 'bind_phone' | 'change_password' }>
+  sms_log_scene_arr: Array<{ label: string; value: 'login' | 'forget' | 'bind_phone' | 'change_password' | 'test' }>
+  sms_log_status_arr: Array<{ label: string; value: 1 | 2 | 3 }>
+  sms_region_arr: Array<{ label: string; value: 'ap-guangzhou' }>
+  default_region: 'ap-guangzhou'
+  default_endpoint: 'sms.tencentcloudapi.com'
+  default_ttl_minutes: number
+}
+```
+
+### Config
+
+```text
+GET    /api/admin/v1/sms/config
+PUT    /api/admin/v1/sms/config
+DELETE /api/admin/v1/sms/config
+POST   /api/admin/v1/sms/test
+```
+
+`GET /sms/config` response:
+
+```ts
+interface SmsConfigResponse {
+  id: number | null
+  configured: boolean
+  secret_id_hint: string
+  secret_key_hint: string
+  sms_sdk_app_id: string
+  sign_name: string
+  region: 'ap-guangzhou'
+  endpoint: string
+  status: 1 | 2
+  verify_code_ttl_minutes: number
+  last_test_at: string | null
+  last_test_error: string
+  created_at: string | null
+  updated_at: string | null
+}
+```
+
+`PUT /sms/config` body accepts plaintext `secret_id` / `secret_key` only as write-only inputs. First setup requires both. Later updates may leave them blank to reuse the current encrypted values. It also accepts `verify_code_ttl_minutes: number`; the value is saved to `system_settings.auth.verify_code.ttl_minutes`, not `sms_configs`.
+
+Rules:
+
+```text
+config_key is fixed to default.
+DELETE is a soft delete of the active default row.
+PUT restores a soft-deleted default row instead of inserting a duplicate.
+region only accepts ap-guangzhou in phase one; default is ap-guangzhou.
+endpoint defaults to sms.tencentcloudapi.com.
+status=1 enables real test sending; status=2 disables it explicitly.
+POST /sms/test accepts one to_phone and one template_scene, normalizes mainland phone numbers to +86 E.164, uses sample verification-code params, and updates last_test_at / last_test_error.
+```
+
+### Templates
+
+```text
+GET    /api/admin/v1/sms/templates
+POST   /api/admin/v1/sms/templates
+PUT    /api/admin/v1/sms/templates/:id
+PATCH  /api/admin/v1/sms/templates/:id/status
+DELETE /api/admin/v1/sms/templates/:id
+```
+
+Template item:
+
+```ts
+interface SmsTemplateItem {
+  id: number
+  scene: 'login' | 'forget' | 'bind_phone' | 'change_password'
+  name: string
+  tencent_template_id: string
+  variables: string[]
+  sample_variables: Record<string, string>
+  status: 1 | 2
+  created_at: string
+  updated_at: string
+}
+```
+
+Rules:
+
+```text
+This system does not edit Tencent SMS body. It maps local scenes to approved Tencent TemplateId.
+Verification-code template variables must be exactly `code` and `ttl_minutes`; `sample_variables` must contain exactly the same two keys. Extra keys such as `app_name` are rejected.
+scene is unique; saving a soft-deleted scene restores the old row.
+DELETE is soft delete.
+```
+
+### Logs
+
+```text
+GET    /api/admin/v1/sms/logs
+GET    /api/admin/v1/sms/logs/:id
+DELETE /api/admin/v1/sms/logs/:id
+DELETE /api/admin/v1/sms/logs        body: { ids: number[] }
+```
+
+Query:
+
+```ts
+interface SmsLogQuery {
+  current_page: number
+  page_size: number
+  scene?: 'login' | 'forget' | 'bind_phone' | 'change_password' | 'test'
+  status?: 1 | 2 | 3
+  to_phone?: string
+  created_at_start?: string
+  created_at_end?: string
+}
+```
+
+Log item:
+
+```ts
+interface SmsLogItem {
+  id: number
+  scene: string
+  template_id: number | null
+  to_phone: string
+  status: 1 | 2 | 3
+  tencent_request_id: string
+  tencent_serial_no: string
+  tencent_fee: number
+  error_code: string
+  error_message: string
+  duration_ms: number
+  sent_at: string | null
+  created_at: string
+  updated_at: string
+  template?: {
+    id: number
+    scene: 'login' | 'forget' | 'bind_phone' | 'change_password'
+    name: string
+    tencent_template_id: string
+    variables: string[]
+    status: 1 | 2
+  } | null
+}
+```
+
+Rules:
+
+```text
+status: 1=pending, 2=success, 3=failed.
+Logs store provider RequestId/SerialNo/Fee, error code/message, duration and timestamps only.
+Detail may include a template summary so humans can identify the Tencent TemplateId and variable names used by the send.
+No body, plaintext verification value, template params, raw request, or raw response field is present in DB/API/frontend contract.
+DELETE is soft delete.
+```
+
+Operation log / permission:
+
+```text
+PUT    /sms/config                 -> system_sms_configEdit, module=sms, action=update_config
+DELETE /sms/config                 -> system_sms_configDel, module=sms, action=delete_config
+POST   /sms/test                   -> system_sms_test, module=sms, action=test_send
+POST   /sms/templates              -> system_sms_templateAdd, module=sms, action=create_template
+PUT    /sms/templates/:id          -> system_sms_templateEdit, module=sms, action=update_template
+PATCH  /sms/templates/:id/status   -> system_sms_templateStatus, module=sms, action=change_template_status
+DELETE /sms/templates/:id          -> system_sms_templateDel, module=sms, action=delete_template
+DELETE /sms/logs/:id and /logs     -> system_sms_logDel, module=sms, action=delete_log/delete_logs
+```
+
 ## Payment
 
 状态：payment config rebuild v1 + recharge cashier v1 implemented in Go backend, adapted in Vue frontend。
