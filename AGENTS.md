@@ -38,6 +38,22 @@ Phase 7: Go/Vue module evolution
 
 如果答案不清楚，先停下来查证，不要写代码。
 
+## 默认实现硬规则
+
+这些规则不是“建议”。新模块、触碰模块、修边角问题时默认都要检查：
+
+```text
+i18n：前后端都必须默认做。后端用 apperror.*Key / response.OKWithMessageKey / 双语 catalog；前端用 vue-i18n，新增可见文案同步 zh-CN.ts / en-US.ts。
+CRUD：标准 CRUD 页面默认用 Search + AppTable + AppDialog + useCrudTable；只读列表用 Search + AppTable + useTable。不要手写 el-table、el-dialog、筛选 el-form。
+布局：用户说的 body-card 在当前 Vue shell 里对应 Layout page-card。页面默认已经在 page-card 内，不要再套大卡片；表格页必须维护 flex 高度链，内容不能撑破 page-card/body-card。
+```
+
+细则统一维护在：
+
+```text
+docs/architecture/05-development-quality-rules.md
+```
+
 ## 不可协商原则
 
 ### 0. 代码质量、架构质量、文档真实性永远优先

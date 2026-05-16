@@ -100,6 +100,122 @@ unknown 只用于真正未知的外部边界，必须在边界处收窄
 
 前端 API 层必须是契约翻译层，不是字段猜测层。
 
+## Full-stack i18n 默认规则
+
+新模块默认就是 i18n 模块。不要等页面写完、接口写完、用户截图骂完再“补国际化”。
+
+后端规则：
+
+```text
+Gin middleware 顺序保持 CORS -> I18n -> AuthToken。
+语言来源只读 Accept-Language；支持 zh-CN / en-US；默认 zh-CN。
+response 是 HTTP { code, data, msg } 的唯一 msg 本地化边界。
+错误消息用 apperror.*Key，不能只丢中文 fallback。
+成功消息用 response.OKWithMessageKey，不能靠 OKWithMessage 长期吃 legacy fallback。
+新增模块必须维护 internal/i18n/locales/zh-CN/<module>.yaml 和 internal/i18n/locales/en-US/<module>.yaml。
+缺翻译 key 可以返回 fallback，不能 panic；但完成态必须跑 i18n coverage。
+```
+
+后端新模块至少验证：
+
+```powershell
+cd E:\admin_go\admin_back_go
+go test ./internal/i18n -count=1
+go test ./internal/module/<module> -count=1
+```
+
+前端规则：
+
+```text
+Vue 组件内用 useI18n().t。
+composable / store / util 里用 src/i18n 导出的 i18n.global.t。
+新增可见文案必须同时更新 src/i18n/locales/zh-CN.ts 和 src/i18n/locales/en-US.ts。
+菜单、按钮、表格列、搜索 label、弹窗标题、确认文案、空状态、错误提示都算可见文案。
+HTTP 继续通过 lang Cookie 产生 Accept-Language，不在页面里自造语言状态。
+```
+
+前端新模块至少验证：
+
+```powershell
+cd E:\admin_go\admin_front_ts
+npm run test -- tests/shared/i18n/literal-i18n-keys.test.ts tests/shared/i18n/no-visible-chinese.test.ts
+npx vue-tsc -b --pretty false
+```
+
+允许例外：
+
+```text
+DB labels、历史日志、用户输入、第三方原始错误、AI prompt/content 不当成业务可见文案强翻译。
+旧模块遗留裸中文可以分批收，但新写和 touched code 不准继续扩大问题。
+```
+
+## Frontend CRUD 公共组件规则
+
+标准 CRUD 页面不要手搓。项目已经有自己的表格、搜索、弹窗和 CRUD hook。
+
+默认组合：
+
+```text
+Search      -> E:\admin_go\admin_front_ts\src\components\Search
+AppTable    -> E:\admin_go\admin_front_ts\src\components\Table
+AppDialog   -> E:\admin_go\admin_front_ts\src\components\AppDialog
+useCrudTable -> E:\admin_go\admin_front_ts\src\hooks\useCrudTable.ts
+useTable    -> E:\admin_go\admin_front_ts\src\components\Table\src\useTable.ts
+```
+
+规则：
+
+```text
+CRUD 页面默认使用 Search + AppTable + AppDialog + useCrudTable。
+只读列表默认使用 Search + AppTable + useTable。
+只读列表不准为了方便套 useCrudTable；useCrudTable 只给真正有 create/update/delete/status 语义的页面。
+弹窗用 AppDialog，不直接写 el-dialog。
+表格用 AppTable，不直接写 el-table。
+搜索区域用 Search，不在页面里手写一组 el-form 当筛选表单。
+表格行操作放 AppTable slot，按钮权限用 userStore.can(...)，不把权限判断散成临时变量猜。
+```
+
+允许例外：
+
+```text
+demo/component 展示页可以直接展示底层组件，但必须在页面名和测试里说明它是展示页。
+高度定制的只读操作页可以用 useTable，不用 useCrudTable，但 Search/AppTable/AppDialog 仍然默认必须用。
+第三方组件必须被项目 wrapper 包住后再扩散，不在业务页直接铺开。
+```
+
+## Frontend page-card / body-card 布局规则
+
+用户口中的 body-card，在当前 Vue shell 里就是 `Layout` 给路由页面套的 `page-card`。页面默认已经在卡片里，不准再套一层大卡片把高度链撑烂。
+
+当前事实：
+
+```text
+src/views/Layout/index.vue 根据 route.meta.pageLayout 给 route view 加 page-card。
+AppTable fixedFooter=true 时会给 ElTable 注入 height: 100%，父级必须提供稳定高度链。
+移动端 page-card 是 auto height + min-height: 100%；桌面端 page-card 是 height: 100%。
+```
+
+规则：
+
+```text
+普通业务页默认不要新增外层 el-card / page-card / body-card。
+表格页根节点必须 display:flex; flex-direction:column; height:100%; min-width:0; min-height:0; overflow:hidden。
+Search 在上，AppTable 在下；AppTable 吃剩余高度，不让页面总高度超过 page-card。
+多个面板页面使用轻量 div section，不用 el-card 叠卡片；需要视觉分区就写局部 panel class。
+长内容滚动必须发生在 page-card 内部的具体内容区，不能撑破 Layout。
+Dialog 长内容用 AppDialog 的 height + bodyPadding + 内部滚动，不让弹窗内容把页面撑高。
+不要靠全局 :deep 和魔法 margin 修 page-card 溢出；先修容器高度链。
+```
+
+验证建议：
+
+```powershell
+cd E:\admin_go\admin_front_ts
+npm run test -- tests/shared/layout/page-layout.test.ts
+npm run test -- <touched module test>
+npx vue-tsc -b --pretty false
+```
+
 ## Go 后端规则
 
 Go 代码保持：
@@ -283,6 +399,10 @@ Go 的 goroutine 很轻，但不是免费 CPU。I/O 密集可以较高并发；C
 有明确契约
 没有静默兜底字段
 新 Go API 是 RESTful
+新增/触碰模块默认完成前后端 i18n
+标准 CRUD 页面使用 Search + AppTable + AppDialog + useCrudTable
+只读列表使用 Search + AppTable + useTable
+页面内容不撑破 Layout page-card/body-card
 前端被触碰代码无 any
 有最小测试
 有可复现 smoke 或构建验证

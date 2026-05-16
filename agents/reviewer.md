@@ -11,6 +11,7 @@ AGENTS.md
 docs/architecture/00-open-source-first.md
 docs/architecture/01-step-by-step-roadmap.md
 docs/architecture/02-agent-framework.md
+docs/architecture/05-development-quality-rules.md
 ```
 
 ## 审查重点
@@ -23,6 +24,10 @@ docs/architecture/02-agent-framework.md
 是否把 legacy action 风格带进 Go 新架构
 是否新增了没验证的依赖
 是否 handler/service/repo 边界混乱
+是否新增/触碰模块漏了前后端 i18n
+是否标准 CRUD 页面绕过 Search/AppTable/AppDialog/useCrudTable
+是否只读列表误用 useCrudTable 或手写 el-table/el-dialog/筛选 el-form
+是否页面内容撑破 Layout page-card/body-card
 是否测试和验证缺失
 ```
 

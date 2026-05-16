@@ -71,6 +71,24 @@ docs/testing/pre-push-gates.md
 
 pre-push 不是 full smoke，也不要求 DB/Redis/backend/frontend 默认在线。
 
+## 默认实现质量规则
+
+agent 接手任何模块时，不能只看“能不能跑”。默认实现质量规则统一在：
+
+```text
+docs/architecture/05-development-quality-rules.md
+```
+
+当前必须记住三条：
+
+```text
+Full-stack i18n 默认做：后端 apperror.*Key / response.OKWithMessageKey / 双语 catalog；前端 vue-i18n / zh-CN.ts / en-US.ts。
+Frontend CRUD 默认用项目公共组件：Search + AppTable + AppDialog + useCrudTable；只读列表用 Search + AppTable + useTable。
+Frontend layout 默认待在 Layout page-card/body-card 内：不要重复套大卡片；表格页必须维护 flex 高度链，不能撑破 shell。
+```
+
+这三条属于 agent 冷启动规则，不是具体模块的临时偏好。发现旧代码不符合，可以分批修；新写和 touched code 不准继续扩大坏味道。
+
 ## 输出格式
 
 每个 agent 完成任务时输出：
