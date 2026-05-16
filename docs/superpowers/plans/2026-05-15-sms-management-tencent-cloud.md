@@ -10,6 +10,15 @@
 
 ---
 
+## 2026-05-16 Refresh Notes
+
+- Official Tencent Cloud SMS Go SDK docs use `sms/v20210111` and `SendSms` fields `SmsSdkAppId`, `SignName`, `TemplateId`, `TemplateParamSet`, and `PhoneNumberSet`: https://cloud.tencent.com/document/product/382/43199
+- Tencent Cloud's 2021-01-11 SMS API migration makes `Region` mandatory and renames old 2019 fields to `SmsSdkAppId` / `TemplateId` / `SignName`: https://cloud.tencent.com/document/api/382/63195
+- Tencent Cloud API overview separates runtime `SendSms` from sign/template management APIs: https://cloud.tencent.com/document/api/382/52077
+- `go list -m -versions github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/sms` currently shows `v1.3.93` as the latest SMS module version available in this workspace.
+- `admin_back_go/internal/enum/verify_code.go` already has `VerifyCodeSceneBindPhone`; do not touch verify-code enum just to add a constant that already exists.
+- `admin_front_ts` currently has unrelated payment recharge dirty files. SMS implementation must not stage, revert, or reformat those files.
+
 ## Hard Boundaries
 
 - Do not modify `auth/send-code` in this slice. Phone codes remain fixed `123456`; email still uses Tencent SES.
@@ -19,13 +28,16 @@
 - SecretId/SecretKey must use `secretbox` encryption. HTTP responses return only hints.
 - Every read path must filter `is_del = enum.CommonNo`.
 - `sms_sdk_app_id`, `sign_name`, `region`, and `endpoint` are all used by the `SendSms` call path.
+- Do not add a field unless this plan names its write path, read path, and runtime reason. Specifically no `provider`, `channel`, `app_name`, `brand`, `callback_url`, `retry_count`, `raw_request`, `raw_response`, `template_content`, or `template_params`.
+- Stability means explicit bounded failure, not hidden retries: Tencent SDK calls use context + 10s timeout; every send creates one pending log and finishes it as success/failed; no automatic retry queue, no batch send, no raw payload persistence.
+- SMS implementation must not switch `auth/send-code` phone verification away from fixed `123456` in this slice.
 
 ## File Structure
 
 ### Backend create
 
-- `admin_back_go/database/migrations/20260515_sms_tencent_cloud.sql` — schema, menu, buttons, and role grants.
-- `admin_back_go/internal/enum/sms.go` — SMS log statuses and SMS scene validators.
+- `admin_back_go/database/migrations/20260516_sms_tencent_cloud.sql` — schema, menu, buttons, and role grants.
+- `admin_back_go/internal/enum/sms.go` — SMS log statuses and SMS scene validators, reusing existing verify-code scene constants.
 - `admin_back_go/internal/dict/sms.go` — SMS scenes, log scenes, log statuses, region options.
 - `admin_back_go/internal/module/sms/model.go` — `sms_configs`, `sms_templates`, `sms_logs` GORM models.
 - `admin_back_go/internal/module/sms/dto.go` — response DTOs, service inputs, sender input/result.
@@ -42,7 +54,6 @@
 ### Backend modify
 
 - `admin_back_go/go.mod`, `admin_back_go/go.sum` — add Tencent Cloud SMS SDK module.
-- `admin_back_go/internal/enum/verify_code.go` — add `bind_phone` scene constant if missing.
 - `admin_back_go/internal/server/router.go` — add `SmsService` dependency and route registration.
 - `admin_back_go/internal/bootstrap/app.go` — wire repository, secretbox, Tencent SMS client, sender adapter.
 - `admin_back_go/internal/bootstrap/route_meta.go` — permission and operation-log route rules.
@@ -70,7 +81,7 @@
 
 - `docs/contracts/admin-api-v1.md` — add SMS API contract.
 - `docs/status/current-status.md` — add SMS row after implementation verification.
-- Current smoke matrix doc under `docs/` — add read-only SMS probes next to mail probes.
+- `docs/testing/smoke-matrix.md` — add read-only SMS probes next to mail probes after implementation verification.
 - `docs/superpowers/specs/2026-05-15-sms-management-tencent-cloud-design.md` — mark implemented after all gates pass.
 
 ---
@@ -78,13 +89,12 @@
 ### Task 1: Backend Schema, Enums, Dicts, and Models
 
 **Files:**
-- Create: `admin_back_go/database/migrations/20260515_sms_tencent_cloud.sql`
+- Create: `admin_back_go/database/migrations/20260516_sms_tencent_cloud.sql`
 - Create: `admin_back_go/internal/enum/sms.go`
 - Create: `admin_back_go/internal/dict/sms.go`
 - Create: `admin_back_go/internal/module/sms/model.go`
 - Create: `admin_back_go/internal/module/sms/errors.go`
 - Create: `admin_back_go/internal/module/sms/repository_test.go`
-- Modify: `admin_back_go/internal/enum/verify_code.go`
 
 - [ ] **Step 1: Write failing dict/model tests**
 
@@ -162,7 +172,7 @@ cd admin_back_go
 go test ./internal/module/sms ./internal/dict ./internal/enum
 ```
 
-Expected: compile failure for missing `sms` package, `dict.SmsSceneOptions`, `enum.VerifyCodeSceneBindPhone`, and SMS models.
+Expected: compile failure for missing `sms` package, `dict.SmsSceneOptions`, `dict.SmsLogSceneOptions`, `dict.SmsLogStatusOptions`, and SMS models. `enum.VerifyCodeSceneBindPhone` already exists and must not be re-added.
 
 - [ ] **Step 3: Add SMS enums and dicts**
 
@@ -197,13 +207,7 @@ func IsSmsLogScene(value string) bool {
 }
 ```
 
-Modify `admin_back_go/internal/enum/verify_code.go` to include:
-
-```go
-VerifyCodeSceneBindPhone = "bind_phone"
-```
-
-If that file has a scene slice, include `VerifyCodeSceneBindPhone` without removing `VerifyCodeSceneBindEmail`.
+Do not modify `admin_back_go/internal/enum/verify_code.go`; the current runtime already defines `VerifyCodeSceneBindPhone`.
 
 Create `admin_back_go/internal/dict/sms.go`:
 
@@ -330,7 +334,7 @@ var (
 
 - [ ] **Step 5: Add migration SQL**
 
-Create `admin_back_go/database/migrations/20260515_sms_tencent_cloud.sql` with:
+Create `admin_back_go/database/migrations/20260516_sms_tencent_cloud.sql` with:
 
 ```sql
 CREATE TABLE IF NOT EXISTS `sms_configs` (
@@ -510,7 +514,7 @@ Expected: PASS.
 Commit:
 
 ```powershell
-git add database/migrations/20260515_sms_tencent_cloud.sql internal/enum/sms.go internal/enum/verify_code.go internal/dict/sms.go internal/module/sms/model.go internal/module/sms/errors.go internal/module/sms/repository_test.go
+git add database/migrations/20260516_sms_tencent_cloud.sql internal/enum/sms.go internal/dict/sms.go internal/module/sms/model.go internal/module/sms/errors.go internal/module/sms/repository_test.go
 git commit -m "feat: add sms schema and enums"
 ```
 
@@ -784,10 +788,10 @@ Run:
 
 ```powershell
 cd admin_back_go
-go get github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/sms@v1.3.86
+go get github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/sms@v1.3.93
 ```
 
-Expected: `go.mod` includes `github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/sms v1.3.86`.
+Expected: `go.mod` includes `github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/sms v1.3.93`.
 
 - [ ] **Step 2: Write failing platform tests**
 
@@ -827,6 +831,13 @@ func TestSendErrorExposesTencentCode(t *testing.T) {
 		t.Fatalf("unexpected error: %q", err.Error())
 	}
 }
+
+func TestClientDefaultTimeoutIsBounded(t *testing.T) {
+	client := New(0)
+	if client.Timeout != defaultTimeout {
+		t.Fatalf("default timeout = %s, want %s", client.Timeout, defaultTimeout)
+	}
+}
 ```
 
 - [ ] **Step 3: Run tests to verify failure**
@@ -859,6 +870,7 @@ import (
 
 const defaultTimeout = 10 * time.Second
 
+// SendInput is the minimal Tencent Cloud SMS SendSms request shape used by admin_go.
 type SendInput struct {
 	SecretID       string
 	SecretKey      string
@@ -870,10 +882,21 @@ type SendInput struct {
 	TemplateID     string
 	TemplateParams []string
 }
-type SendResult struct{ RequestID string; SerialNo string; Fee uint64 }
+
+// SendResult is the sanitized SendSms result persisted by the module.
+type SendResult struct {
+	RequestID string
+	SerialNo  string
+	Fee       uint64
+}
+
+// Client wraps Tencent Cloud SMS SDK calls.
 type Client struct{ Timeout time.Duration }
+
+// New creates a Tencent Cloud SMS client wrapper with a bounded timeout.
 func New(timeout time.Duration) *Client { if timeout <= 0 { timeout = defaultTimeout }; return &Client{Timeout: timeout} }
 
+// SendError preserves Tencent Cloud's per-recipient error code without leaking request payloads.
 type SendError struct{ Code string; Message string; Cause error }
 func (e SendError) Error() string { if e.Code == "" { if e.Message != "" { return e.Message }; return e.Cause.Error() }; return e.Code + ": " + e.Message }
 func (e SendError) Unwrap() error { return e.Cause }
@@ -893,7 +916,7 @@ func BuildTemplateParams(variables []string, values map[string]string) ([]string
 }
 ```
 
-`Send` must create `sms.NewSendSmsRequest()` and set:
+`Send` must derive a bounded context when the caller has no earlier deadline, then create `sms.NewSendSmsRequest()` and set:
 
 ```go
 request.SmsSdkAppId = common.StringPtr(strings.TrimSpace(input.SmsSdkAppID))
@@ -912,6 +935,8 @@ result.Fee = uint64Value(response.Response.SendStatusSet[0].Fee)
 ```
 
 If first send status `Code` is non-empty and not `Ok`, return `SendError{Code: code, Message: message}`.
+
+Do not expose request payload, template params, SecretId, or SecretKey in `SendError`.
 
 - [ ] **Step 5: Run tests and commit**
 
@@ -1047,6 +1072,8 @@ result, err := sender.Send(ctx, SendInput{
 ```
 
 Create pending log before the SDK call, finish success with `RequestID`, `SerialNo`, `Fee`, `DurationMS`, `SentAt`, and finish failure with provider error code plus truncated message.
+
+No retry loop is allowed in `Service`. If Tencent returns an error, finish the same log as failed and return a localized error. Retrying belongs to a future explicitly specified queue/outbox slice, not this management slice.
 
 - [ ] **Step 4: Add backend i18n catalogs**
 
@@ -1318,12 +1345,13 @@ Use `BASE = `${ADMIN_API_PREFIX}/sms`` and methods:
 
 ```ts
 pageInit, config, saveConfig, deleteConfig, test,
-templates, createTemplate, addTemplate, updateTemplate, editTemplate,
-updateTemplateStatus, changeTemplateStatus, deleteTemplate,
+templates, createTemplate, updateTemplate, updateTemplateStatus, deleteTemplate,
 logs, log, deleteLog, deleteLogs
 ```
 
 `normalizeLogParams` only sends non-empty `scene`, numeric `status`, trimmed `to_phone`, and date strings.
+
+Do not add duplicate aliases such as `addTemplate`, `editTemplate`, or `changeTemplateStatus` for SMS. Mail has historical aliases, but this new module does not need them.
 
 - [ ] **Step 3: Create dict helper and tab shell**
 
@@ -1418,7 +1446,7 @@ git commit -m "feat: add sms management frontend"
 **Files:**
 - Modify: `docs/contracts/admin-api-v1.md`
 - Modify: `docs/status/current-status.md`
-- Modify: current smoke matrix doc under `docs/`
+- Modify: `docs/testing/smoke-matrix.md`
 - Modify: `admin_back_go/docs/architecture.md`
 - Modify: `docs/superpowers/specs/2026-05-15-sms-management-tencent-cloud-design.md`
 
@@ -1530,12 +1558,19 @@ all tests pass
 both residue checks print no lines
 ```
 
-- [ ] **Step 6: Commit docs**
+- [ ] **Step 6: Commit docs in the correct repos**
 
 ```powershell
-git add docs/contracts/admin-api-v1.md docs/status/current-status.md docs/superpowers/specs/2026-05-15-sms-management-tencent-cloud-design.md admin_back_go/docs/architecture.md docs/testing/smoke-matrix.md
-git commit -m "docs: document sms management contract"
+cd E:\admin_go\admin_back_go
+git add docs/architecture.md
+git commit -m "docs: document sms runtime boundary"
+
+cd E:\admin_go
+git add docs/contracts/admin-api-v1.md docs/status/current-status.md docs/testing/smoke-matrix.md docs/superpowers/specs/2026-05-15-sms-management-tencent-cloud-design.md docs/superpowers/plans/2026-05-15-sms-management-tencent-cloud.md
+git commit -m "docs: refresh sms management contract and plan"
 ```
+
+Do not stage unrelated dirty files from `admin_front_ts`, especially payment recharge work that existed before this SMS slice started.
 
 ---
 

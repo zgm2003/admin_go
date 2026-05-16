@@ -1,7 +1,8 @@
 # Admin SMS Tencent Cloud SMS Design
 
 日期：2026-05-15  
-状态：待评审  
+复核：2026-05-16，按当前 Go/Vue runtime、邮件模块现状和腾讯云 SMS 2021-01-11 API 重新收口
+状态：待落地，未实现
 范围：`admin_back_go` 短信管理、腾讯云短信发送、短信模板/配置/日志、`admin_front_ts` 系统菜单入口
 
 ## Linus 三问
@@ -24,18 +25,38 @@
 
 - 邮件管理已经是当前可用的完整参考实现：`internal/module/mail` + `internal/platform/mail/tencentcloudses`。
 - `auth/send-code` 现在对手机号仍是固定验证码 `123456`，没有短信发送。
+- `admin_back_go/internal/enum/verify_code.go` 已经有 `bind_phone` 场景；短信切片不需要再改验证码场景枚举。
 - 验证码有效期已经沉到 `system_settings.auth.verify_code.ttl_minutes`，邮件和未来短信共用。
+- 当前工作区已有前端 payment recharge 未提交改动；短信落地时不要顺手碰这些文件。
 
 ### 官方依据
 
-- 腾讯云短信发送：`SendSms`
-  - https://cloud.tencent.com/document/product/382/55981
-- 腾讯云短信模板申请：`AddSmsTemplate`
-  - https://cloud.tencent.com/document/product/382/55974
-- 腾讯云短信签名申请：`AddSmsSign`
-  - https://cloud.tencent.com/document/product/382/55971
+- 腾讯云短信 Go SDK 示例：`SendSms` 使用 `SmsSdkAppId`、`SignName`、`TemplateId`、`TemplateParamSet`、`PhoneNumberSet`，手机号使用 `+国家码手机号` 的 E.164 形状。
+  - https://cloud.tencent.com/document/product/382/43199
+- 腾讯云短信 2021-01-11 API 迁移说明：`SmsSdkAppid -> SmsSdkAppId`，`TemplateID -> TemplateId`，`Sign -> SignName`，并且 `Region` 从非必选变成必选。
+  - https://cloud.tencent.com/document/api/382/63195
+- 腾讯云短信 API 概览把运行时发送、模板管理、签名管理分成不同接口族：`SendSms` 是发送，`AddSmsTemplate` / `AddSmsSign` 是审核型管理接口。
+  - https://cloud.tencent.com/document/api/382/52077
 
 结论很简单：`SendSms` 是运行时发送；`AddSmsTemplate` / `AddSmsSign` 是审核型管理接口。第一期不把审核流做进后台。
+
+## 字段准入规则
+
+短信管理照着邮件管理的骨架走，但不能照抄字段。每个字段必须能回答三个问题：
+
+```text
+谁写它？
+谁读它？
+不用它会破坏哪条真实链路？
+```
+
+第一期禁止为了“以后可能用”新增这些字段：
+
+```text
+provider / channel / app_name / brand / callback_url / retry_count / raw_request / raw_response / template_content
+```
+
+如果后续要做回执、重试队列、营销短信、国际短信或多供应商，那是新 spec，不许把预留字段塞进本切片。
 
 ## 方案比较
 
@@ -128,7 +149,7 @@ change_password
 | `secret_key_hint` | 前端只显示 hint，不回传密文 |
 | `sms_sdk_app_id` | `SendSms` 必填 |
 | `sign_name` | `SendSms` 必填签名 |
-| `region` | SDK client region |
+| `region` | 腾讯云 2021-01-11 API 必填 region；第一期只开放 `ap-guangzhou` |
 | `endpoint` | SDK HTTP endpoint，默认 `sms.tencentcloudapi.com` |
 | `status` | 启用/禁用当前配置 |
 | `last_test_at` | 最近一次测试发送时间 |
@@ -181,6 +202,8 @@ ttl_minutes
 
 日志只记录事实，不记录短信正文、不记录验证码明文、不记录完整模板参数。
 
+这些字段已经足够。不要加 `raw_response` 存整包，不要加 `content/body` 存正文，不要加 `template_params` 存变量明文。调试靠 request id、serial no、错误码、耗时和腾讯云控制台，不靠把敏感内容塞进数据库。
+
 ## 发送流程
 
 ### 配置保存
@@ -211,6 +234,22 @@ ttl_minutes
 ### 实际发送
 
 第一期不接 `auth`，但模块要把发送函数做成可复用边界，后续 `auth` 切短信时直接依赖这个 sender 接口即可。
+
+## 稳定性设计
+
+第一期的稳定性不是“加一堆重试和状态机”，而是把失败边界做硬、做小、做可查：
+
+```text
+1. SDK 调用必须带 context 和固定超时，默认 10s；不要无期限卡住 HTTP handler。
+2. 配置缺失、配置禁用、模板缺失、模板禁用、变量不匹配、手机号非法都明确返回业务错误，不假成功。
+3. 调用腾讯云前先写 pending log；成功/失败都 finish 同一条 log，记录 RequestId、SerialNo、Fee、错误码、错误消息、耗时。
+4. 不做自动重试队列。测试发送和未来验证码发送都宁可明确失败，也不要后台悄悄重试导致重复短信。
+5. 不保存短信正文、验证码、完整模板参数、raw request、raw response；稳定性靠结构化错误码和腾讯云 RequestId 排查。
+6. 只支持单手机号发送。腾讯云支持最多 200 个手机号不是本项目第一期需求，不做群发入口。
+7. `auth/send-code` 手机固定 `123456` 在本切片保持不变；短信管理先独立验证，不把登录链路一起拉进风险面。
+```
+
+这比“上来就加重试、回执、异步队列”稳定。那些东西没有业务闭环前都是复杂性。
 
 ## HTTP API
 
