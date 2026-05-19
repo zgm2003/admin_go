@@ -1,6 +1,6 @@
 # Production Deployment Baseline
 
-状态：planned deployment guide for implemented modular monolith baseline。本文不是 Kubernetes 教程，只固定当前项目不能走歪的运行边界。
+状态：生产部署边界说明。具体后端生产 runbook 以 `docs/deployment/docker-first-backend.md` 为准；MySQL/Redis Docker 边界以 `docs/deployment/docker-first-state.md` 为准；前端仍保持现有静态站点部署方式。
 
 ## 进程模型
 
@@ -82,7 +82,9 @@ low      # 慢任务、导入导出、AI 后处理
 4. 真需要时再拆独立服务
 ```
 
-## 环境变量
+## 后端容器运行配置
+
+生产配置由宝塔 Docker / Docker Compose 注入到容器运行时，不再推荐把仓库工作树里的 `.env` 作为生产入口。
 
 最少必须明确配置：
 
@@ -135,19 +137,19 @@ AccessLog middleware
 
 ```text
 1. 备份 MySQL
-2. 备份/记录当前 env
-3. 发布 admin-api/admin-worker 二进制
-4. 先启动一套新 admin-api 验证 /ready
-5. 再切流量
-6. worker 最后滚动替换，避免 in-flight task 被硬杀
+2. 备份 /www/docker/admin-go-backend/admin-go.env
+3. 记录当前 admin_back_go commit
+4. 重新构建并启动 admin-api/admin-worker 容器
+5. 先验证 /ready，再切换或保留宝塔 Nginx 反代
+6. worker 滚动替换，避免 in-flight task 被硬杀
 ```
 
 失败回滚：
 
 ```text
-回退二进制
-恢复 env
-重启 admin-api/admin-worker
+回退 admin_back_go commit
+恢复 /www/docker/admin-go-backend/admin-go.env
+重新构建并启动 admin-api/admin-worker 容器
 确认 /ready 和 full smoke 的核心链路
 ```
 
@@ -159,10 +161,10 @@ AccessLog middleware
 runtime/payment/certs/alipay/<config_code>/<sha256>.crt
 ```
 
-生产 env 必须显式配置：
+后端容器运行配置必须显式配置：
 
 ```text
-PAYMENT_CERT_BASE_DIR=/path/to/admin_back_go
+PAYMENT_CERT_BASE_DIR=/app
 ```
 
 发布 gate：

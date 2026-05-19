@@ -20,7 +20,9 @@ admin-worker 不暴露 REST，不处理浏览器请求。
 WebSocket 当前由 admin-api 承载；连接数/内存/fd 压力上来后再拆 cmd/admin-realtime。
 ```
 
-## 后端启动
+## 后端本地启动
+
+本地开发仍允许 `.env + go run`，这是开发兼容路径，不是生产部署方式。生产后端部署以 `docs/deployment/docker-first-backend.md` 和 `admin_back_go/deploy/docker-first/` 为准。
 
 ```powershell
 cd E:\admin_go\admin_back_go

@@ -1,28 +1,29 @@
-# First Node Baota + Docker Backend Deployment
+# Backend Docker-first Deployment with Baota Docker
 
-状态：第一台机器部署 runbook。当前机器同时承载：
+状态：后端生产部署 canonical runbook。前端仍按现有静态站点方式部署；本文只负责 `admin_back_go` 的 Docker-first 后端部署。
+
+当前生产入口分工：
 
 ```text
-zgm2003.cn       前端静态站点，已由 GitHub CI 发布到宝塔目录
-www.zgm2003.cn   后端 API / WebSocket 入口，宝塔 Nginx 反代到本机 Docker
+zgm2003.cn       前端静态站点，由 GitHub CI / 宝塔静态目录发布
+www.zgm2003.cn   后端 API / WebSocket 入口，宝塔 Nginx 反代到本机或内网 admin-api 容器
 ```
 
-这不是微服务改造。后端仍是 Gin modular monolith，只是把运行进程拆成：
+宝塔 Docker 项目分工：
 
 ```text
-admin-api      HTTP + WebSocket，暴露 127.0.0.1:8080
+admin-go-state    MySQL + Redis，状态服务，独立生命周期
+admin-go-backend  admin-api + admin-worker，应用服务，可随代码发布重建
+```
+
+这不是微服务改造。后端仍是 Gin modular monolith，只是把运行进程固定为 Docker 管理的两个容器：
+
+```text
+admin-api      HTTP + WebSocket，第一台后端默认暴露 127.0.0.1:8080
 admin-worker   队列消费者 + 定时任务，不暴露公网端口
 ```
 
-三机最终拓扑固定为：
-
-```text
-机器 A：118.126.104.244，前端静态站 + 宝塔 Nginx + admin-api/admin-worker Docker
-机器 B：第二台后端，admin-api/admin-worker Docker
-机器 C：状态机，MySQL + Redis，以及后续可选对象存储/备份/监控类状态服务
-```
-
-机器 A / B 都只通过 `MYSQL_DSN` / `REDIS_ADDR` 连接机器 C。不要在 A / B 上再起 MySQL/Redis。
+MySQL/Redis 可以也推荐用宝塔 Docker 管，但必须属于独立的 `admin-go-state` 项目。后端 Compose 不内置 MySQL/Redis；状态项目的 Docker 边界见 `docs/deployment/docker-first-state.md`。
 
 ## 0. Linus 三问
 
@@ -38,9 +39,9 @@ admin-worker   队列消费者 + 定时任务，不暴露公网端口
 
 ```bash
 mkdir -p /www/project
-mkdir -p /www/docker/admin-go/runtime/logs
-mkdir -p /www/docker/admin-go/runtime/payment/certs/alipay
-mkdir -p /www/docker/admin-go/exports
+mkdir -p /www/docker/admin-go-backend/runtime/logs
+mkdir -p /www/docker/admin-go-backend/runtime/payment/certs/alipay
+mkdir -p /www/docker/admin-go-backend/exports
 ```
 
 拉后端代码：
@@ -63,14 +64,14 @@ git reset --hard origin/master
 复制模板：
 
 ```bash
-cp /www/project/admin_back_go/deploy/first-node/admin-go.env.example /www/docker/admin-go/admin-go.env
-chmod 600 /www/docker/admin-go/admin-go.env
+cp /www/project/admin_back_go/deploy/docker-first/admin-go.env.example /www/docker/admin-go-backend/admin-go.env
+chmod 600 /www/docker/admin-go-backend/admin-go.env
 ```
 
 编辑：
 
 ```bash
-vim /www/docker/admin-go/admin-go.env
+vim /www/docker/admin-go-backend/admin-go.env
 ```
 
 必须改掉这些值。这里的 `DB_PRIVATE_IP` / `REDIS_PRIVATE_IP` 指机器 C 的内网 IP；如果机器之间没有可互通内网，才临时使用机器 C 公网 IP，并且安全组/防火墙只放行机器 A / B 的源 IP。
@@ -116,7 +117,7 @@ HTTPS SSL 证书：放宝塔 Nginx，也就是机器 A 的 www.zgm2003.cn 站点
 如果启用支付宝，通过 `/payment/config` 上传后，机器 A 和机器 B 都必须能读到这里的私有证书文件：
 
 ```text
-/www/docker/admin-go/runtime/payment/certs/alipay/<config_code>/<sha256>.crt
+/www/docker/admin-go-backend/runtime/payment/certs/alipay/<config_code>/<sha256>.crt
 ```
 
 容器内对应：
@@ -142,10 +143,10 @@ PAYMENT_CERT_BASE_DIR=/app
 每台后端机器都有自己的日志目录：
 
 ```text
-机器 A：/www/docker/admin-go/runtime/logs/admin-api.log
-机器 A：/www/docker/admin-go/runtime/logs/admin-worker.log
-机器 B：/www/docker/admin-go/runtime/logs/admin-api.log
-机器 B：/www/docker/admin-go/runtime/logs/admin-worker.log
+机器 A：/www/docker/admin-go-backend/runtime/logs/admin-api.log
+机器 A：/www/docker/admin-go-backend/runtime/logs/admin-worker.log
+机器 B：/www/docker/admin-go-backend/runtime/logs/admin-api.log
+机器 B：/www/docker/admin-go-backend/runtime/logs/admin-worker.log
 ```
 
 容器内对应：
@@ -161,7 +162,7 @@ PAYMENT_CERT_BASE_DIR=/app
 
 ```text
 1. 系统日志页面先只作为当前节点运行日志查看。
-2. 真要查全量日志，分别 SSH 到 A / B 看 /www/docker/admin-go/runtime/logs。
+2. 真要查全量日志，分别 SSH 到 A / B 看 /www/docker/admin-go-backend/runtime/logs。
 3. 等正式需要统一日志，再上 Loki/ELK/腾讯云 CLS，不要现在自造一套日志平台。
 ```
 
@@ -177,22 +178,26 @@ PAYMENT_CERT_BASE_DIR=/app
 进入部署目录：
 
 ```bash
-mkdir -p /www/docker/admin-go
-cp /www/project/admin_back_go/deploy/first-node/docker-compose.yml /www/docker/admin-go/docker-compose.yml
-cd /www/docker/admin-go
+mkdir -p /www/docker/admin-go-backend
+cp /www/project/admin_back_go/deploy/docker-first/docker-compose.yml /www/docker/admin-go-backend/docker-compose.yml
+cd /www/docker/admin-go-backend
 ```
 
 确保挂载目录能被容器内 `app` 用户写入：
 
 ```bash
-chown -R 10001:10001 /www/docker/admin-go/runtime /www/docker/admin-go/exports
+chown -R 10001:10001 /www/docker/admin-go-backend/runtime /www/docker/admin-go-backend/exports
 ```
+
+如果使用宝塔 Docker 面板创建 Compose 项目，后端应用项目命名为 `admin-go-backend`，Compose 工作目录使用 `/www/docker/admin-go-backend`，Compose 文件使用 `/www/docker/admin-go-backend/docker-compose.yml`。项目环境变量至少配置 `ADMIN_BACK_GO_DIR=/www/project/admin_back_go` 和 `ADMIN_GO_ENV_FILE=/www/docker/admin-go-backend/admin-go.env`。宝塔 Docker 负责启动、停止、重启、查看容器日志；宝塔 Nginx 仍负责 SSL 和反向代理。
+
+MySQL/Redis 即便也用 Docker，也放在独立的 `admin-go-state` 项目，不写进后端 Compose。
 
 启动：
 
 ```bash
 ADMIN_BACK_GO_DIR=/www/project/admin_back_go \
-ADMIN_GO_ENV_FILE=/www/docker/admin-go/admin-go.env \
+ADMIN_GO_ENV_FILE=/www/docker/admin-go-backend/admin-go.env \
 docker compose up -d --build
 ```
 
@@ -308,7 +313,7 @@ www.zgm2003.cn -> 118.126.104.244 Nginx -> 127.0.0.1:8080 admin-api
 
 ```bash
 ADMIN_BACK_GO_DIR=/www/project/admin_back_go \
-ADMIN_GO_ENV_FILE=/www/docker/admin-go/admin-go.env \
+ADMIN_GO_ENV_FILE=/www/docker/admin-go-backend/admin-go.env \
 ADMIN_API_HOST_BIND=0.0.0.0 \
 ADMIN_API_HOST_PORT=8080 \
 docker compose up -d --build
@@ -350,7 +355,21 @@ SCHEDULER_ENABLED=false
 
 等确认 Redis lock 和任务幂等都没问题，再考虑多 worker 节点同时开 scheduler。
 
-## 8. 回滚
+## 8. 数据库初始化和迁移
+
+Docker-first 只负责后端进程编排，不替代数据库初始化和迁移。首次部署新 MySQL、升级已有 MySQL、补菜单/权限/系统设置 seed 时，必须走单独的 SQL/migration runbook。
+
+本切片不把迁移 SQL 写进 `admin-api` / `admin-worker` 启动流程。迁移是显式步骤，应用启动是显式步骤；后续单独设计 baseline schema、seed 数据、菜单/权限、`system_settings` 默认值和幂等迁移顺序。
+
+当前原则：
+
+```text
+Docker 管应用进程。
+admin-go-state 管 MySQL/Redis 生命周期。
+SQL migration 管数据库结构和基础数据。
+```
+
+## 9. 回滚
 
 记录旧版本：
 
@@ -365,7 +384,7 @@ git rev-parse --short HEAD
 cd /www/project/admin_back_go
 git fetch origin master
 git reset --hard <旧commit>
-cd /www/docker/admin-go
+cd /www/docker/admin-go-backend
 docker compose up -d --build
 curl -fsS http://127.0.0.1:8080/ready
 ```
