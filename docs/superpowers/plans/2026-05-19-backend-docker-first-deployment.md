@@ -616,6 +616,3 @@ Expected: root repo commit succeeds if there were root reference changes. If no 
 - Placeholder scan: this plan contains no unfinished-marker wording and no unspecified implementation step.
 - Type/path consistency: canonical backend runbook path is `docs/deployment/docker-first-backend.md`; canonical state runbook path is `docs/deployment/docker-first-state.md`; canonical backend deploy dir is `admin_back_go/deploy/docker-first/`; service names remain `admin-api` and `admin-worker`.
 - Verification path: root docs checks plus backend `docker compose config --quiet` are included before completion claims.
-
-
-
