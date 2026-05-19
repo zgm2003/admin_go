@@ -25,6 +25,52 @@ admin-worker   队列消费者 + 定时任务，不暴露公网端口
 
 MySQL/Redis 可以也推荐用宝塔 Docker 管，但必须属于独立的 `admin-go-state` 项目。后端 Compose 不内置 MySQL/Redis；状态项目的 Docker 边界见 `docs/deployment/docker-first-state.md`。
 
+
+## 本地 Docker 启动
+
+本仓库本机工作区保留一份被 Git 忽略的真实 Docker env，避免每次都只看到 `.example`：
+
+```text
+admin_back_go/deploy/docker-first/.env
+admin_back_go/deploy/docker-first/admin-go.env
+admin_back_go/deploy/docker-first/runtime/
+admin_back_go/deploy/docker-first/exports/
+```
+
+本地启动：
+
+```powershell
+cd E:/admin_go/admin_back_go/deploy/docker-first
+docker compose up -d --build
+docker compose ps
+curl.exe http://127.0.0.1:8080/health
+curl.exe http://127.0.0.1:8080/ready
+```
+
+如果构建时 Docker Hub token 超时，先改 `admin_back_go/deploy/docker-first/.env` 里的 `GO_BUILD_IMAGE` / `GO_RUNTIME_IMAGE` 到你能访问的镜像源，或先手动 pull/tag 这两个基础镜像；后端 Compose 已把这两个 build args 暴露出来。
+
+默认本地 `admin-go.env` 是 backend-only smoke：
+
+```env
+MYSQL_DSN=
+REDIS_ADDR=
+QUEUE_ENABLED=false
+REALTIME_PUBLISHER=local
+SCHEDULER_ENABLED=false
+```
+
+这样本地没开 MySQL/Redis 时也能先启动容器并验证 `/health`。要跑完整业务 smoke，再改成：
+
+```env
+MYSQL_DSN=root:@tcp(host.docker.internal:3306)/admin?charset=utf8mb4&parseTime=True&loc=Local
+REDIS_ADDR=host.docker.internal:6379
+QUEUE_ENABLED=true
+REALTIME_PUBLISHER=redis
+SCHEDULER_ENABLED=true
+```
+
+如果 MySQL/Redis 也 Docker 化，仍然放独立 `admin-go-state`，这里只改连接地址，不把 mysql/redis 服务塞进 `admin-go-backend` Compose。
+
 ## 0. Linus 三问
 
 ```text

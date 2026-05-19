@@ -30,8 +30,10 @@
   - Backend-repo-local operator guide for the same Docker-first deployment.
 - Modify: `admin_back_go/README.md`
   - Update references from `deploy/first-node` to `deploy/docker-first` and explain that repo `.env` is not the production deployment entry.
-- Optional compatibility: `admin_back_go/deploy/first-node/README.md`
-  - If the old directory is retained for one release, add a pointer to `deploy/docker-first/`.
+- Delete: `admin_back_go/deploy/first-node/`
+  - Remove the old transition directory so there is only one backend Docker entry.
+- Local ignored files: `admin_back_go/deploy/docker-first/.env` and `admin_back_go/deploy/docker-first/admin-go.env`
+  - Keep real local startup env files in the working tree but out of Git.
 
 ---
 
@@ -465,11 +467,13 @@ Expected: root repo commit succeeds.
 
 ---
 
-### Task 5: Update backend README references and optional compatibility pointer
+### Task 5: Update backend README references and remove old first-node path
 
 **Files:**
 - Modify: `admin_back_go/README.md`
-- Optional create: `admin_back_go/deploy/first-node/README.md`
+- Modify: `admin_back_go/.gitignore`
+- Delete: `admin_back_go/deploy/first-node/`
+- Local ignored: `admin_back_go/deploy/docker-first/.env`, `admin_back_go/deploy/docker-first/admin-go.env`
 
 - [ ] **Step 1: Replace backend README deploy path references**
 
@@ -497,30 +501,38 @@ Production backend deployment is Docker-first. Use `deploy/docker-first/docker-c
 
 Expected: README distinguishes local `.env` from production Docker runtime config.
 
-- [ ] **Step 3: Add a compatibility pointer if `deploy/first-node/` remains**
-
-If `admin_back_go/deploy/first-node/` is kept for one release, create `admin_back_go/deploy/first-node/README.md` with:
-
-```markdown
-# Deprecated deploy path
-
-Use `../docker-first/` for the canonical backend Docker-first deployment assets.
-
-This directory is retained only to avoid breaking existing server-side notes during the transition.
-```
-
-Expected: old deploy path cannot be mistaken as canonical.
-
-- [ ] **Step 4: Commit backend README updates**
+- [ ] **Step 3: Remove the old first-node directory**
 
 Run:
 
 ```powershell
-git -C admin_back_go add README.md deploy/first-node/README.md
-git -C admin_back_go commit -m "docs: point backend deployment to docker-first"
+git -C admin_back_go rm -r deploy/first-node
 ```
 
-Expected: backend repo commit succeeds. If `deploy/first-node/README.md` was not created because the old directory was removed in a later implementation, omit it from `git add`.
+Expected: `admin_back_go/deploy/` contains only `docker-first` for backend Docker deployment assets.
+
+- [ ] **Step 4: Create ignored local Docker env files**
+
+Create local-only files for direct startup from `deploy/docker-first/`:
+
+```text
+deploy/docker-first/.env
+deploy/docker-first/admin-go.env
+```
+
+Expected: local `docker compose up -d --build` does not require manually inventing env file names.
+
+- [ ] **Step 5: Commit backend cleanup updates**
+
+Run:
+
+```powershell
+git -C admin_back_go add README.md .gitignore deploy/docker-first/README.md
+git -C admin_back_go add -u deploy/first-node
+git -C admin_back_go commit -m "docs: keep only docker-first deploy entry"
+```
+
+Expected: backend repo commit succeeds; local `.env` and `admin-go.env` remain ignored.
 
 ---
 

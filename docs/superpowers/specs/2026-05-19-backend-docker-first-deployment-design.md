@@ -34,9 +34,9 @@ MySQL/Redis 可以也推荐用 Docker，但必须作为独立的状态服务项�
 ## 当前事实
 
 - `admin_back_go/Dockerfile` 已能构建 `admin-api` 和 `admin-worker` 两个二进制。
-- `admin_back_go/deploy/first-node/docker-compose.yml` 已有双服务容器形态：`admin-api` 暴露 8080，`admin-worker` 不暴露公网端口。
-- `admin_back_go/deploy/first-node/admin-go.env.example` 已包含生产所需后端配置模板。
-- 当前 root 部署文档 `docs/deployment/first-node-baota-docker.md` 已经是宝塔 + Docker 方向，但文件名和口径仍像第一台机器临时 runbook。
+- `admin_back_go/deploy/docker-first/docker-compose.yml` 是当前 canonical 双服务容器形态：`admin-api` 暴露 8080，`admin-worker` 不暴露公网端口。
+- `admin_back_go/deploy/docker-first/compose.env.example` 和 `admin-go.env.example` 分别负责 Compose 项目变量和后端运行配置模板。
+- `admin_back_go/deploy/first-node/` 是旧过渡目录，确认无 active 文档依赖后应删除，避免和 Docker-first canonical 入口并存。
 - `docs/deployment/production.md` 仍有偏传统进程/环境变量部署的表述，需要降级为架构边界或指向 Docker-first runbook。
 - `docs/deployment/local.md` 仍以 `.env + go run` 作为默认本地启动方式，需要明确这是开发兼容路径，不是生产路径。
 
@@ -127,7 +127,7 @@ Redis 设置密码，不暴露公网端口
 裸机 systemd 读取 repo .env
 ```
 
-Docker-first 有两类 env：`compose.env.example` 生成 `/www/docker/admin-go-backend/.env`，给 Docker Compose 解析路径、端口、构建上下文；`admin-go.env.example` 生成 `/www/docker/admin-go-backend/admin-go.env`，给后端容器进程读取业务运行配置。后端代码仍读取 `os.Getenv`。Docker-first 不是“没有环境变量”，而是“环境变量由容器运行时注入，不由仓库工作树 `.env` 文件承担生产入口”。
+Docker-first 有两类 env：`compose.env.example` 生成 `/www/docker/admin-go-backend/.env`，给 Docker Compose 解析路径、端口、构建上下文；`admin-go.env.example` 生成 `/www/docker/admin-go-backend/admin-go.env`，给后端容器进程读取业务运行配置。为了本地能直接启动，本机工作区可以有被 Git 忽略的 `deploy/docker-first/.env` 和 `deploy/docker-first/admin-go.env`。后端代码仍读取 `os.Getenv`。Docker-first 不是“没有环境变量”，而是“环境变量由容器运行时注入，不由仓库工作树根 `.env` 文件承担生产入口”。
 
 必须稳定的生产配置：
 
@@ -154,6 +154,8 @@ admin_back_go/deploy/docker-first/
   compose.env.example
   admin-go.env.example
   README.md
+  .env          # local only, ignored
+  admin-go.env  # local only, ignored
 ```
 
 推荐 root canonical runbook：
@@ -169,10 +171,10 @@ docs/deployment/docker-first-state.md
 
 ```text
 docs/deployment/first-node-baota-docker.md -> 重命名为 docker-first-backend.md
-admin_back_go/deploy/first-node/ -> 可保留一轮兼容，但新文档只指向 deploy/docker-first/
+admin_back_go/deploy/first-node/ -> 删除，不保留第二套活动入口
 ```
 
-如果后续确认没有外部脚本依赖 `deploy/first-node/`，再删除旧目录。
+删除旧目录的原因：当前 active docs 已指向 `deploy/docker-first/`，继续保留 `first-node` 会让宝塔 Docker 项目名、env 文件和本地启动入口产生歧义。
 
 ## 卷和持久化
 
@@ -274,7 +276,7 @@ docker compose -f admin_back_go\deploy\docker-first\docker-compose.yml config --
 
 ## 风险和约束
 
-- 如果生产环境继续使用旧 `deploy/first-node/`，重命名需要给一个过渡说明，避免服务器按旧路径更新失败。
+- 如果某台旧服务器仍手工引用 `deploy/first-node/`，升级时必须先改成 `deploy/docker-first/`，因为旧目录不再保留第二套 Compose。
 - 如果 MySQL/Redis 也由宝塔 Docker 管理，必须明确它们是 `admin-go-state` 状态服务，不跟随后端 Compose 随意 `down -v`。
 - 如果后续迁移 SQL 设计不到位，Docker 部署只能证明容器启动，不能证明业务表、菜单、权限和系统配置完整。
 - 如果 `APP_SECRET` 变化，登录态和已加密 secret 会失效，必须继续引用 auth reset runbook。
