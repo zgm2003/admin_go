@@ -8,6 +8,7 @@
 # Local scratch/runtime directories.
 /.tmp/
 /.tmp_*/
+/.docker/
 
 # OS/editor noise.
 .DS_Store

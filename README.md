@@ -85,15 +85,47 @@ docs/deployment/local.md
 admin_back_go/README.md
 ```
 
-### 2. 启动后端 API
+### 2. 启动后端 API / Worker
+
+后端本地开发也统一 Docker-first，不再使用 `go run` 启动 API 或 Worker。
+
+推荐本地 Compose 工作目录放在 root 仓库忽略的 `.docker/admin-go-backend/`：
 
 ```powershell
-cd E:\admin_go\admin_back_go
-Copy-Item .env.example .env  # 仅首次；真实密钥不要提交
-go run ./cmd/admin-api
+cd E:\admin_go
+New-Item -ItemType Directory -Force -Path .docker\admin-go-backend\runtime\logs, .docker\admin-go-backend\exports
+Copy-Item admin_back_go\deploy\docker-first\docker-compose.yml .docker\admin-go-backend\docker-compose.yml
+Copy-Item admin_back_go\deploy\docker-first\compose.env.example .docker\admin-go-backend\.env
+Copy-Item admin_back_go\deploy\docker-first\admin-go.env.example .docker\admin-go-backend\admin-go.env
 ```
 
-默认 API 地址：
+然后编辑：
+
+```text
+E:\admin_go\.docker\admin-go-backend\.env
+E:\admin_go\.docker\admin-go-backend\admin-go.env
+```
+
+至少把 `.env` 里的源码目录改成本机路径：
+
+```env
+ADMIN_BACK_GO_DIR=E:/admin_go/admin_back_go
+ADMIN_GO_ENV_FILE=./admin-go.env
+ADMIN_GO_RUNTIME_DIR=./runtime
+ADMIN_GO_EXPORTS_DIR=./exports
+ADMIN_API_HOST_BIND=127.0.0.1
+ADMIN_API_HOST_PORT=8080
+```
+
+启动：
+
+```powershell
+cd E:\admin_go\.docker\admin-go-backend
+docker compose up -d --build
+docker compose ps
+```
+
+默认 API 地址仍是：
 
 ```text
 http://127.0.0.1:8080
@@ -106,16 +138,7 @@ GET /health
 GET /ready
 ```
 
-### 3. 启动后端 Worker
-
-另开一个终端：
-
-```powershell
-cd E:\admin_go\admin_back_go
-go run ./cmd/admin-worker
-```
-
-职责分工：
+职责分工不变：
 
 ```text
 admin-api    负责 HTTP API / WebSocket

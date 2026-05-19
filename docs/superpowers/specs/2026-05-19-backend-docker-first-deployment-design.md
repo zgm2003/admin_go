@@ -27,7 +27,7 @@ MySQL/Redis 可以也推荐用 Docker，但必须作为独立的状态服务项�
 - 不把前端塞进后端 Compose。
 - 不拆 Go 后端模块为微服务。
 - 不在本切片改业务 API、RBAC、数据库 schema、队列任务语义。
-- 不第一刀删除 `config.LoadDotEnv()`；它只作为本地兼容入口保留，生产文档不再依赖它。
+- 不把 repository-root `.env` / `.env.example` 作为后端启动入口；本地后端也只走 Docker Compose。
 - 不在本切片编写或执行迁移 SQL，不设计具体表数据 seed 内容。
 - 不让 `admin-api` / `admin-worker` 容器启动时自动改库。
 
@@ -38,7 +38,7 @@ MySQL/Redis 可以也推荐用 Docker，但必须作为独立的状态服务项�
 - `admin_back_go/deploy/docker-first/compose.env.example` 和 `admin-go.env.example` 分别负责 Compose 项目变量和后端运行配置模板。
 - `admin_back_go/deploy/first-node/` 是旧过渡目录，确认无 active 文档依赖后应删除，避免和 Docker-first canonical 入口并存。
 - `docs/deployment/production.md` 仍有偏传统进程/环境变量部署的表述，需要降级为架构边界或指向 Docker-first runbook。
-- `docs/deployment/local.md` 仍以 `.env + go run` 作为默认本地启动方式，需要明确这是开发兼容路径，不是生产路径。
+- `docs/deployment/local.md` 已收口为 Docker-first 本地后端启动；不再允许 `.env + go run` 作为本地后端开发入口。
 
 ## 目标部署拓扑
 
@@ -123,7 +123,7 @@ Redis 设置密码，不暴露公网端口
 
 ```text
 /www/project/admin_back_go/.env
-仓库工作树里的生产 .env
+仓库工作树根 `.env` / `.env.example`
 裸机 systemd 读取 repo .env
 ```
 

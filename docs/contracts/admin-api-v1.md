@@ -2055,7 +2055,7 @@ send_at 空：写 task 后 enqueue notification:send-task:v1，queued=true。
 send_at 非空：只写 pending task，queued=false，等待 scheduler。
 created_by 来自 AuthToken identity.user_id，不接受前端传 created_by。
 DB 写入 + Redis enqueue 当前不是强事务；enqueue 失败会返回明确错误，任务仍留 pending。`cron_task.name=notification_task_scheduler` 对应的 Go registry 会补偿 `send_at IS NULL` 的立即 pending 任务和到期定时任务。后续强一致用 outbox。
-注意：后台如果有旧的 `admin-worker-smoke.exe` 或未重启 worker，可能不包含 notification:send-task:v1 handler，任务会停在 pending 或进入 Asynq archived。运行真实发布前必须启动当前代码的 `go run ./cmd/admin-worker`。
+注意：后台如果有旧的 `admin-worker-smoke.exe` 或未重启 worker，可能不包含 notification:send-task:v1 handler，任务会停在 pending 或进入 Asynq archived。运行真实发布前必须启动当前代码构建出的 `admin-worker` Docker 容器。
 ```
 
 ### Cancel / Delete

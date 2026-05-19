@@ -17,7 +17,7 @@
 - Modify: `docs/deployment/production.md`
   - Keep architecture boundaries, point production operators to `docker-first-backend.md` for the concrete runbook.
 - Modify: `docs/deployment/local.md`
-  - Mark `.env + go run` as local development compatibility, not production deployment.
+  - Make local backend development Docker-first; remove `.env + go run` as a supported startup path.
 - Create: `docs/deployment/docker-first-state.md`
   - State-service boundary doc for MySQL/Redis Docker usage, lifecycle isolation, backup/connection rules, and the explicit SQL-migration deferral.
 - Create: `admin_back_go/deploy/docker-first/docker-compose.yml`
@@ -448,7 +448,7 @@ In `docs/deployment/local.md`, replace the `## 后端启动` introductory lines 
 ```markdown
 ## 后端本地启动
 
-本地开发仍允许 `.env + go run`，这是开发兼容路径，不是生产部署方式。生产后端部署以 `docs/deployment/docker-first-backend.md` 和 `admin_back_go/deploy/docker-first/` 为准。
+后端本地开发统一 Docker-first，不再允许 `.env + go run` 启动 `admin-api` / `admin-worker`。
 ```
 
 Expected: local docs do not imply `.env` is the production path.
@@ -495,7 +495,7 @@ Expected: backend README points to the canonical deploy assets.
 Add this paragraph near the backend deployment section in `admin_back_go/README.md`:
 
 ```markdown
-Production backend deployment is Docker-first. Use `deploy/docker-first/docker-compose.yml` with Baota Docker or `docker compose`; do not use the repository working-tree `.env` as the production entry. The `.env.example` at the repository root is kept for local `go run` compatibility only.
+Backend deployment and local backend development are Docker-first. Use `deploy/docker-first/docker-compose.yml` with Baota Docker or `docker compose`; do not use repository-root `.env` / `.env.example`, and do not start `admin-api` or `admin-worker` with `go run`.
 ```
 
 Expected: README distinguishes local `.env` from production Docker runtime config.

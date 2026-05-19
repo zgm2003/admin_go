@@ -22,35 +22,63 @@ WebSocket 当前由 admin-api 承载；连接数/内存/fd 压力上来后再拆
 
 ## 后端本地启动
 
-本地开发仍允许 `.env + go run`，这是开发兼容路径，不是生产部署方式。生产后端部署以 `docs/deployment/docker-first-backend.md` 和 `admin_back_go/deploy/docker-first/` 为准。
+后端本地开发统一 Docker-first，不再使用 `.env + go run` 启动 `admin-api` / `admin-worker`。
 
-```powershell
-cd E:\admin_go\admin_back_go
-Copy-Item .env.example .env  # 仅首次；真实密码不要提交
+`admin_back_go/deploy/docker-first/` 只保存可提交模板；真实运行文件放 root 仓忽略的本地 Compose 工作目录：
 
-go run ./cmd/admin-api
+```text
+E:\admin_go\.docker\admin-go-backend\.env
+E:\admin_go\.docker\admin-go-backend\admin-go.env
+E:\admin_go\.docker\admin-go-backend\runtime\
+E:\admin_go\.docker\admin-go-backend\exports\
 ```
 
-另开一个终端启动 worker：
+首次准备：
 
 ```powershell
-cd E:\admin_go\admin_back_go
-go run ./cmd/admin-worker
+cd E:\admin_go
+New-Item -ItemType Directory -Force -Path .docker\admin-go-backend\runtime\logs, .docker\admin-go-backend\exports
+Copy-Item admin_back_go\deploy\docker-first\docker-compose.yml .docker\admin-go-backend\docker-compose.yml
+Copy-Item admin_back_go\deploy\docker-first\compose.env.example .docker\admin-go-backend\.env
+Copy-Item admin_back_go\deploy\docker-first\admin-go.env.example .docker\admin-go-backend\admin-go.env
 ```
 
-如果 8080 被占用：
+编辑 `.env`：
+
+```env
+ADMIN_BACK_GO_DIR=E:/admin_go/admin_back_go
+ADMIN_GO_ENV_FILE=./admin-go.env
+ADMIN_GO_RUNTIME_DIR=./runtime
+ADMIN_GO_EXPORTS_DIR=./exports
+ADMIN_API_HOST_BIND=127.0.0.1
+ADMIN_API_HOST_PORT=8080
+```
+
+编辑 `admin-go.env`，至少设置：
+
+```env
+MYSQL_DSN=你的 MySQL DSN
+REDIS_ADDR=host.docker.internal:6379
+APP_SECRET=本地长随机字符串，至少 32 位
+CORS_ALLOW_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174
+```
+
+启动后端：
 
 ```powershell
-netstat -ano | Select-String ':8080\s+.*LISTENING'
-Stop-Process -Id <PID> -Force
+cd E:\admin_go\.docker\admin-go-backend
+docker compose up -d --build
+docker compose ps
 ```
 
-或者临时改：
+验证：
 
 ```powershell
-$env:HTTP_ADDR=':18081'
-go run ./cmd/admin-api
+curl.exe http://127.0.0.1:8080/health
+curl.exe http://127.0.0.1:8080/ready
 ```
+
+如果 8080 被占用，改 `.env` 中的 `ADMIN_API_HOST_PORT`，不要用 `go run` 临时绕过。
 
 ## 前端启动
 
@@ -75,7 +103,7 @@ http://127.0.0.1:8080/api/admin/v1/queue-monitor-ui
 
 ## Redis DB 分工
 
-当前 `.env.example` 默认：
+当前 `deploy/docker-first/admin-go.env.example` 默认：
 
 ```text
 REDIS_DB=0          # 普通缓存、验证码、verify code
@@ -110,7 +138,7 @@ noop
 redis
 ```
 
-`redis` fan-out 已实现，主要用于 `notification.created.v1` 的跨进程推送。默认本地 smoke 仍用 `local/noop`；`REALTIME_PUBLISHER=redis` 只有在你确实要测分布式 fan-out 时才启用，别再把它写成 planned。
+`redis` fan-out 已实现，主要用于 `notification.created.v1` 的跨进程推送。本地 Docker smoke 可以用 `local/noop`；`REALTIME_PUBLISHER=redis` 只有在你确实要测分布式 fan-out 时才启用，别再把它写成 planned。
 
 ## 本地验证
 
