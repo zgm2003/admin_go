@@ -52,6 +52,7 @@ Use these words strictly:
 | Frontend route, menu, permission, API adapter | `docs/status/current-status.md`, API contract if the public shape changed, frontend/runtime docs | Do not document a route as usable until the served UI/API path works. |
 | Database schema or seed baseline | `docs/status/current-status.md`, architecture docs, smoke/test docs | Schema text alone is not runtime proof. |
 | Governance or agent workflow | `AGENTS.md`, `agents/README.md`, `docs/README.md`, this document, `docs/testing/pre-push-gates.md` | Keep onboarding paths discoverable and numbered paths stable. |
+| Codex lifecycle hook behavior | `docs/architecture/08-codex-hooks.md`; `.codex/hooks.json` / `.codex/hooks/*.ps1` / `scripts/test-codex-hooks.ps1` when hook implementation changes; `docs/testing/pre-push-gates.md` | Hooks are conversation-time governance only; they must not be documented as runtime proof or smoke evidence. |
 | Spec/plan changes only | The relevant spec/plan | Spec/plan history does not override `current-status`. |
 
 ## Verification matrix
@@ -63,6 +64,7 @@ Use these words strictly:
 | Smoke | Exact smoke command and result. | Pre-push hook pass. |
 | Documentation-only change | `git diff --check` plus path/reference sanity. | No whitespace check. |
 | Governance check | `git diff --check` and the governance checker when present. | Auto-fixing files silently. |
+| Codex hook behavior | `scripts/test-codex-hooks.ps1` output when hook scripts exist plus `/hooks` review/trust note when hook config changed. | Assuming Codex loaded changed hooks without review. |
 
 Hook/checker do not auto-fix files. They report drift and fail only on defined blocking rules. A human must decide the documentation correction.
 

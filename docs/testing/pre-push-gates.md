@@ -16,6 +16,18 @@ Pre-push must not require DB/Redis/backend/frontend to be online. Pre-push must 
 
 Default gate catches whitespace drift and obvious governance/path drift. It does not prove the application works.
 
+## Codex hooks versus Git pre-push
+
+Codex lifecycle hooks and Git pre-push hooks are different layers:
+
+```text
+Codex hooks       = during the Codex conversation
+Git pre-push hook = before pushing Git commits
+Smoke/tests       = task-specific runtime proof
+```
+
+Codex hooks can remind or block during a turn, but they do not prove the final diff is valid. The Git pre-push hook still runs `scripts/check-agent-governance.ps1 -Mode range`.
+
 ## Strict gate
 
 Strict gate = heavier checks for release or module finish.

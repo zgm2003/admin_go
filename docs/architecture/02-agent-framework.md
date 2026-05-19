@@ -84,12 +84,17 @@ Codex hooks 的项目级说明在：
 docs/architecture/08-codex-hooks.md
 ```
 
-该文档由本治理计划 Task 2 新增；在落地完成前，以当前 spec/plan 为执行依据。
 
-默认加载位置：
+计划配置入口：
 
 ```text
 .codex/hooks.json
+.codex/config.toml
+```
+
+计划脚本位置：
+
+```text
 .codex/hooks/*.ps1
 ```
 

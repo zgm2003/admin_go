@@ -29,7 +29,7 @@
 8. docs/architecture/04-go-backend-framework.md
 9. docs/architecture/05-development-quality-rules.md
 10. docs/architecture/07-documentation-governance.md
-11. docs/architecture/08-codex-hooks.md (本治理计划 Task 2 新增)
+11. docs/architecture/08-codex-hooks.md
 12. docs/contracts/admin-api-v1.md
 13. docs/contracts/admin-realtime-v1.md
 14. docs/testing/test-strategy.md
@@ -73,7 +73,7 @@ admin_front_ts/   # Vue 前端，独立 Git 仓库
 .tmp*/            # 本地 smoke / runtime scratch
 ```
 
-Codex hooks 落地后位于 root `.codex/`，只服务 Codex 会话生命周期。hook 配置变更后，在 Codex CLI 内用 `/hooks review/trust`。
+Codex hooks 落地后位于 root `.codex/`，只服务 Codex 会话生命周期。hook 配置变更后，在 Codex CLI 内运行 `/hooks`，再 review/trust。
 
 ## 当前真实状态
 

@@ -15,7 +15,7 @@
 8. Read docs/architecture/04-go-backend-framework.md
 9. Read docs/architecture/05-development-quality-rules.md
 10. Read docs/architecture/07-documentation-governance.md
-11. Read docs/architecture/08-codex-hooks.md (本治理计划 Task 2 新增)
+11. Read docs/architecture/08-codex-hooks.md
 12. Read docs/testing/pre-push-gates.md
 13. Pick exactly one role below
 ```
