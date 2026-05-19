@@ -11,7 +11,7 @@
  Target Server Version : 80408 (8.4.8)
  File Encoding         : 65001
 
- Date: 15/05/2026 21:30:28
+ Date: 19/05/2026 22:33:30
 */
 
 SET NAMES utf8mb4;
@@ -591,7 +591,7 @@ CREATE TABLE `cron_task_log`  (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_task_del_id`(`task_id` ASC, `is_del` ASC) USING BTREE,
   INDEX `idx_name_del_id`(`task_name` ASC, `is_del` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 50022 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '定时任务执行日志表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 50684 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '定时任务执行日志表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for export_tasks
@@ -758,7 +758,7 @@ CREATE TABLE `operation_logs`  (
   INDEX `idx_action`(`action` ASC) USING BTREE,
   INDEX `idx_created_at`(`created_at` ASC) USING BTREE,
   INDEX `idx_del_created_id`(`is_del` ASC, `created_at` ASC, `id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 102294 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '操作日志表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 102350 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '操作日志表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for payment_configs
@@ -778,6 +778,7 @@ CREATE TABLE `payment_configs`  (
   `notify_url` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
   `environment` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'sandbox',
   `enabled_methods_json` json NOT NULL,
+  `sort` int NOT NULL DEFAULT 100,
   `status` tinyint NOT NULL DEFAULT 2,
   `remark` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
   `is_del` tinyint NOT NULL DEFAULT 2,
@@ -786,7 +787,8 @@ CREATE TABLE `payment_configs`  (
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_payment_configs_code`(`code` ASC) USING BTREE,
   INDEX `idx_payment_configs_provider_status`(`provider` ASC, `status` ASC, `is_del` ASC) USING BTREE,
-  INDEX `idx_payment_configs_environment`(`environment` ASC, `is_del` ASC) USING BTREE
+  INDEX `idx_payment_configs_environment`(`environment` ASC, `is_del` ASC) USING BTREE,
+  INDEX `idx_payment_configs_provider_status_sort`(`provider` ASC, `status` ASC, `is_del` ASC, `sort` ASC, `id` ASC) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
@@ -818,7 +820,54 @@ CREATE TABLE `payment_orders`  (
   INDEX `idx_payment_order_status_created`(`is_del` ASC, `status` ASC, `created_at` ASC) USING BTREE,
   INDEX `idx_payment_order_config_created`(`config_id` ASC, `created_at` ASC, `is_del` ASC) USING BTREE,
   CONSTRAINT `fk_payment_order_config` FOREIGN KEY (`config_id`) REFERENCES `payment_configs` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for payment_recharge_packages
+-- ----------------------------
+DROP TABLE IF EXISTS `payment_recharge_packages`;
+CREATE TABLE `payment_recharge_packages`  (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `code` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `amount_cents` bigint NOT NULL,
+  `badge` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `sort` int NOT NULL DEFAULT 100,
+  `status` tinyint NOT NULL DEFAULT 1,
+  `is_del` tinyint NOT NULL DEFAULT 2,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_payment_recharge_package_code`(`code` ASC) USING BTREE,
+  INDEX `idx_payment_recharge_package_status_sort`(`status` ASC, `is_del` ASC, `sort` ASC, `id` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 9 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for payment_recharges
+-- ----------------------------
+DROP TABLE IF EXISTS `payment_recharges`;
+CREATE TABLE `payment_recharges`  (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `recharge_no` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `user_id` bigint NOT NULL,
+  `package_code` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `package_name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `amount_cents` bigint NOT NULL,
+  `payment_order_id` bigint NOT NULL,
+  `status` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `paid_at` datetime NULL DEFAULT NULL,
+  `credited_at` datetime NULL DEFAULT NULL,
+  `failure_reason` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `is_del` tinyint NOT NULL DEFAULT 2,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_payment_recharge_no`(`recharge_no` ASC) USING BTREE,
+  UNIQUE INDEX `uk_payment_recharge_order`(`payment_order_id` ASC) USING BTREE,
+  INDEX `idx_payment_recharge_user_status_created`(`user_id` ASC, `is_del` ASC, `status` ASC, `created_at` ASC) USING BTREE,
+  INDEX `idx_payment_recharge_created`(`is_del` ASC, `created_at` ASC) USING BTREE,
+  CONSTRAINT `fk_payment_recharge_order` FOREIGN KEY (`payment_order_id`) REFERENCES `payment_orders` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
+) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for permissions
@@ -846,30 +895,7 @@ CREATE TABLE `permissions`  (
   INDEX `idx_permissions_platform`(`platform` ASC) USING BTREE,
   INDEX `idx_permissions_parent_sort`(`parent_id` ASC, `sort` ASC) USING BTREE,
   INDEX `idx_permissions_status_del_platform_type`(`is_del` ASC, `status` ASC, `platform` ASC, `type` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 558 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '菜单权限表' ROW_FORMAT = Dynamic;
-
--- ----------------------------
--- Table structure for permissions_backup_payment_20260515
--- ----------------------------
-DROP TABLE IF EXISTS `permissions_backup_payment_20260515`;
-CREATE TABLE `permissions_backup_payment_20260515`  (
-  `id` int UNSIGNED NOT NULL DEFAULT 0,
-  `name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '权限名',
-  `path` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT '' COMMENT '路由',
-  `icon` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT '' COMMENT '图标',
-  `parent_id` int UNSIGNED NOT NULL DEFAULT 0 COMMENT 'parent permission id; 0 means root',
-  `component` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '组件路径',
-  `platform` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'admin' COMMENT '平台：admin=PC后台, app=H5/APP',
-  `type` tinyint UNSIGNED NOT NULL DEFAULT 1 COMMENT 'type: 1 dir 2 page 3 button',
-  `sort` int UNSIGNED NOT NULL DEFAULT 0 COMMENT '排序',
-  `code` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '权限标识',
-  `i18n_key` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT 'i18n键',
-  `show_menu` tinyint UNSIGNED NOT NULL DEFAULT 1 COMMENT 'show menu: 1 yes 2 no',
-  `status` tinyint UNSIGNED NOT NULL DEFAULT 1,
-  `is_del` tinyint UNSIGNED NOT NULL DEFAULT 2,
-  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 586 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '菜单权限表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for role_permissions
@@ -885,20 +911,7 @@ CREATE TABLE `role_permissions`  (
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uniq_role_permission`(`role_id` ASC, `permission_id` ASC) USING BTREE,
   INDEX `idx_role_permissions_permission_del_role`(`permission_id` ASC, `is_del` ASC, `role_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 746 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'role permission pivot' ROW_FORMAT = Dynamic;
-
--- ----------------------------
--- Table structure for role_permissions_backup_payment_20260515
--- ----------------------------
-DROP TABLE IF EXISTS `role_permissions_backup_payment_20260515`;
-CREATE TABLE `role_permissions_backup_payment_20260515`  (
-  `id` int UNSIGNED NOT NULL DEFAULT 0,
-  `role_id` int UNSIGNED NOT NULL COMMENT 'role.id',
-  `permission_id` int UNSIGNED NOT NULL COMMENT 'permission.id',
-  `is_del` tinyint UNSIGNED NOT NULL DEFAULT 2,
-  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 777 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'role permission pivot' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for roles
@@ -915,6 +928,78 @@ CREATE TABLE `roles`  (
   UNIQUE INDEX `uk_roles_name`(`name` ASC) USING BTREE,
   INDEX `idx_roles_default_del`(`is_default` ASC, `is_del` ASC) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 9 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '角色' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for sms_configs
+-- ----------------------------
+DROP TABLE IF EXISTS `sms_configs`;
+CREATE TABLE `sms_configs`  (
+  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
+  `config_key` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'default',
+  `secret_id_enc` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `secret_id_hint` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '',
+  `secret_key_enc` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `secret_key_hint` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '',
+  `sms_sdk_app_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '',
+  `sign_name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '',
+  `region` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'ap-guangzhou',
+  `endpoint` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'sms.tencentcloudapi.com',
+  `status` tinyint UNSIGNED NOT NULL DEFAULT 2,
+  `last_test_at` datetime NULL DEFAULT NULL,
+  `last_test_error` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '',
+  `is_del` tinyint UNSIGNED NOT NULL DEFAULT 2,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_sms_configs_config_key`(`config_key` ASC) USING BTREE,
+  INDEX `idx_sms_configs_status_del`(`status` ASC, `is_del` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for sms_logs
+-- ----------------------------
+DROP TABLE IF EXISTS `sms_logs`;
+CREATE TABLE `sms_logs`  (
+  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
+  `scene` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `template_id` bigint UNSIGNED NULL DEFAULT NULL,
+  `to_phone` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `status` tinyint UNSIGNED NOT NULL,
+  `tencent_request_id` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '',
+  `tencent_serial_no` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '',
+  `tencent_fee` bigint UNSIGNED NOT NULL DEFAULT 0,
+  `error_code` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '',
+  `error_message` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '',
+  `duration_ms` bigint UNSIGNED NOT NULL DEFAULT 0,
+  `sent_at` datetime NULL DEFAULT NULL,
+  `is_del` tinyint UNSIGNED NOT NULL DEFAULT 2,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_sms_logs_scene_created`(`is_del` ASC, `scene` ASC, `created_at` ASC) USING BTREE,
+  INDEX `idx_sms_logs_status_created`(`is_del` ASC, `status` ASC, `created_at` ASC) USING BTREE,
+  INDEX `idx_sms_logs_to_phone_created`(`is_del` ASC, `to_phone` ASC, `created_at` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for sms_templates
+-- ----------------------------
+DROP TABLE IF EXISTS `sms_templates`;
+CREATE TABLE `sms_templates`  (
+  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
+  `scene` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `tencent_template_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `variables_json` json NOT NULL,
+  `sample_variables_json` json NOT NULL,
+  `status` tinyint UNSIGNED NOT NULL DEFAULT 1,
+  `is_del` tinyint UNSIGNED NOT NULL DEFAULT 2,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_sms_templates_scene`(`scene` ASC) USING BTREE,
+  INDEX `idx_sms_templates_status_del`(`status` ASC, `is_del` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for system_settings
@@ -934,39 +1019,6 @@ CREATE TABLE `system_settings`  (
   UNIQUE INDEX `uniq_setting_key`(`setting_key` ASC) USING BTREE,
   INDEX `idx_status_del`(`status` ASC, `is_del` ASC) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 15 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '系统设置（key-value）' ROW_FORMAT = Dynamic;
-
--- ----------------------------
--- Table structure for test
--- ----------------------------
-DROP TABLE IF EXISTS `test`;
-CREATE TABLE `test`  (
-  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `title` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '标题',
-  `username` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '用户名',
-  `nickname` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '昵称',
-  `email` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '邮箱',
-  `phone` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '手机号',
-  `password` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '密码',
-  `avatar` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '头像',
-  `cover_image` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '封面图',
-  `status` tinyint UNSIGNED NOT NULL DEFAULT 1,
-  `type` tinyint UNSIGNED NULL DEFAULT NULL,
-  `sex` tinyint UNSIGNED NOT NULL DEFAULT 0,
-  `age` int NULL DEFAULT NULL COMMENT '年龄',
-  `score` decimal(10, 2) NULL DEFAULT NULL COMMENT '分数',
-  `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '描述',
-  `content` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '内容',
-  `remark` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '备注',
-  `url` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '网址',
-  `published_at` datetime NULL DEFAULT NULL COMMENT '发布时间',
-  `birthday` date NULL DEFAULT NULL COMMENT '生日',
-  `is_vip` tinyint UNSIGNED NOT NULL DEFAULT 2,
-  `is_hot` tinyint UNSIGNED NOT NULL DEFAULT 2,
-  `is_del` tinyint UNSIGNED NOT NULL DEFAULT 2,
-  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-  PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '测试表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for upload_driver
@@ -990,7 +1042,7 @@ CREATE TABLE `upload_driver`  (
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uniq_driver_bucket`(`driver` ASC, `bucket` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 35 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 41 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for upload_rule
@@ -1006,7 +1058,7 @@ CREATE TABLE `upload_rule`  (
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 35 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 37 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for upload_setting
@@ -1025,7 +1077,7 @@ CREATE TABLE `upload_setting`  (
   UNIQUE INDEX `uniq_driver_rule`(`driver_id` ASC, `rule_id` ASC) USING BTREE,
   INDEX `idx_status`(`status` ASC) USING BTREE,
   INDEX `idx_rule`(`rule_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 37 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '上传设置：驱动+规则组合与启用状态' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 43 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '上传设置：驱动+规则组合与启用状态' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for user_profiles
@@ -1072,7 +1124,24 @@ CREATE TABLE `user_sessions`  (
   INDEX `idx_expires_at`(`expires_at` ASC) USING BTREE,
   INDEX `idx_refresh_expires_at`(`refresh_expires_at` ASC) USING BTREE,
   INDEX `idx_active_stats`(`is_del` ASC, `revoked_at` ASC, `expires_at` ASC, `platform` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 893 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户会话表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 913 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户会话表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for user_wallets
+-- ----------------------------
+DROP TABLE IF EXISTS `user_wallets`;
+CREATE TABLE `user_wallets`  (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `user_id` bigint NOT NULL,
+  `balance_cents` bigint NOT NULL DEFAULT 0,
+  `total_recharge_cents` bigint NOT NULL DEFAULT 0,
+  `is_del` tinyint NOT NULL DEFAULT 2,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_user_wallet_user`(`user_id` ASC) USING BTREE,
+  INDEX `idx_user_wallet_isdel`(`is_del` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for users
@@ -1118,7 +1187,7 @@ CREATE TABLE `users_login_log`  (
   INDEX `idx_account_created`(`login_account` ASC, `created_at` DESC) USING BTREE,
   INDEX `idx_ip_created`(`ip` ASC, `created_at` DESC) USING BTREE,
   INDEX `idx_created`(`created_at` DESC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 931 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '登录日志' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 951 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '登录日志' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for users_quick_entry
@@ -1135,6 +1204,32 @@ CREATE TABLE `users_quick_entry`  (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_user_del_sort`(`user_id` ASC, `is_del` ASC, `sort` ASC) USING BTREE,
   INDEX `idx_user_permission_del`(`user_id` ASC, `permission_id` ASC, `is_del` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 104 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户快捷入口' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 108 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户快捷入口' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for wallet_transactions
+-- ----------------------------
+DROP TABLE IF EXISTS `wallet_transactions`;
+CREATE TABLE `wallet_transactions`  (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `transaction_no` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `wallet_id` bigint NOT NULL,
+  `user_id` bigint NOT NULL,
+  `direction` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `amount_cents` bigint NOT NULL,
+  `balance_before_cents` bigint NOT NULL,
+  `balance_after_cents` bigint NOT NULL,
+  `source_type` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `source_id` bigint NOT NULL,
+  `remark` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `is_del` tinyint NOT NULL DEFAULT 2,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_wallet_transaction_no`(`transaction_no` ASC) USING BTREE,
+  UNIQUE INDEX `uk_wallet_transaction_source`(`source_type` ASC, `source_id` ASC) USING BTREE,
+  INDEX `idx_wallet_transaction_user_created`(`user_id` ASC, `is_del` ASC, `created_at` ASC) USING BTREE,
+  INDEX `idx_wallet_transaction_wallet_created`(`wallet_id` ASC, `is_del` ASC, `created_at` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
 
 SET FOREIGN_KEY_CHECKS = 1;
