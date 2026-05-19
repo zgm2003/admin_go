@@ -23,7 +23,7 @@ Official behavior reference:
 - https://developers.openai.com/codex/hooks
 - https://developers.openai.com/codex/config-reference#configtoml
 
-Planned repo-local hook files after hook implementation lands:
+Current repo-local hook files:
 
 ```text
 .codex/hooks.json
@@ -66,8 +66,6 @@ Do not treat hook pass as smoke or runtime verification.
 ```
 
 ## Verification
-
-Hook script tests become runnable after Task 4/5 creates the hook test harness and scripts.
 
 For hook script changes, run:
 
