@@ -116,7 +116,7 @@ Redis 设置密码，不暴露公网端口
 ```text
 宝塔 Docker Compose 项目环境变量 / env_file
 或宝塔 Docker UI 管理的容器环境变量
-或服务器上的 /www/docker/admin-go-backend/admin-go.env
+或服务器上的 /www/docker/admin-go-backend/.env + /www/docker/admin-go-backend/admin-go.env
 ```
 
 明确不再推荐：
@@ -127,7 +127,7 @@ Redis 设置密码，不暴露公网端口
 裸机 systemd 读取 repo .env
 ```
 
-后端代码仍读取 `os.Getenv`。Docker-first 不是“没有环境变量”，而是“环境变量由容器运行时注入，不由仓库 `.env` 文件承担生产入口”。
+Docker-first 有两类 env：`compose.env.example` 生成 `/www/docker/admin-go-backend/.env`，给 Docker Compose 解析路径、端口、构建上下文；`admin-go.env.example` 生成 `/www/docker/admin-go-backend/admin-go.env`，给后端容器进程读取业务运行配置。后端代码仍读取 `os.Getenv`。Docker-first 不是“没有环境变量”，而是“环境变量由容器运行时注入，不由仓库工作树 `.env` 文件承担生产入口”。
 
 必须稳定的生产配置：
 
@@ -151,6 +151,7 @@ SCHEDULER_ENABLED
 ```text
 admin_back_go/deploy/docker-first/
   docker-compose.yml
+  compose.env.example
   admin-go.env.example
   README.md
 ```

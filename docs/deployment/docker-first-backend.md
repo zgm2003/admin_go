@@ -180,8 +180,11 @@ PAYMENT_CERT_BASE_DIR=/app
 ```bash
 mkdir -p /www/docker/admin-go-backend
 cp /www/project/admin_back_go/deploy/docker-first/docker-compose.yml /www/docker/admin-go-backend/docker-compose.yml
+cp /www/project/admin_back_go/deploy/docker-first/compose.env.example /www/docker/admin-go-backend/.env
 cd /www/docker/admin-go-backend
 ```
+
+复制 `/www/docker/admin-go-backend/.env` 后按需调整 `ADMIN_BACK_GO_DIR`、`ADMIN_GO_ENV_FILE`、挂载目录和端口。`.env` 是 Docker Compose 项目变量，不是后端业务运行配置；后端业务配置仍在 `/www/docker/admin-go-backend/admin-go.env`。
 
 确保挂载目录能被容器内 `app` 用户写入：
 
@@ -189,15 +192,13 @@ cd /www/docker/admin-go-backend
 chown -R 10001:10001 /www/docker/admin-go-backend/runtime /www/docker/admin-go-backend/exports
 ```
 
-如果使用宝塔 Docker 面板创建 Compose 项目，后端应用项目命名为 `admin-go-backend`，Compose 工作目录使用 `/www/docker/admin-go-backend`，Compose 文件使用 `/www/docker/admin-go-backend/docker-compose.yml`。项目环境变量至少配置 `ADMIN_BACK_GO_DIR=/www/project/admin_back_go` 和 `ADMIN_GO_ENV_FILE=/www/docker/admin-go-backend/admin-go.env`。宝塔 Docker 负责启动、停止、重启、查看容器日志；宝塔 Nginx 仍负责 SSL 和反向代理。
+如果使用宝塔 Docker 面板创建 Compose 项目，后端应用项目命名为 `admin-go-backend`，Compose 工作目录使用 `/www/docker/admin-go-backend`，Compose 文件使用 `/www/docker/admin-go-backend/docker-compose.yml`。项目环境变量可以来自 `/www/docker/admin-go-backend/.env`，至少包含 `ADMIN_BACK_GO_DIR=/www/project/admin_back_go` 和 `ADMIN_GO_ENV_FILE=./admin-go.env`。宝塔 Docker 负责启动、停止、重启、查看容器日志；宝塔 Nginx 仍负责 SSL 和反向代理。
 
 MySQL/Redis 即便也用 Docker，也放在独立的 `admin-go-state` 项目，不写进后端 Compose。
 
 启动：
 
 ```bash
-ADMIN_BACK_GO_DIR=/www/project/admin_back_go \
-ADMIN_GO_ENV_FILE=/www/docker/admin-go-backend/admin-go.env \
 docker compose up -d --build
 ```
 

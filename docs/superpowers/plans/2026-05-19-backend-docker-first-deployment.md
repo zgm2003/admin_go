@@ -22,6 +22,8 @@
   - State-service boundary doc for MySQL/Redis Docker usage, lifecycle isolation, backup/connection rules, and the explicit SQL-migration deferral.
 - Create: `admin_back_go/deploy/docker-first/docker-compose.yml`
   - Canonical backend Compose file for Baota Docker.
+- Create: `admin_back_go/deploy/docker-first/compose.env.example`
+  - Canonical Docker Compose project env template for paths, ports, and build context.
 - Create: `admin_back_go/deploy/docker-first/admin-go.env.example`
   - Canonical backend runtime env template for Baota Docker Compose.
 - Create: `admin_back_go/deploy/docker-first/README.md`
@@ -142,6 +144,7 @@ Expected: commit succeeds with only root deployment doc rename/update staged.
 
 **Files:**
 - Create: `admin_back_go/deploy/docker-first/docker-compose.yml`
+- Create: `admin_back_go/deploy/docker-first/compose.env.example`
 - Create: `admin_back_go/deploy/docker-first/admin-go.env.example`
 - Create: `admin_back_go/deploy/docker-first/README.md`
 
@@ -153,9 +156,21 @@ Run:
 New-Item -ItemType Directory -Force -Path 'admin_back_go\deploy\docker-first'
 Copy-Item 'admin_back_go\deploy\first-node\docker-compose.yml' 'admin_back_go\deploy\docker-first\docker-compose.yml'
 Copy-Item 'admin_back_go\deploy\first-node\admin-go.env.example' 'admin_back_go\deploy\docker-first\admin-go.env.example'
+Set-Content -Path 'admin_back_go\deploy\docker-first\compose.env.example' -Encoding UTF8 -Value @'
+# Docker Compose project variables for Baota Docker / docker compose.
+# Copy to /www/docker/admin-go-backend/.env on the server.
+# This file is read by docker compose itself; backend runtime config lives in admin-go.env.
+
+ADMIN_BACK_GO_DIR=/www/project/admin_back_go
+ADMIN_GO_ENV_FILE=./admin-go.env
+ADMIN_GO_RUNTIME_DIR=./runtime
+ADMIN_GO_EXPORTS_DIR=./exports
+ADMIN_API_HOST_BIND=127.0.0.1
+ADMIN_API_HOST_PORT=8080
+'@
 ```
 
-Expected: the new directory contains `docker-compose.yml` and `admin-go.env.example`.
+Expected: the new directory contains `docker-compose.yml`, `compose.env.example`, and `admin-go.env.example`.
 
 - [ ] **Step 2: Update the Compose project name**
 
@@ -231,6 +246,7 @@ This directory is the canonical Docker-first deployment entry for `admin_back_go
 ```text
 /www/project/admin_back_go        # backend source checkout
 /www/docker/admin-go-backend              # compose working directory
+/www/docker/admin-go-backend/.env          # docker compose project env
 /www/docker/admin-go-backend/admin-go.env # production runtime env file
 /www/docker/admin-go-backend/runtime      # mounted to /app/runtime
 /www/docker/admin-go-backend/exports      # mounted to /app/exports
@@ -241,11 +257,12 @@ This directory is the canonical Docker-first deployment entry for `admin_back_go
 ```bash
 mkdir -p /www/docker/admin-go-backend/runtime /www/docker/admin-go-backend/exports
 cp /www/project/admin_back_go/deploy/docker-first/docker-compose.yml /www/docker/admin-go-backend/docker-compose.yml
+cp /www/project/admin_back_go/deploy/docker-first/compose.env.example /www/docker/admin-go-backend/.env
 cp /www/project/admin_back_go/deploy/docker-first/admin-go.env.example /www/docker/admin-go-backend/admin-go.env
-chmod 600 /www/docker/admin-go-backend/admin-go.env
+chmod 600 /www/docker/admin-go-backend/.env /www/docker/admin-go-backend/admin-go.env
 chown -R 10001:10001 /www/docker/admin-go-backend/runtime /www/docker/admin-go-backend/exports
 cd /www/docker/admin-go-backend
-ADMIN_BACK_GO_DIR=/www/project/admin_back_go ADMIN_GO_ENV_FILE=/www/docker/admin-go-backend/admin-go.env docker compose up -d --build
+docker compose up -d --build
 ```
 
 ## Validate
@@ -278,7 +295,7 @@ Expected: command exits `0` with no output.
 Run:
 
 ```powershell
-git -C admin_back_go add deploy/docker-first/docker-compose.yml deploy/docker-first/admin-go.env.example deploy/docker-first/README.md
+git -C admin_back_go add deploy/docker-first/docker-compose.yml deploy/docker-first/compose.env.example deploy/docker-first/admin-go.env.example deploy/docker-first/README.md
 git -C admin_back_go commit -m "docs: add docker-first backend deploy assets"
 ```
 
