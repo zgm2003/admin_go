@@ -202,6 +202,16 @@ $stopBarePassOutput = Invoke-HookScript -RepoRoot $repoRoot -RelativePath '.code
 $stopBarePassJson = Convert-JsonOutput $stopBarePassOutput
 Assert-Equals $stopBarePassJson.decision 'block' 'Bare 通过 should not count as evidence.'
 
+$stopBareEnglishPassOutput = Invoke-HookCommand -Command (Get-HookCommand -HooksConfig $hooksConfig -EventName 'Stop') -InputObject @{
+    hook_event_name = 'Stop'
+    cwd = $repoRoot
+    model = 'gpt-5.5'
+    stop_hook_active = $false
+    last_assistant_message = 'done, passed'
+}
+$stopBareEnglishPassJson = Convert-JsonOutput $stopBareEnglishPassOutput
+Assert-Equals $stopBareEnglishPassJson.decision 'block' 'Bare passed should not count as evidence.'
+
 $sessionCommandOutput = Invoke-HookCommand -Command (Get-HookCommand -HooksConfig $hooksConfig -EventName 'SessionStart') -InputObject @{
     hook_event_name = 'SessionStart'
     source = 'startup'
@@ -258,6 +268,18 @@ $removeCommandOutput = Invoke-HookCommand -Command (Get-HookCommand -HooksConfig
 }
 $removeCommandJson = Convert-JsonOutput $removeCommandOutput
 Assert-Equals $removeCommandJson.hookSpecificOutput.permissionDecision 'deny' 'Remove-Item recursive workspace deletion should be denied.'
+
+$removeDotCommandOutput = Invoke-HookCommand -Command (Get-HookCommand -HooksConfig $hooksConfig -EventName 'PreToolUse') -InputObject @{
+    hook_event_name = 'PreToolUse'
+    tool_name = 'Bash'
+    cwd = $repoRoot
+    model = 'gpt-5.5'
+    tool_input = @{
+        command = 'Remove-Item . -Recurse -Force'
+    }
+}
+$removeDotCommandJson = Convert-JsonOutput $removeDotCommandOutput
+Assert-Equals $removeDotCommandJson.hookSpecificOutput.permissionDecision 'deny' 'Remove-Item recursive current-directory deletion should be denied.'
 
 $postCommandOutput = Invoke-HookCommand -Command (Get-HookCommand -HooksConfig $hooksConfig -EventName 'PostToolUse') -InputObject @{
     hook_event_name = 'PostToolUse'

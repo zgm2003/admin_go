@@ -25,8 +25,10 @@ foreach ($pattern in $dangerousPatterns) {
     }
 }
 
-$removeItemTargetPattern = 'E:[\\/]+admin_go|admin_back_go|admin_front_ts|\.git'
+# "." / "./" / ".\" is repo-wide when Codex runs from E:\admin_go, so treat it like a protected target for recursive deletion.
+$removeItemCurrentDirPattern = '(?:^|\s)(?:"\.(?:[\\/])?"|''\.(?:[\\/])?''|\.(?:[\\/])?)(?=\s|$)'
+$removeItemTargetPattern = "E:[\\/]+admin_go|admin_back_go|admin_front_ts|\.git|$removeItemCurrentDirPattern"
 if ($command -match 'Remove-Item\b' -and $command -match '-Recurse\b' -and $command -match $removeItemTargetPattern) {
-    Write-PreToolDeny -Reason 'Blocked by admin_go Codex hook: Remove-Item recursive deletion against a protected workspace target. Ask the user for an explicit narrow confirmation or use a reversible command.'
+    Write-PreToolDeny -Reason 'Blocked by admin_go Codex hook: Remove-Item recursive deletion against a protected workspace or current-directory target. Ask the user for an explicit narrow confirmation or use a reversible command.'
     exit 0
 }
