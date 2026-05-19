@@ -26,6 +26,26 @@ Phase 6: Go/Vue active runtime closure
 Phase 7: Go/Vue module evolution
 ```
 
+## Codex-first 四层治理
+
+本仓库默认是 Codex-first，但不是只靠提示词记忆。
+
+```text
+Superpowers       = 需求理解、spec、plan、TDD 工作法
+agents/           = 项目角色边界，谁负责什么、不能做什么
+Codex hooks       = 对话内提醒、上下文注入、低误伤阻断
+Git pre-push hook = push 前轻量治理检查
+```
+
+默认顺序：
+
+```text
+1. 用 Superpowers 理解需求；新行为/行为变更先 brainstorming
+2. 进入实现或 bugfix 前默认 TDD：先失败测试，再生产代码
+3. 只选一个项目 agent 主角色，不做全能 agent
+4. Codex hooks 只做过程治理，不替代 Git pre-push、smoke 或 runtime 验证
+```
+
 ## Linus 三问
 
 每个任务开始前先问：
@@ -147,6 +167,7 @@ docs/architecture/03-technology-decision.md
 docs/architecture/04-go-backend-framework.md
 docs/architecture/05-development-quality-rules.md
 docs/architecture/07-documentation-governance.md
+docs/architecture/08-codex-hooks.md (本治理计划 Task 2 新增)
 docs/status/current-status.md
 docs/testing/pre-push-gates.md
 ```

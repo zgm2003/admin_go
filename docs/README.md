@@ -29,15 +29,16 @@
 8. docs/architecture/04-go-backend-framework.md
 9. docs/architecture/05-development-quality-rules.md
 10. docs/architecture/07-documentation-governance.md
-11. docs/contracts/admin-api-v1.md
-12. docs/contracts/admin-realtime-v1.md
-13. docs/testing/test-strategy.md
-14. docs/testing/pre-push-gates.md
-15. docs/testing/smoke-matrix.md
-16. docs/deployment/local.md
-17. docs/deployment/production.md
-18. docs/deployment/distributed-readiness.md
-19. docs/deployment/frontend-github-actions-scp.md
+11. docs/architecture/08-codex-hooks.md (本治理计划 Task 2 新增)
+12. docs/contracts/admin-api-v1.md
+13. docs/contracts/admin-realtime-v1.md
+14. docs/testing/test-strategy.md
+15. docs/testing/pre-push-gates.md
+16. docs/testing/smoke-matrix.md
+17. docs/deployment/local.md
+18. docs/deployment/production.md
+19. docs/deployment/distributed-readiness.md
+20. docs/deployment/frontend-github-actions-scp.md
 ```
 
 按任务再读：
@@ -61,6 +62,7 @@ AGENTS.md
 agents/
 docs/
   superpowers/          # spec/plan 总入口；后端子仓不再保存独立 superpowers 计划
+.codex/                 # Codex lifecycle hooks 配置落地后由 root repo 跟踪
 ```
 
 不跟踪：
@@ -70,6 +72,8 @@ admin_back_go/    # Go 后端，独立 Git 仓库
 admin_front_ts/   # Vue 前端，独立 Git 仓库
 .tmp*/            # 本地 smoke / runtime scratch
 ```
+
+Codex hooks 落地后位于 root `.codex/`，只服务 Codex 会话生命周期。hook 配置变更后，在 Codex CLI 内用 `/hooks review/trust`。
 
 ## 当前真实状态
 

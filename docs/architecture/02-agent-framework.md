@@ -4,13 +4,18 @@
 
 `Superpowers` 是通用开发流程框架。`E:\admin_go\agents` 是本项目自己的 agent 分工规则。
 
-两者关系：
+当前治理关系分四层：
 
 ```text
-Superpowers = 怎么推进任务
-agents/     = 谁负责什么、不能做什么、必须产出什么
-docs/superpowers = spec/plan 总入口，包含当前计划和历史归档
+Superpowers       = 怎么理解需求、写 spec/plan、执行 TDD
+agents/           = 谁负责什么、不能做什么、必须产出什么
+Codex hooks       = 对话内提醒、上下文注入、低误伤阻断
+Git pre-push hook = push 前轻量治理检查
 ```
+
+`docs/superpowers` 仍是 spec/plan 的存放入口，不是单独的治理执行层。
+
+`Codex hooks` 不替代 `scripts/check-agent-governance.ps1`、smoke 或 runtime 证据。它只帮助 Codex 在对话过程中少忘规则。
 
 ## Agent 列表
 
@@ -70,6 +75,25 @@ docs/testing/pre-push-gates.md
 ```
 
 pre-push 不是 full smoke，也不要求 DB/Redis/backend/frontend 默认在线。
+
+## Codex lifecycle hooks
+
+Codex hooks 的项目级说明在：
+
+```text
+docs/architecture/08-codex-hooks.md
+```
+
+该文档由本治理计划 Task 2 新增；在落地完成前，以当前 spec/plan 为执行依据。
+
+默认加载位置：
+
+```text
+.codex/hooks.json
+.codex/hooks/*.ps1
+```
+
+项目 hooks 只做对话内治理：冷启动提示、Superpowers/TDD 提醒、危险命令低误伤阻断、完成前验证提醒。不要让 hooks 自动改业务代码、自动修文档或假装覆盖所有工具路径。
 
 ## 默认实现质量规则
 
