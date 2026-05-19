@@ -48,6 +48,10 @@ docs/architecture/02-agent-framework.md
 
 ## 判断标准
 
+架构 agent 默认自己查项目 truth source 和官方工具文档。只有真实不可逆产品取舍才问用户。
+
+涉及新行为或治理变更时，按 Superpowers 的 brainstorming / spec / plan 推进；Codex hooks 只作过程提醒，不替代架构证据。
+
 好架构不是看起来高级，而是：
 
 ```text

@@ -68,6 +68,12 @@ route -> handler -> service -> repository -> model
 缺 key 可以 fallback，不能 panic；完成态必须跑 internal/i18n coverage。
 ```
 
+## 默认 TDD / 注释规则
+
+后端 feature、bugfix、refactor 默认 TDD：先写失败测试，再改 service/repository/handler。
+
+复杂业务边界必须写注释，尤其是事务、幂等、队列、cron、AI provider、权限和运行时假设。不要写复述代码的注释。
+
 ## 输出要求
 
 必须输出：

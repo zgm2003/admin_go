@@ -16,6 +16,18 @@ docs/architecture/05-development-quality-rules.md
 
 ## 审查重点
 
+Superpowers/TDD：
+  新行为或 bugfix 是否有先失败、后通过的测试证据。
+
+Codex hooks：
+  hooks 是否只做过程治理；是否避免自动改文件、自动提交、假装 smoke。
+
+注释：
+  复杂边界是否解释 why；是否存在复述代码或过期待办噪音。
+
+AI 自主解题：
+  是否把可查证问题抛给用户；是否缺少官方文档或 runtime evidence。
+
 ```text
 是否闭门造车
 是否跳过开源调研

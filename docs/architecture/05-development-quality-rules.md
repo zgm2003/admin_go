@@ -18,6 +18,68 @@
 
 答不清楚就查运行时和旧系统事实，不准猜。
 
+## Superpowers and TDD 默认规则
+
+新行为、行为变更、bugfix、refactor 默认按 Superpowers 流程推进。
+
+```text
+需求不清或要设计新行为 -> brainstorming
+设计认可后 -> spec
+spec 认可后 -> implementation plan
+进入实现 -> TDD
+```
+
+实现阶段默认 TDD：
+
+```text
+先写最小失败测试
+确认失败原因正确
+再写最小生产代码
+确认测试通过
+再重构
+```
+
+docs-only governance changes do not require backend/frontend runtime tests, but they still require `git diff --check` and governance checks.
+
+## AI 自主解题规则
+
+AI 默认自己解决问题，不把可以查证的事情抛回给用户。
+
+默认先查：
+
+```text
+docs/status/current-status.md
+docs/contracts/*
+docs/architecture/*
+runtime docs
+git diff / git status
+targeted tests
+logs and smoke output
+official vendor docs when the behavior is tool/provider-specific
+```
+
+需要问用户：
+
+```text
+真实不可逆业务选择
+需要生产凭据、账号、支付后台或第三方控制台操作
+会删除数据或改变线上状态
+多个产品方案无法从现有规则推出
+用户明确要求先确认
+```
+
+不需要问用户：
+
+```text
+文档归属
+路径命名
+轻量验证命令
+是否先读 current-status
+是否先查官方 Codex/OpenAI docs
+是否遵守 TDD
+是否补必要注释
+```
+
 ## 禁止兜底字段
 
 禁止：
@@ -214,6 +276,37 @@ cd E:\admin_go\admin_front_ts
 npm run test -- tests/shared/layout/page-layout.test.ts
 npm run test -- <touched module test>
 npx vue-tsc -b --pretty false
+```
+
+## 注释规则
+
+AI 应该积极写有用注释，但不制造噪音。
+
+应该写注释：
+
+```text
+非显然业务约束
+事务、幂等、重试、队列、cron、WebSocket、AI provider 边界
+安全、权限、跨仓、部署、运行时假设
+为什么不能用更简单或更常见做法
+临时兼容的退出条件和证据来源
+```
+
+不应该写注释：
+
+```text
+复述代码能直接看出的内容
+没有 owner 或退出条件的待办注释
+用注释掩盖坏命名
+注释与 current-status / contract / runtime 不一致
+把注释当测试或契约
+```
+
+验收口径：
+
+```text
+注释解释 why，不解释肉眼能看到的 what。
+复杂边界没有注释是问题；无意义注释也是问题。
 ```
 
 ## Go 后端规则

@@ -43,6 +43,13 @@ agents/api-contract.md
 
 前端不是自由发挥区。写页面前先按下面默认值落地，除非能拿出更简单、更少破坏的证据。
 
+TDD：
+  前端行为变更默认先补 Vitest / vue-tsc 可验证的测试，再改组件或 composable。
+
+注释：
+  复杂 UI 状态机、权限判断、WebSocket/AI streaming、副作用和兼容边界要解释 why。
+  不写复述模板结构的注释。
+
 ```text
 i18n：
   Vue 组件内用 useI18n().t。
