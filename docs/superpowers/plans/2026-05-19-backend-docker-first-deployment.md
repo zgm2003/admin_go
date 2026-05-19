@@ -32,8 +32,7 @@
   - Update references from `deploy/first-node` to `deploy/docker-first` and explain that repo `.env` is not the production deployment entry.
 - Delete: `admin_back_go/deploy/first-node/`
   - Remove the old transition directory so there is only one backend Docker entry.
-- Local ignored files: `admin_back_go/deploy/docker-first/.env` and `admin_back_go/deploy/docker-first/admin-go.env`
-  - Keep real local startup env files in the working tree but out of Git.
+- Rule: do not keep real `.env`, `admin-go.env`, `runtime/`, or `exports/` inside `admin_back_go/deploy/docker-first/`.
 
 ---
 
@@ -473,7 +472,7 @@ Expected: root repo commit succeeds.
 - Modify: `admin_back_go/README.md`
 - Modify: `admin_back_go/.gitignore`
 - Delete: `admin_back_go/deploy/first-node/`
-- Local ignored: `admin_back_go/deploy/docker-first/.env`, `admin_back_go/deploy/docker-first/admin-go.env`
+- Cleanup: remove any real `.env`, `admin-go.env`, `runtime/`, or `exports/` from `admin_back_go/deploy/docker-first/`
 
 - [ ] **Step 1: Replace backend README deploy path references**
 
@@ -511,16 +510,18 @@ git -C admin_back_go rm -r deploy/first-node
 
 Expected: `admin_back_go/deploy/` contains only `docker-first` for backend Docker deployment assets.
 
-- [ ] **Step 4: Create ignored local Docker env files**
+- [ ] **Step 4: Remove accidental real env/runtime files from deploy assets**
 
-Create local-only files for direct startup from `deploy/docker-first/`:
+Delete these if they exist under `deploy/docker-first/`:
 
 ```text
-deploy/docker-first/.env
-deploy/docker-first/admin-go.env
+.env
+admin-go.env
+runtime/
+exports/
 ```
 
-Expected: local `docker compose up -d --build` does not require manually inventing env file names.
+Expected: the deploy directory contains only committed deploy assets and templates.
 
 - [ ] **Step 5: Commit backend cleanup updates**
 
@@ -532,7 +533,7 @@ git -C admin_back_go add -u deploy/first-node
 git -C admin_back_go commit -m "docs: keep only docker-first deploy entry"
 ```
 
-Expected: backend repo commit succeeds; local `.env` and `admin-go.env` remain ignored.
+Expected: backend repo commit succeeds; deploy directory has no real `.env` or `admin-go.env`.
 
 ---
 

@@ -127,7 +127,7 @@ Redis 设置密码，不暴露公网端口
 裸机 systemd 读取 repo .env
 ```
 
-Docker-first 有两类 env：`compose.env.example` 生成 `/www/docker/admin-go-backend/.env`，给 Docker Compose 解析路径、端口、构建上下文；`admin-go.env.example` 生成 `/www/docker/admin-go-backend/admin-go.env`，给后端容器进程读取业务运行配置。为了本地能直接启动，本机工作区可以有被 Git 忽略的 `deploy/docker-first/.env` 和 `deploy/docker-first/admin-go.env`。后端代码仍读取 `os.Getenv`。Docker-first 不是“没有环境变量”，而是“环境变量由容器运行时注入，不由仓库工作树根 `.env` 文件承担生产入口”。
+Docker-first 有两类 env：`compose.env.example` 生成 `/www/docker/admin-go-backend/.env`，给 Docker Compose 解析路径、端口、构建上下文；`admin-go.env.example` 生成 `/www/docker/admin-go-backend/admin-go.env`，给后端容器进程读取业务运行配置。部署资产目录不保存真实 `.env` 或 `admin-go.env`；真实运行 env 只在服务器 Compose 工作目录或本地临时目录生成。后端代码仍读取 `os.Getenv`。Docker-first 不是“没有环境变量”，而是“环境变量由容器运行时注入，不由仓库工作树根 `.env` 文件承担生产入口”。
 
 必须稳定的生产配置：
 
@@ -154,8 +154,6 @@ admin_back_go/deploy/docker-first/
   compose.env.example
   admin-go.env.example
   README.md
-  .env          # local only, ignored
-  admin-go.env  # local only, ignored
 ```
 
 推荐 root canonical runbook：
@@ -174,7 +172,7 @@ docs/deployment/first-node-baota-docker.md -> 重命名为 docker-first-backend.
 admin_back_go/deploy/first-node/ -> 删除，不保留第二套活动入口
 ```
 
-删除旧目录的原因：当前 active docs 已指向 `deploy/docker-first/`，继续保留 `first-node` 会让宝塔 Docker 项目名、env 文件和本地启动入口产生歧义。
+删除旧目录的原因：当前 active docs 已指向 `deploy/docker-first/`，继续保留 `first-node` 会让宝塔 Docker 项目名和 env 模板入口产生歧义。
 
 ## 卷和持久化
 
