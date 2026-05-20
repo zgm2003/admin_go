@@ -69,7 +69,7 @@ taskqueue.Mux 已注册 handler 可以处理 project task
 jobs.Register 同时注册 system:no-op:v1、auth:login-log:v1、notification:dispatch-due:v1、notification:send-task:v1
 jobs.RegisterSchedules 不再注册静态业务 schedule；cron-to-queue 由 internal/module/crontask.SchedulerService.RegisterEnabled 负责
 notification_task_scheduler 只写 cron_task_log 并 enqueue notification:dispatch-due:v1；dispatch-due handler 才 claim 到期 notification_task 并 enqueue send-task
-ai_run_timeout 由 Go registry 投递 ai:run-timeout:v1；aichat worker handler 只扫描并标记超过 AI_RUN_STALE_TIMEOUT 的残留 running ai_runs
+ai_run_timeout 由 Go registry 投递 ai:run-timeout:v1；aichat worker handler 只扫描并标记超过代码内置 AI run stale timeout 默认值的残留 running ai_runs
 AI conversation focused gates cover aiconversation/aimessage/aichat REST/service contracts plus frontend AI REST/WebSocket event contract tests; aitool gate covers tool definition/binding/internal dispatch/audit; airun gate covers token-only `ai_runs` / `ai_run_events` monitor reads, aggregates, and `ai_tool_calls` detail visibility
 realtime Redis Pub/Sub fan-out 通过 `go test ./internal/platform/realtime ./internal/module/notificationtask ./internal/bootstrap` 验证，不在 smoke 发送真实通知
 admin-worker 可构造 queue server + scheduler；admin-api 只持有 producer，不消费队列

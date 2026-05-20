@@ -1594,7 +1594,7 @@ Runtime rules:
 - `ai:conversation-reply:v1` remains a registered worker task type, but it is not the active browser chat MVP handoff path; the API process owns the immediate reply execution so local WebSocket conversations do not depend on a separately running worker
 - `POST /messages/cancel` cancels the matching in-process reply context by `conversation_id + request_id`; late WebSocket events for a locally canceled request must be ignored by the browser
 - provider stream is consumed only inside Go and converted to admin_go WebSocket envelopes; the browser never receives provider stream directly
-- AI chat streaming timeout is layered: provider stream reads do not use a 30s total HTTP timeout; live reply max duration is controlled by `AI_CHAT_STREAM_MAX_DURATION`; upstream silence is controlled by `AI_CHAT_STREAM_IDLE_TIMEOUT`; `ai_run_timeout` only marks stale running rows older than `AI_RUN_STALE_TIMEOUT`
+- AI chat streaming timeout is layered: provider stream reads do not use a 30s total HTTP timeout; live reply max duration, upstream silence timeout, and stale-run cleanup window are code-owned runtime guardrails, not Docker-first env knobs; `ai_run_timeout` only marks stale running rows older than the stale-run cleanup window
 - OpenAI-compatible Chat Completions requests set `stream_options.include_usage=true`; token usage is written to existing `prompt_tokens`, `completion_tokens`, and `total_tokens` fields when the provider returns usage
 - before the first provider call, `aichat` invokes the local knowledge runtime for the selected agent; enabled `ai_agent_knowledge_bases` bindings may inject selected knowledge context into the current user content and persist retrieval audit rows
 - knowledge retrieval failure is non-blocking for chat: the run records a `knowledge_failed` event and continues without knowledge context
@@ -1914,7 +1914,7 @@ queue handler=aichat.TimeoutRuns
 Rules:
 
 - cron row remains DB-owned through System Cron Tasks, but executable truth comes from the Go registry
-- worker marks only stale `running` rows as `timeout`: `status='running' AND started_at IS NOT NULL AND started_at < now - AI_RUN_STALE_TIMEOUT`
+- worker marks only stale `running` rows as `timeout`: `status='running' AND started_at IS NOT NULL AND started_at < now - code-owned AI run stale timeout default`
 - online stream max duration and upstream idle timeout are handled by the live `admin-api` reply execution path, not by this cron task
 - default smoke checks registry/list shape; it does not create a long-running AI run just to time it out
 
@@ -3644,7 +3644,7 @@ AI runtime migration (2026-05-08)
 ai_run_timeout.handler = ai:run-timeout:v1
 ```
 
-`ai_run_timeout` 是 stale-run sweeper only：worker 只处理 `status='running' AND started_at < now - AI_RUN_STALE_TIMEOUT` 的残留运行，不负责正常在线流式请求超时。
+`ai_run_timeout` 是 stale-run sweeper only：worker 只处理超过代码内置 AI run stale timeout 默认值的残留 `running` 运行，不负责正常在线流式请求超时。
 
 ### Routes
 
