@@ -125,6 +125,10 @@ CORS_ALLOW_ORIGINS=https://zgm2003.cn
 
 上传临时凭证开关不再通过 Docker env 配置；后台 enabled upload setting 是唯一启用事实源。COS Bucket、SecretId、SecretKey、Region、APPID、COS 写入端点和访问域名来自后台上传配置，其中 Region 是 COS bucket region，例如 `ap-nanjing`。上传 token TTL 来自 `system_settings.upload.token.ttl_minutes`，默认 15 分钟。Tencent STS API endpoint/region 由 Go 代码内置，避免和 COS bucket region 混淆。
 
+队列运行时：
+
+Docker-first env 的队列组只保留 `QUEUE_ENABLED=true`、`QUEUE_REDIS_DB=3`、`QUEUE_CONCURRENCY=10`。队列 lane 名称、lane 权重、默认 retry/timeout 和 worker shutdown timeout 都是 Go 代码内置默认值；部署只决定是否启用队列、Asynq 使用哪个 Redis DB、以及每个 worker 进程并发跑多少 task handler。
+
 日志运行时：
 
 Docker-first env 的日志组只保留 `LOG_DIR=/app/runtime/logs`。文件日志默认开启；API 写 `admin-api.log`，worker 写 `admin-worker.log`。日志文件名、`.log` 读取白名单、最多 tail 2000 行、64MB/7 backups/14 days/compress 轮转策略都是 Go 代码内置默认值，不通过 env 或 `system_settings` 配置。

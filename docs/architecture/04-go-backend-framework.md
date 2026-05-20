@@ -253,7 +253,7 @@ internal/jobs/fast
 internal/jobs/slow
 ```
 
-`fast/slow` 只存在于队列配置、worker 部署和任务 SLA 文档里，不成为业务代码目录。
+`fast/slow` 只存在于队列 lane、worker 部署和任务 SLA 文档里，不成为业务代码目录。当前 lane 名称和权重由 `internal/platform/taskqueue` 代码内置，普通 Docker-first env 不暴露 lane 权重。
 
 ### Go concurrency model
 
@@ -281,7 +281,7 @@ CPU 密集任务：控制并发，放 low queue 或独立 worker，必要时限�
 
 ```text
 启动更多 cmd/admin-worker 进程
-或给不同 worker 配不同 queue 权重
+或按节点能力调整 QUEUE_CONCURRENCY
 或把 low/AI worker 单独部署
 ```
 

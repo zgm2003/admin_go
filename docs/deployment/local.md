@@ -111,6 +111,8 @@ TOKEN_REDIS_DB=2    # token/session
 QUEUE_REDIS_DB=3    # Asynq queue broker / asynqmon
 ```
 
+本地 Docker-first 只需要保留 `QUEUE_ENABLED`、`QUEUE_REDIS_DB`、`QUEUE_CONCURRENCY`。Queue lane 名称、权重、默认 retry/timeout 和 worker shutdown timeout 都是 Go 代码默认值，不通过本地 env 调。
+
 `/ready` 会分别检查：
 
 ```text

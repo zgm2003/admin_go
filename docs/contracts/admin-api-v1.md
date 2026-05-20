@@ -109,6 +109,8 @@ QUEUE_ENABLED=true 但 REDIS_ADDR 为空时 queue_redis=down。
 REALTIME_ENABLED=true 但 REALTIME_PUBLISHER 是未实现值时 realtime=down。
 ```
 
+Queue Docker-first env 只暴露 `QUEUE_ENABLED`、`QUEUE_REDIS_DB`、`QUEUE_CONCURRENCY`。Queue lane 名称 `critical/default/low`、lane 权重 `6/3/1`、默认重试 `3`、默认 task timeout `30s`、worker shutdown timeout `10s` 都是 `internal/platform/taskqueue` 代码内置默认值，不是 `system_settings`，也不是公开 Docker-first env contract。
+
 通用错误：
 
 ```text
@@ -2102,6 +2104,8 @@ handler 必须幂等，Asynq 是 at-least-once 语义。
 send-task 写入 notifications 后 best-effort 发布 `notification.created.v1`；Redis Pub/Sub 只做实时提示，DB notifications 仍是真相。
 ```
 
+Docker-first queue env 只保留 `QUEUE_ENABLED`、`QUEUE_REDIS_DB`、`QUEUE_CONCURRENCY`。Queue lane policy 跟随 Go 代码和任务 builder 演进，不通过系统设置或部署 env 热改。
+
 Operation log：
 
 ```text
@@ -2219,7 +2223,7 @@ mutating routes 显式注册 operation log rule。
 
 ### Queue Monitor Config Cleanup
 
-`devtools_queue_monitor_queues` 是旧队列监控配置项。Go 队列监控已经采用官方 `asynqmon`、Asynq Redis lane 和 `QUEUE_*` env；系统设置 CRUD 不再读取或维护该 key。
+`devtools_queue_monitor_queues` 是旧队列监控配置项。Go 队列监控已经采用官方 `asynqmon`、Asynq Redis lane 和 Docker-first queue runtime env（仅 `QUEUE_ENABLED` / `QUEUE_REDIS_DB` / `QUEUE_CONCURRENCY`）；系统设置 CRUD 不再读取或维护该 key。
 
 迁移时应将该行软删或标记删除，不删除队列监控功能本身。
 

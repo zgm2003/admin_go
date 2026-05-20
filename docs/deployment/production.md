@@ -77,7 +77,7 @@ low      # 慢任务、导入导出、AI 后处理
 
 ```text
 1. 增加 admin-worker 进程数量
-2. 调整 QUEUE_CONCURRENCY 和 lane 权重
+2. 按 worker 节点能力调整 QUEUE_CONCURRENCY
 3. 单独部署 low/AI worker
 4. 真需要时再拆独立服务
 ```
@@ -98,6 +98,7 @@ APP_SECRET=<at least 64 random chars>
 TOKEN_REDIS_DB=2
 QUEUE_ENABLED=true
 QUEUE_REDIS_DB=3
+QUEUE_CONCURRENCY=10
 REALTIME_ENABLED=true
 REALTIME_PUBLISHER=local
 CORS_ALLOW_ORIGINS=https://admin.example.com
@@ -109,6 +110,7 @@ CORS_ALLOW_ORIGINS=https://admin.example.com
 APP_SECRET 变更会让现有 access/refresh token、Redis session cache、以及已加密的 AI/upload/payment secret 全部失效；变更前按 auth-foundation-v2 reset runbook 处理。
 手机号验证码固定 123456，不接短信，不受 env 控制；邮箱验证码必须走邮件管理配置的腾讯云 SES。生产如果不开放手机号登录，在 auth_platforms.login_types 关闭 phone。
 验证码有效期不是 env；它来自 DB 配置 system_settings.auth.verify_code.ttl_minutes，默认 seed 为 5 分钟，可在 /system/mail 的“验证码公共配置”里修改。Redis namespace auth:verify_code: 由代码内置，不通过 env 配置。验证码模板变量必须且只能包含 code / ttl_minutes。
+Queue lane 名称、lane 权重、默认 retry/timeout 和 worker shutdown timeout 是 Go 代码内置默认值；生产 env 只调 QUEUE_ENABLED、QUEUE_REDIS_DB、QUEUE_CONCURRENCY。
 REALTIME_PUBLISHER 支持 local/noop/redis；redis 是 `notification.created.v1` 的跨进程 fan-out 选项，前提是 Redis 正常可用。
 ```
 
