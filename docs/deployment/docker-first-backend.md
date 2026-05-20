@@ -125,6 +125,10 @@ CORS_ALLOW_ORIGINS=https://zgm2003.cn
 
 上传临时凭证开关不再通过 Docker env 配置；后台 enabled upload setting 是唯一启用事实源。COS Bucket、SecretId、SecretKey、Region、APPID、COS 写入端点和访问域名来自后台上传配置，其中 Region 是 COS bucket region，例如 `ap-nanjing`。上传 token TTL 来自 `system_settings.upload.token.ttl_minutes`，默认 15 分钟。Tencent STS API endpoint/region 由 Go 代码内置，避免和 COS bucket region 混淆。
 
+日志运行时：
+
+Docker-first env 的日志组只保留 `LOG_DIR=/app/runtime/logs`。文件日志默认开启；API 写 `admin-api.log`，worker 写 `admin-worker.log`。日志文件名、`.log` 读取白名单、最多 tail 2000 行、64MB/7 backups/14 days/compress 轮转策略都是 Go 代码内置默认值，不通过 env 或 `system_settings` 配置。
+
 ## 3. 支付证书目录
 
 这里说的是支付宝/支付业务证书，不是 HTTPS SSL 证书。
@@ -178,6 +182,8 @@ PAYMENT_CERT_BASE_DIR=/app
 /app/runtime/logs/admin-api.log
 /app/runtime/logs/admin-worker.log
 ```
+
+`LOG_DIR` 只决定容器内日志目录；具体文件名、tail 上限和轮转策略由 Go 代码固定，部署时不要再配置日志策略类 env 键。
 
 所以后台“系统日志”接口读取的是**当前处理这个请求的后端节点本地日志**。如果 `www.zgm2003.cn` 后面同时负载均衡到 A / B，那么你在页面里看到的系统日志可能一会儿是 A 的，一会儿是 B 的。
 

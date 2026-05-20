@@ -3308,16 +3308,16 @@ admin-api    -> runtime/logs/admin-api.log
 admin-worker -> runtime/logs/admin-worker.log
 ```
 
-文件输出使用 lumberjack 轮转，默认：
+文件输出使用 lumberjack 轮转，代码默认值固定为：
 
 ```text
-LOG_FILE_MAX_SIZE_MB=64
-LOG_FILE_MAX_BACKUPS=7
-LOG_FILE_MAX_AGE_DAYS=14
-LOG_FILE_COMPRESS=true
+file_max_size_mb=64
+file_max_backups=7
+file_max_age_days=14
+file_compress=true
 ```
 
-所以不是一个 `admin-api.log` 无限增长。`LOG_FILE_NAME` 仅保留旧配置入口；实际进程入口会按 `LOG_API_FILE_NAME` / `LOG_WORKER_FILE_NAME` 选择文件名。
+所以不是一个 `admin-api.log` 无限增长。Docker-first env 只保留 `LOG_DIR` 作为部署路径；`admin-api.log` / `admin-worker.log` 文件名、轮转策略、`.log` 白名单和 2000 行 tail 上限都是代码内置默认值。
 
 ### Init
 
@@ -3393,7 +3393,7 @@ Response:
 
 Validation and safety:
 
-- `tail`: 1-2000, capped again by `LOG_MAX_TAIL_LINES`.
+- `tail`: 1-2000, capped again by the code-owned max tail limit 2000.
 - `level`: one of `DEBUG/INFO/WARNING/ERROR/CRITICAL`.
 - `keyword`: max 200 chars.
 - Rejects absolute paths, `..`, backslash paths, null bytes, unsupported extensions, missing files.
