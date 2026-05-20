@@ -112,6 +112,7 @@ APP_SECRET 变更会让现有 access/refresh token、Redis session cache、以�
 验证码有效期不是 env；它来自 DB 配置 system_settings.auth.verify_code.ttl_minutes，默认 seed 为 5 分钟，可在 /system/mail 的“验证码公共配置”里修改。Redis namespace auth:verify_code: 由代码内置，不通过 env 配置。验证码模板变量必须且只能包含 code / ttl_minutes。
 Queue lane 名称、lane 权重、默认 retry/timeout 和 worker shutdown timeout 是 Go 代码内置默认值；生产 env 只调 QUEUE_ENABLED、QUEUE_REDIS_DB、QUEUE_CONCURRENCY。
 REALTIME_PUBLISHER 支持 local/noop/redis；redis 是 `notification.created.v1` 的跨进程 fan-out 选项，前提是 Redis 正常可用。
+Realtime Redis Pub/Sub channel、25s heartbeat、每连接 16 条 send buffer 是 Go 代码内置默认值，不通过 env 或 system_settings 配置。
 ```
 
 ## 日志和请求 ID

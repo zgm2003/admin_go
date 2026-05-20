@@ -18,10 +18,17 @@ SSE: intentionally not supported
 ```text
 REALTIME_ENABLED=true|false
 REALTIME_PUBLISHER=local|noop|redis
-REALTIME_REDIS_CHANNEL=admin_go:realtime:publish
-REALTIME_HEARTBEAT_INTERVAL=25s
-REALTIME_SEND_BUFFER=16
 ```
+
+代码内置 realtime policy：
+
+```text
+Redis Pub/Sub channel: admin_go:realtime:publish
+Heartbeat interval: 25s
+Send buffer per connection: 16
+```
+
+这些值不是 Docker-first env，也不进 system_settings。`REALTIME_PUBLISHER=redis` 时，`admin-api` 和 `admin-worker` 使用同一份代码默认 channel。
 
 `REALTIME_ENABLED=false` 时：
 

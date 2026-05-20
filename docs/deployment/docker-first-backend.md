@@ -113,6 +113,7 @@ APP_SECRET=CHANGE_ME_AT_LEAST_64_RANDOM_CHARS
 APP_ENV=production
 HTTP_ADDR=:8080
 PAYMENT_CERT_BASE_DIR=/app
+REALTIME_ENABLED=true
 REALTIME_PUBLISHER=redis
 CORS_ALLOW_ORIGINS=https://zgm2003.cn
 ```
@@ -128,6 +129,10 @@ CORS_ALLOW_ORIGINS=https://zgm2003.cn
 队列运行时：
 
 Docker-first env 的队列组只保留 `QUEUE_ENABLED=true`、`QUEUE_REDIS_DB=3`、`QUEUE_CONCURRENCY=10`。队列 lane 名称、lane 权重、默认 retry/timeout 和 worker shutdown timeout 都是 Go 代码内置默认值；部署只决定是否启用队列、Asynq 使用哪个 Redis DB、以及每个 worker 进程并发跑多少 task handler。
+
+Realtime 运行时：
+
+Docker-first Realtime env 只保留启用开关和 publisher 拓扑：`REALTIME_ENABLED=true`、`REALTIME_PUBLISHER=redis`。Redis Pub/Sub channel、25s heartbeat、每连接 16 条 send buffer 是 Go 代码内置默认值，不通过 env 或 system_settings 配置。
 
 日志运行时：
 

@@ -128,9 +128,9 @@ queue 启用但 `REDIS_ADDR` 为空时，`queue_redis` 必须 down；这是配�
 ```text
 REALTIME_ENABLED=true
 REALTIME_PUBLISHER=local
-REALTIME_HEARTBEAT_INTERVAL=25s
-REALTIME_SEND_BUFFER=16
 ```
+
+Realtime Redis Pub/Sub channel、heartbeat interval 25s、每连接 send buffer 16 都是 Go 代码内置默认值，不通过 env 或 system_settings 配置。
 
 当前只支持：
 

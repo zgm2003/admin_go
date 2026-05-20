@@ -182,15 +182,13 @@ module/realtime.Handler     # Gin upgrade 边界，注册 session，调用 servi
 module/realtime.Service     # connected/ping/pong/subscribe/error 业务 envelope，不依赖 Gin/gorilla
 ```
 
-当前 send queue buffer 固定为 16。队列满就关闭连接，这是故意的 slow-client drop policy，不做无界缓存。
-
-现在 send queue buffer 已经配置化：
+当前 send queue buffer 由代码默认值控制：
 
 ```text
-REALTIME_SEND_BUFFER=16
+DefaultRealtimeSendBuffer = 16
 ```
 
-默认仍是 16；改大不是“越大越好”，只是给不同部署规模调节慢客户端容忍度。真正慢客户端仍然要丢连接，不能无界缓存。
+默认 16；队列满就关闭连接，这是故意的 slow-client drop policy，不做无界缓存。这个值不放 Docker-first env，也不进 system_settings。
 
 ## Backpressure and lifecycle
 
@@ -261,6 +259,8 @@ redis
 ```
 
 `redis` 是 Redis Pub/Sub fan-out，不是 Redis Streams。未知 `REALTIME_PUBLISHER` 会让 WebSocket upgrade 显式关闭并记录 server log，而不是偷偷退回 local。
+
+Redis Pub/Sub channel、heartbeat interval、send buffer 都是代码内置默认值；Docker-first env 只暴露启用开关和 publisher 拓扑。
 
 好品味点在这里：业务模块以后不应该知道当前是本机连接、Redis Pub/Sub 还是 Redis Streams。它只发 `Publication`。分布式实现替换 Publisher，不反向污染业务 module。
 
