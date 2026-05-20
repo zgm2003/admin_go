@@ -852,7 +852,7 @@ current AuthIdentity.SessionID cannot revoke itself; return code=100.
 missing session returns 404.
 already revoked session is idempotent: { id, revoked: false }.
 new revoke sets user_sessions.revoked_at and clears Redis access token cache.
-single-session pointer TOKEN_REDIS_PREFIX + cur_sess:<platform>:<user_id> is deleted only when its value equals this session id.
+single-session pointer `token:cur_sess:<platform>:<user_id>` is deleted only when its value equals this session id; `token:` is a code-owned Redis namespace.
 response must never include access_token_hash or refresh_token_hash.
 ```
 
@@ -3481,7 +3481,7 @@ Token TTL 事实源：
 ```text
 auth_platforms.access_ttl  = access_token 有效期，单位秒
 auth_platforms.refresh_ttl = refresh_token 总有效期，单位秒
-.env 只保存 APP_SECRET、TOKEN_REDIS_PREFIX、TOKEN_REDIS_DB、TOKEN_SESSION_CACHE_TTL、TOKEN_SINGLE_SESSION_POINTER_TTL 这类运行时基础设施配置。access_ttl / refresh_ttl 仍以 auth_platforms 表为业务事实源
+.env 只保存 `APP_SECRET` 和 `TOKEN_REDIS_DB` 这类认证/session 部署基础项；token Redis prefix `token:`、session cache TTL `30m`、single-session pointer TTL `720h` 是代码内置默认。access_ttl / refresh_ttl 仍以 auth_platforms 表为业务事实源。
 ```
 
 ### Enum / Dict
