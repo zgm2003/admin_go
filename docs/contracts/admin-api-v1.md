@@ -3278,7 +3278,8 @@ Generated key format: {folder}/{yyyy}/{mm}/{dd}/{unix_ms}-{randomhex}-{safe_file
 STS policy is scoped to the generated key resource, not the whole bucket.
 `bucket_domain` in the response is a bare host from upload config, and clients build HTTPS public URLs from it.
 Response never exposes upload_driver secret_id/secret_key plaintext.
-COS_STS_ENABLED=false returns explicit COS temporary credential disabled error.
+Upload token TTL comes from system_settings.upload.token.ttl_minutes.
+Tencent STS API endpoint/region are code-owned platform defaults, not upload config fields; upload config Region remains the COS bucket region.
 No OperationLog route metadata for upload token create, because the response contains temporary STS credentials. Business modules that persist the uploaded object reference own their own operation log.
 Smoke checks token shape only; it never uploads a real file.
 ```
@@ -3292,7 +3293,6 @@ invalid folder                        -> code 100 / 上传目录不支持
 invalid file size                     -> code 100 / 文件大小不正确 or 文件大小超过限制
 invalid extension                     -> code 100 / 文件类型不支持
 decrypt failure or missing secret     -> code 500 / 上传密钥不可用
-COS_STS_ENABLED=false                 -> code 500 / COS 临时凭证未启用
 COS STS provider failure              -> code 500 / COS 临时凭证签发失败
 ```
 

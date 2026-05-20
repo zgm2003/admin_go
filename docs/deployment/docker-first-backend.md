@@ -121,6 +121,10 @@ CORS_ALLOW_ORIGINS=https://zgm2003.cn
 
 手机号验证码固定 `123456`，不接短信，不受 env 控制；邮箱验证码走腾讯云 SES。真实用户上线如果不开放手机号登录，在 `auth_platforms.login_types` 关闭 `phone`。验证码有效期不是 env；它来自 DB 配置 `system_settings.auth.verify_code.ttl_minutes`，默认 seed 为 5 分钟，可在 `/system/mail` 的“验证码公共配置”里修改。Redis namespace `auth:verify_code:` 由代码内置，不通过 env 配置。验证码模板变量必须且只能包含 `code` / `ttl_minutes`。
 
+上传运行时：
+
+上传临时凭证开关不再通过 Docker env 配置；后台 enabled upload setting 是唯一启用事实源。COS Bucket、SecretId、SecretKey、Region、APPID、COS 写入端点和访问域名来自后台上传配置，其中 Region 是 COS bucket region，例如 `ap-nanjing`。上传 token TTL 来自 `system_settings.upload.token.ttl_minutes`，默认 15 分钟。Tencent STS API endpoint/region 由 Go 代码内置，避免和 COS bucket region 混淆。
+
 ## 3. 支付证书目录
 
 这里说的是支付宝/支付业务证书，不是 HTTPS SSL 证书。
