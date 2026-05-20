@@ -27,3 +27,5 @@ The last tool command failed. Return to the earliest uncertain evidence, summari
     Write-HookContext -EventName 'PostToolUse' -Context $context
     exit 0
 }
+
+Write-HookNoop

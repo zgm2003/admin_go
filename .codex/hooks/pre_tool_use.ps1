@@ -8,6 +8,7 @@ $toolName = Get-StringValue $inputObject.tool_name
 $command = Get-StringValue $inputObject.tool_input.command
 
 if ($toolName -ne 'Bash' -and $toolName -ne 'shell_command') {
+    Write-HookNoop
     exit 0
 }
 
@@ -32,3 +33,5 @@ if ($command -match 'Remove-Item\b' -and $command -match '-Recurse\b' -and $comm
     Write-PreToolDeny -Reason 'Blocked by admin_go Codex hook: Remove-Item recursive deletion against a protected workspace or current-directory target. Ask the user for an explicit narrow confirmation or use a reversible command.'
     exit 0
 }
+
+Write-HookNoop

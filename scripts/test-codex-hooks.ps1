@@ -142,6 +142,14 @@ Assert-Equals $promptJson.hookSpecificOutput.hookEventName 'UserPromptSubmit' 'U
 Assert-Contains $promptJson.hookSpecificOutput.additionalContext 'brainstorming'
 Assert-Contains $promptJson.hookSpecificOutput.additionalContext 'TDD'
 
+$promptNoMatchOutput = Invoke-HookScript -RepoRoot $repoRoot -RelativePath '.codex/hooks/user_prompt_submit.ps1' -InputObject @{
+    hook_event_name = 'UserPromptSubmit'
+    prompt = '什么情况呢？'
+    cwd = $repoRoot
+    model = 'gpt-5.5'
+}
+[void](Convert-JsonOutput $promptNoMatchOutput)
+
 $preOutput = Invoke-HookScript -RepoRoot $repoRoot -RelativePath '.codex/hooks/pre_tool_use.ps1' -InputObject @{
     hook_event_name = 'PreToolUse'
     tool_name = 'Bash'
@@ -231,6 +239,14 @@ $promptCommandOutput = Invoke-HookCommand -Command (Get-HookCommand -HooksConfig
 $promptCommandJson = Convert-JsonOutput $promptCommandOutput
 Assert-Equals $promptCommandJson.hookSpecificOutput.hookEventName 'UserPromptSubmit' 'hooks.json UserPromptSubmit event mismatch.'
 Assert-Contains $promptCommandJson.hookSpecificOutput.additionalContext 'Governance reminder'
+
+$promptNoMatchCommandOutput = Invoke-HookCommand -Command (Get-HookCommand -HooksConfig $hooksConfig -EventName 'UserPromptSubmit') -InputObject @{
+    hook_event_name = 'UserPromptSubmit'
+    prompt = '什么情况呢？'
+    cwd = $repoRoot
+    model = 'gpt-5.5'
+}
+[void](Convert-JsonOutput $promptNoMatchCommandOutput)
 
 $preCommandOutput = Invoke-HookCommand -Command (Get-HookCommand -HooksConfig $hooksConfig -EventName 'PreToolUse') -InputObject @{
     hook_event_name = 'PreToolUse'

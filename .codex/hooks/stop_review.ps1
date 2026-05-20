@@ -6,11 +6,13 @@ $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $inputObject = Read-HookInput
 
 if ($inputObject.stop_hook_active -eq $true) {
+    Write-HookNoop
     exit 0
 }
 
 $message = Get-StringValue $inputObject.last_assistant_message
 if ([string]::IsNullOrWhiteSpace($message)) {
+    Write-HookNoop
     exit 0
 }
 
@@ -25,3 +27,5 @@ if ($message -match $claimPattern -and $message -notmatch $evidencePattern) {
     Write-StopBlock -Reason '你刚才声称完成或通过，但最终回答里没有验证证据。请继续一轮：补充实际验证命令和结果；如果只是设计完成或尚未验证，请明确写“未验证”。'
     exit 0
 }
+
+Write-HookNoop

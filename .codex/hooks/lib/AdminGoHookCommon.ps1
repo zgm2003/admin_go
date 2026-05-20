@@ -33,6 +33,10 @@ function Write-HookContext {
     } | ConvertTo-Json -Depth 20 -Compress
 }
 
+function Write-HookNoop {
+    @{} | ConvertTo-Json -Depth 20 -Compress
+}
+
 function Write-PreToolDeny {
     param([Parameter(Mandatory=$true)][string]$Reason)
 

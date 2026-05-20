@@ -34,3 +34,5 @@ Project workflow reminder:
     Write-HookContext -EventName 'UserPromptSubmit' -Context $context
     exit 0
 }
+
+Write-HookNoop
