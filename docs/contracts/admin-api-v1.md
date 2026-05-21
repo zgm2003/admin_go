@@ -3691,7 +3691,7 @@ payment_close_expired_order.handler = payment:close-expired-order:v1
 
 `ai_run_timeout` 是 stale-run sweeper only：worker 只处理超过代码内置 AI run stale timeout 默认值的残留 `running` 运行，不负责正常在线流式请求超时。
 
-支付定时任务只做最终一致性补偿：`payment_sync_pending_order` 扫描支付中支付宝订单并复用手动 sync / callback 的 paid finalizer；`payment_close_expired_order` 扫描过期未支付订单并关闭本地/支付宝订单。
+支付定时任务只做最终一致性补偿：`payment_sync_pending_order` 扫描支付中支付宝订单并复用手动 sync / callback 的 paid finalizer；`payment_close_expired_order` 扫描过期未支付订单并关闭本地/支付宝订单。支付宝返回 `ACQ.TRADE_NOT_EXIST` 且本地订单已过期时按未支付过期处理，同步关闭本地支付订单和关联充值单。
 
 ### Routes
 
