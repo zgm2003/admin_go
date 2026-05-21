@@ -2656,8 +2656,8 @@ backend owner: internal/module/payment
 gateway boundary: internal/platform/payment/alipay
 provider scope: Alipay only
 active tables: payment_configs, payment_orders, payment_recharge_packages, payment_recharges, payment_callback_events, user_wallets, wallet_transactions
-active pages: /payment/config, /payment/recharge
-internal/raw visibility page: /payment/orders is hidden from menu and has no raw create UX
+active pages: /payment/config, /payment/recharge, /payment/orders
+order page: /payment/orders is a product-visible payment-order/expenditure ledger; raw create UX stays hidden
 cert storage: runtime/payment/certs/alipay/<config_code>/<sha256>.crt
 public callback: POST /api/payment/callbacks/alipay
 ```
@@ -2706,13 +2706,13 @@ POST   /api/admin/v1/payment/recharges/:id/sync
 PATCH  /api/admin/v1/payment/recharges/:id/close
 ```
 
-Low-level order routes remain for internal runtime/visibility and existing tests, but `/payment/orders` is not the product entry and the Vue page no longer exposes raw create:
+Payment order routes back the product-visible `/payment/orders` ledger. The Vue page exposes list/detail/pay/sync/close operations, but still does not expose raw create UX:
 
 ```text
 GET    /api/admin/v1/payment/orders/page-init
 GET    /api/admin/v1/payment/orders
 GET    /api/admin/v1/payment/orders/:id
-POST   /api/admin/v1/payment/orders              # backend/internal capability; not exposed by product UX
+POST   /api/admin/v1/payment/orders              # backend/internal capability; raw create UX not exposed by product page
 POST   /api/admin/v1/payment/orders/:id/pay
 POST   /api/admin/v1/payment/orders/:id/sync
 PATCH  /api/admin/v1/payment/orders/:id/close
@@ -2901,11 +2901,14 @@ BUTTON payment_recharge_pay
 BUTTON payment_recharge_sync
 BUTTON payment_recharge_close
 
-HIDDEN PAGE payment_order_list        /payment/orders view_key=payment/orders show_menu=2
-BUTTON      payment_order_pay
-BUTTON      payment_order_sync
-BUTTON      payment_order_close
+PAGE   payment_order_list            /payment/orders view_key=payment/orders show_menu=1
+BUTTON payment_order_add             # backend/internal raw create capability; Vue raw create UX stays retired
+BUTTON payment_order_pay
+BUTTON payment_order_sync
+BUTTON payment_order_close
 ```
+
+`payment_recharge_*` 是产品可见充值入口权限，迁移脚本默认补给 active admin roles；`payment_order_*` 是产品可见支付订单/支出流水权限，但仍按角色单独授权，不跟随充值入口自动扩散。
 
 ### Retired From Active Product Runtime
 
@@ -2913,7 +2916,7 @@ BUTTON      payment_order_close
 payment_channel_* permissions and channel menu
 payment_event_* permissions and event menu
 old pay_* permissions and old wallet menu
-/payment/orders as user-facing raw create entry
+/payment/orders raw create UX
 PaymentOrderFormDialog raw create UX
 /api/admin/v1/payment/channels*
 /api/admin/v1/payment/events*
