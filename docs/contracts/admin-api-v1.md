@@ -3665,7 +3665,7 @@ name: payment_close_expired_order
 Asynq task type: payment:close-expired-order:v1
 ```
 
-未迁 Go 的 legacy handler 不注册假任务；列表返回 `registry_status=missing`。禁用行返回 `disabled`，表达式错误返回 `invalid_cron`。当前支付闭环只注册支付宝充值完成补偿任务；wallet/refund/reconcile/WeChat 没有本阶段 registry 合同。
+未注册的历史任务不注册假任务，也不再通过列表展示“接入状态/旧处理器”迁移态标签；已确认废弃的 `clean_expired_contact_request` 通过 `20260521_cron_task_active_cleanup.sql` 从 active rows 软删除。当前支付闭环只注册支付宝充值完成补偿任务；wallet/refund/reconcile/WeChat 没有本阶段 registry 合同。
 
 当前数据迁移：
 
@@ -3677,6 +3677,14 @@ AI runtime migration (2026-05-08)
 ai_run_timeout.handler = ai:run-timeout:v1
 
 payment recharge completion closure migration (2026-05-21)
+payment_sync_pending_order.handler = payment:sync-pending-order:v1
+payment_close_expired_order.handler = payment:close-expired-order:v1
+
+active cron cleanup migration (2026-05-21)
+clean_expired_contact_request.status = 2
+clean_expired_contact_request.is_del = 1
+notification_task_scheduler.handler = notification:dispatch-due:v1
+ai_run_timeout.handler = ai:run-timeout:v1
 payment_sync_pending_order.handler = payment:sync-pending-order:v1
 payment_close_expired_order.handler = payment:close-expired-order:v1
 ```
@@ -3714,8 +3722,6 @@ Mutating routes write explicit OperationLog metadata with module `cron_task` and
 ### List response item
 
 ```ts
-type CronTaskRegistryStatus = 'registered' | 'missing' | 'disabled' | 'invalid_cron'
-
 interface CronTaskItem {
   id: number
   name: string
@@ -3723,14 +3729,10 @@ interface CronTaskItem {
   description: string
   cron: string
   cron_readable: string
-  handler: string // registered Go task returns task type; missing legacy rows may show old provenance
+  handler: string // API 语义：任务类型 task type；已知 Go registry 任务返回版本化 Asynq task type
   status: number
   status_name: string
   next_run_time: string
-  registry_status: CronTaskRegistryStatus
-  registry_status_text: string
-  registry_task_type: string
-  registry_description: string
   created_at: string
   updated_at: string
 }
@@ -3740,8 +3742,8 @@ interface CronTaskItem {
 
 ```text
 name 是 Go registry key，新增后不允许编辑修改。
-registered 任务的 handler 由 Go registry task type 覆盖，前端不能把旧 class string 当“处理类”展示。
-registry_status 是 Go 根据 DB row + registry + cron 表达式派生；支持筛选，并在服务端筛选后重新分页。
+已知 Go registry 任务的 handler 由 Go registry task type 覆盖，前端列名展示为“任务类型”。
+公共列表不再返回 registry_status / registry_task_type / registry_description 迁移态字段，也不再支持 registry_status 筛选。
 ```
 
 注意：修改 `cron_task` 配置后，已运行的 `admin-worker` 不热重载 schedule；需要重启 worker 或后续引入显式 reload/分布式锁策略。不要在 admin-api handler 里启动 cron。
