@@ -2644,9 +2644,9 @@ DELETE /sms/logs/:id and /logs     -> system_sms_logDel, module=sms, action=dele
 
 ## Payment
 
-状态：payment config rebuild v1 + recharge cashier v1 implemented in Go backend, adapted in Vue frontend。
+状态：payment config rebuild v1 + recharge cashier v1 + recharge completion closure implemented in Go backend, adapted in Vue frontend。
 
-用途：当前 active scope 只做支付宝支付配置、充值收银台和充值记录：配置 CRUD、私有证书上传、本地配置测试、套餐充值、后端自动选择可用支付宝配置、创建底层支付单、拉起 web/h5 支付、手动同步状态、关闭未支付充值、钱包余额幂等入账。退款、提现、对账、微信、notify 回调、自动 close/sync cron、订阅权益和业务消费不属于本 slice。
+用途：当前 active scope 只做支付宝支付配置、充值收银台和充值完成闭环：配置 CRUD、私有证书上传、本地配置测试、套餐充值、后端自动选择可用支付宝配置、创建底层支付单、拉起 web/h5 支付、手动同步状态、支付宝正式异步回调、支付中订单定时补偿同步、过期订单定时关闭、钱包余额幂等入账。退款、提现、对账、微信、订阅权益和业务消费不属于本 slice。
 
 ### Shared Rules
 
@@ -2655,22 +2655,23 @@ resource prefix: /api/admin/v1/payment
 backend owner: internal/module/payment
 gateway boundary: internal/platform/payment/alipay
 provider scope: Alipay only
-active tables: payment_configs, payment_orders, payment_recharge_packages, payment_recharges, user_wallets, wallet_transactions
+active tables: payment_configs, payment_orders, payment_recharge_packages, payment_recharges, payment_callback_events, user_wallets, wallet_transactions
 active pages: /payment/config, /payment/recharge
 internal/raw visibility page: /payment/orders is hidden from menu and has no raw create UX
 cert storage: runtime/payment/certs/alipay/<config_code>/<sha256>.crt
+public callback: POST /api/payment/callbacks/alipay
 ```
 
 硬规则：
 
 ```text
 Alipay only.
-No active public notify endpoint in this slice.
 No refund/reconcile/WeChat/subscription/business-consumption runtime contract in this slice.
+Public Alipay callback is POST /api/payment/callbacks/alipay; old notify paths are retired.
 payment_configs.sort selects the preferred enabled Alipay config; lower sort wins, then lower id.
 payment_configs has no return_url; recharge create computes return_url per payment.
 Users do not submit config_code, app_id, subject, amount_yuan, expire_minutes, or handwritten return_url on the recharge page.
-paid can only be written by Alipay query/sync in this slice.
+paid/credited state can only be written by verified Alipay callback, manual Alipay query/sync, or the payment sync-pending cron path that reuses the same finalizer.
 wallet credit is DB-transactional and idempotent through wallet_transactions(source_type, source_id).
 private_key_enc and plaintext app_private_key never appear in API response, operation log, smoke output, or frontend types.
 Certificate content is never returned; API only stores private relative cert paths.
@@ -2719,6 +2720,35 @@ PATCH  /api/admin/v1/payment/orders/:id/close
 
 No order edit/delete endpoints exist in this slice.
 
+Public callback route:
+
+```text
+POST   /api/payment/callbacks/alipay
+```
+
+Callback contract:
+
+```text
+Content-Type: application/x-www-form-urlencoded
+AuthToken: skip
+RBAC: none
+OperationLog: none
+Response success: text/plain; charset=utf-8 body success
+Response failure: text/plain; charset=utf-8 body fail
+```
+
+Callback rules:
+
+```text
+invalid signature -> payment_callback_events.failed -> fail -> no business mutation
+unknown out_trade_no -> payment_callback_events.ignored -> success -> no business mutation
+app_id mismatch -> payment_callback_events.failed -> fail -> no business mutation
+amount mismatch -> payment_callback_events.failed -> fail -> no business mutation
+TRADE_SUCCESS / TRADE_FINISHED -> shared paid finalizer -> order paid + recharge credited -> success
+WAIT_BUYER_PAY / other non-success -> payment_callback_events.ignored -> success -> no business mutation
+internal finalize error -> payment_callback_events.failed -> fail, so Alipay can retry
+```
+
 ### Config Contract
 
 `payment/configs` 管理 `payment_configs`。写入必须带 `provider=alipay`，可以接收 `app_private_key` 明文，但后端只加密保存 `private_key_enc` 和可展示的 `private_key_hint`。列表返回 provider/provider_text、hint、证书私有相对路径、环境、启用方式、优先级、状态和备注。
@@ -2732,8 +2762,8 @@ name: 后台展示名。
 app_id: 支付宝应用 ID，构建 SDK client 必需。
 private_key_enc: 服务端 secretbox 加密后的应用私钥，只写入和本地测试使用，永不返回。
 private_key_hint: 展示“已配置私钥”的安全提示。
-app_cert_path / platform_cert_path / root_cert_path: 本地私有证书相对路径，启用和测试前必须能解析到文件。
-notify_url: 支付宝异步通知地址配置值；本 slice 不开放 notify 接收路由。
+app_cert_path / platform_cert_path / root_cert_path: 本地私有证书相对路径，启用、测试、支付、同步和回调验签前必须能解析到文件。
+notify_url: 支付宝异步通知地址配置值；应指向 public callback route `/api/payment/callbacks/alipay`。
 environment: sandbox / production，构建支付宝客户端时使用。
 enabled_methods_json: 当前只允许 web / h5；充值按设备选择 web/h5 后用它过滤配置。
 sort: 支付配置优先级，充值自动选择时按 sort ASC, id ASC。
@@ -2804,7 +2834,8 @@ Repeat sync credited -> return credited, no second wallet credit
 
 ```text
 payment_recharge_packages.code/name/amount_cents/badge/sort/status: page-init 套餐展示和创建充值单的金额事实源。
-payment_recharges.recharge_no/user_id/package_code/package_name/amount_cents/payment_order_id/status/paid_at/credited_at/failure_reason: 充值记录、return_url 回跳识别、状态机和入账审计。
+payment_recharges.recharge_no/user_id/package_code/package_name/amount_cents/payment_order_id/status/paid_at/credited_at/failure_reason: 充值记录、return_url 回跳识别、callback/sync/cron 共用状态机和入账审计。
+payment_callback_events.provider/notify_id/out_trade_no/trade_no/trade_status/app_id/total_amount_cents/signature_valid/process_status/process_message/raw_payload_json/received_at/processed_at: 支付宝回调审计事实；不作为支付业务真相源。
 user_wallets.user_id/balance_cents/total_recharge_cents: 充值页余额展示，入账时原子增加。
 wallet_transactions.transaction_no/wallet_id/user_id/direction/amount_cents/balance_before_cents/balance_after_cents/source_type/source_id/remark: 钱包流水审计和 `(source_type, source_id)` 幂等约束。
 is_del / created_at / updated_at: 每张新增表都有并参与过滤、排序或审计展示。
@@ -2887,7 +2918,6 @@ PaymentOrderFormDialog raw create UX
 /api/admin/v1/payment/channels*
 /api/admin/v1/payment/events*
 /api/payment/notify/alipay
-payment order cron registration
 refund / WeChat / subscription / reconcile / consume-wallet features
 ```
 
@@ -3627,9 +3657,15 @@ Asynq task type: notification:dispatch-due:v1
 
 name: ai_run_timeout
 Asynq task type: ai:run-timeout:v1
+
+name: payment_sync_pending_order
+Asynq task type: payment:sync-pending-order:v1
+
+name: payment_close_expired_order
+Asynq task type: payment:close-expired-order:v1
 ```
 
-未迁 Go 的 legacy handler 不注册假任务；列表返回 `registry_status=missing`。禁用行返回 `disabled`，表达式错误返回 `invalid_cron`。当前 payment order Alipay pay v1 slice 只做手动 sync/close，不注册支付订单自动补偿任务；wallet/refund/reconcile/WeChat 没有本阶段 registry 合同。
+未迁 Go 的 legacy handler 不注册假任务；列表返回 `registry_status=missing`。禁用行返回 `disabled`，表达式错误返回 `invalid_cron`。当前支付闭环只注册支付宝充值完成补偿任务；wallet/refund/reconcile/WeChat 没有本阶段 registry 合同。
 
 当前数据迁移：
 
@@ -3637,14 +3673,17 @@ Asynq task type: ai:run-timeout:v1
 database/migrations/20260506_cron_task_go_handler_cleanup.sql
 notification_task_scheduler.handler = notification:dispatch-due:v1
 
-payment config rebuild v1 migration
-payment_close_expired_order and payment_sync_pending_order remain absent until an automatic close/sync slice reintroduces them with a new spec.
-
 AI runtime migration (2026-05-08)
 ai_run_timeout.handler = ai:run-timeout:v1
+
+payment recharge completion closure migration (2026-05-21)
+payment_sync_pending_order.handler = payment:sync-pending-order:v1
+payment_close_expired_order.handler = payment:close-expired-order:v1
 ```
 
 `ai_run_timeout` 是 stale-run sweeper only：worker 只处理超过代码内置 AI run stale timeout 默认值的残留 `running` 运行，不负责正常在线流式请求超时。
+
+支付定时任务只做最终一致性补偿：`payment_sync_pending_order` 扫描支付中支付宝订单并复用手动 sync / callback 的 paid finalizer；`payment_close_expired_order` 扫描过期未支付订单并关闭本地/支付宝订单。
 
 ### Routes
 
