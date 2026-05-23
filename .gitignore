@@ -4,6 +4,7 @@
 # Nested implementation repositories. They have their own Git history/remotes.
 /admin_back_go/
 /admin_front_ts/
+/admin_app/
 
 # Local scratch/runtime directories.
 /.tmp/
