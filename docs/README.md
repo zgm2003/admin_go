@@ -133,7 +133,7 @@ admin_front_ts/docs/deployment/github-actions-scp.md   # 旧链接 stub，真实
 ```text
 后端：Go + Gin modular monolith
 前端：Vue 3 + TypeScript
-API：/api/admin/v1/...，未来 /api/app/v1/...
+API：/api/admin/v1/...，以及 /api/app/v1/...
 Realtime：WebSocket-only，不新增 SSE
 异步：admin-worker + Asynq + gocron/v2；队列监控优先用官方 asynqmon 只读 UI
 认证/RBAC：core 已成型；后续是 Go/Vue runtime 的模块演进、产品补齐和 hardening

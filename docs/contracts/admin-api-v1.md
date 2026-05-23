@@ -23,7 +23,7 @@ data 里的业务内容不自动翻译。
 
 ```text
 后台管理端：/api/admin/v1
-未来 App 端：/api/app/v1
+App 端：/api/app/v1
 ```
 
 ## Contract Source Policy
@@ -59,6 +59,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-contract.ps1
 | auth config/captcha/code/login/forgot-password/refresh | `/api/admin/v1/auth/login-config`, `/captcha`, `/send-code`, `/forgot-password`, `/login`, `/refresh` | public |
 | logout | `POST /api/admin/v1/auth/logout` | bearer token |
 | current user bootstrap | `GET /api/admin/v1/users/me`, `GET /api/admin/v1/users/init` | bearer token |
+| App auth baseline | `POST /api/app/v1/auth/login`, `GET /api/app/v1/users/me`, `POST /api/app/v1/auth/logout` | login: public; current user/logout: bearer token; app bearer requests default `platform=app` |
 | read-only admin resources | permissions/auth-platforms/roles/users/profile/operation-logs/system-settings/mail/upload-drivers/upload-rules/upload-settings/notifications list or init | bearer token |
 | user quick-entry current-user write | `PUT /api/admin/v1/users/me/quick-entries` | bearer token; current user only, no user-manager button permission |
 | user login logs read | `GET /api/admin/v1/users/login-logs/page-init`, `GET /api/admin/v1/users/login-logs` | bearer token |
@@ -80,6 +81,26 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-contract.ps1
 | AI sidecar provider/agent/tool/knowledge management | ai-providers/ai-agents/ai-tools/ai-knowledge-bases/ai-knowledge-documents write routes | bearer token; mutation routes use explicit `ai_provider_*`, `ai_agent_*`, `ai_tool_*`, `ai_knowledge_*`, `ai_knowledge_document_*` route permissions and OperationLog metadata; secret fields are write-only/masked |
 | AI sidecar runtime current-user | ai-conversations current-user CRUD, ai-conversations/:id/messages list/send, and ai-runs read monitor | bearer token; current-user ownership where applicable; message send requires an enabled chat-scene AI agent + provider and must fail explicitly when not configured |
 | Retired AI legacy routes | legacy model/tool/prompt/agent/knowledge-base routes | not mounted in active Go runtime; only backup/rollback SQL, historical specs, or negative router tests may mention exact old route strings |
+
+## App Auth Baseline
+
+状态：implemented for served runtime.
+
+```text
+POST /api/app/v1/auth/login
+GET  /api/app/v1/users/me
+POST /api/app/v1/auth/logout
+```
+
+规则：
+
+```text
+login 只收 account/password，不走 admin captcha 流程。
+login 返回 data.token + data.user{id,nickname,avatar}。
+users/me 只返回 id/nickname/avatar，不返回 admin RBAC 字段。
+logout 返回 data:null。
+App bearer 请求在路径为 /api/app/v1/* 时默认 platform=app。
+```
 
 ## Health / Readiness
 
