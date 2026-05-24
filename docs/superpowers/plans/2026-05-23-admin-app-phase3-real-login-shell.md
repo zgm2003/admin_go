@@ -1,190 +1,407 @@
-# Admin App Phase 3 Real Login Shell Implementation Plan
+# Admin App Phase 3 UniApp Shell Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
-**Goal:** 让 Flutter App 真实完成“登录 -> 拉取当前用户 -> 首页/我的页展示当前用户 -> 退出登录回到登录页”的闭环。
+**Goal:** Build the first `admin_app` UniApp Vue3 shell: real `/api/app/v1` login, current-user session, logout, two guarded tabbar pages, and a maintainable mobile UI baseline.
 
-**Architecture:** 继续沿用当前 `Riverpod + GoRouter + Dio + SharedPreferences` 骨架，不新增 H5/小程序，不改后端接口。登录成功后只写本地会话，页面层统一通过当前用户 provider 读取 `/api/app/v1/users/me`，首页和我的页共享同一份会话数据；退出登录先调用 `/api/app/v1/auth/logout`，再清理本地会话并回到登录页。
+**Architecture:** Treat `admin_app` as an independent UniApp Vue3 + TypeScript runtime under the `E:\admin_go` agent framework. Keep the app API boundary separate from `/api/admin/v1`: the app only calls `/api/app/v1/auth/login`, `/api/app/v1/users/me`, and `/api/app/v1/auth/logout`; first-pass RBAC is a session guard because the served App API does not return app menus, routes, or button capabilities.
 
-**Tech Stack:** Flutter 3.41.7, Dart 3.11.5, Riverpod 3, GoRouter 17, Dio + Retrofit, SharedPreferences, flutter_test.
+**Tech Stack:** UniApp Vue3, TypeScript, Vue I18n, Vitest, vue-tsc, H5 build through `uni build`, `uview-plus@3.8.37` via `easycom` on-demand components plus a local minimal `$u` runtime.
 
 ---
+
+## Scope Check
+
+This plan replaces the stale Flutter plan at the same path. The live project is `E:\admin_go\admin_app`, and the current app runtime is UniApp Vue3 + TypeScript, not Flutter.
+
+In scope:
+
+```text
+1. Register admin_app with the E:\admin_go agent framework.
+2. Document the UniApp runtime architecture and app-api v1 contract.
+3. Replace UniApp starter pages/assets with login/home/mine.
+4. Implement app API request, auth client, session controller, storage, and route guards.
+5. Use Vue I18n for visible copy.
+6. Select and wire uview-plus without full plugin install.
+7. Verify with Vitest, vue-tsc, H5 build, governance checks, and live /api/app/v1 smoke.
+```
+
+Out of scope:
+
+```text
+1. Reusing backend admin RBAC router/buttonCodes in the app.
+2. Creating fake app menu trees before the backend serves them.
+3. Secure native credential storage; current token storage is the next slice.
+4. Implementing business modules beyond home/mine shell pages.
+5. Reopening the Flutter implementation path.
+```
 
 ## File Structure
 
-- Modify: `lib/src/domain/use_cases/authentication_use_case.dart`
-  - Add a current-user use case so UI 只依赖 domain 层，不直接摸 repository。
-- Modify: `lib/src/core/di/parts/use_cases.dart`
-  - Register the new current-user use case provider.
-- Create: `lib/src/presentation/core/application_state/current_user_provider/current_user_provider.dart`
-  - Single source of truth for the current user page state.
-- Modify: `lib/src/presentation/features/home/view/home_page.dart`
-  - Replace placeholder content with real current-user summary and logout action.
-- Modify: `lib/src/presentation/features/profile/view/profile_page.dart`
-  - Replace placeholder content with real current-user detail card.
-- Modify: `lib/src/presentation/features/authentication/login/riverpod/login_provider.dart`
-  - Keep login loading state, and invalidate current-user state after successful login.
-- Modify: `lib/src/presentation/core/application_state/logout_provider/logout_provider.dart`
-  - Remove fake delay, call real logout, clear session, invalidate current-user state.
-- Modify: `lib/src/core/localization/intl_zh.arb`
-  - Add labels for current-user / avatar / user id / loading / error / retry.
-- Modify: `lib/src/core/localization/intl_en.arb`
-  - Mirror the new labels in English.
-- Regenerate: `lib/src/core/gen/l10n/*`
-  - Refresh generated localization classes after ARB changes.
-- Modify: `test/widget_test.dart`
-  - Update startup/home/profile expectations to the new authenticated shell behavior.
-- Create: `test/current_user_provider_test.dart`
-  - Verify the current-user provider resolves the App API user and surfaces failures cleanly.
+Root governance:
+
+```text
+Modify: docs/status/current-status.md
+Replace: docs/superpowers/plans/2026-05-23-admin-app-phase3-real-login-shell.md
+```
+
+App governance and docs:
+
+```text
+Create: admin_app/AGENTS.md
+Create: admin_app/docs/architecture.md
+Create: admin_app/docs/app-api-v1.md
+```
+
+App package/build baseline:
+
+```text
+Modify: admin_app/package.json
+Create: admin_app/package-lock.json
+Modify: admin_app/vite.config.ts
+Create: admin_app/vitest.config.ts
+Modify: admin_app/src/env.d.ts
+Rename: admin_app/src/shime-uni.d.ts -> admin_app/src/shim-uni.d.ts
+Delete: admin_app/src/pages/index/index.vue
+Delete: admin_app/src/static/logo.png
+```
+
+App runtime code:
+
+```text
+Modify: admin_app/src/main.ts
+Modify: admin_app/src/App.vue
+Modify: admin_app/src/pages.json
+Create: admin_app/src/api/http.ts
+Create: admin_app/src/api/appAuth.ts
+Create: admin_app/src/composables/useSession.ts
+Create: admin_app/src/config/env.ts
+Create: admin_app/src/constants/storage.ts
+Create: admin_app/src/i18n.ts
+Create: admin_app/src/locales/zh-CN.ts
+Create: admin_app/src/locales/en-US.ts
+Create: admin_app/src/pages/login/index.vue
+Create: admin_app/src/pages/home/index.vue
+Create: admin_app/src/pages/mine/index.vue
+Create: admin_app/src/plugins/uview-runtime.ts
+Create: admin_app/src/plugins/uview-luch-request-shim.ts
+Create: admin_app/src/router/guards.ts
+Create: admin_app/src/stores/session.ts
+Create: admin_app/src/types/api.ts
+Create: admin_app/src/types/auth.ts
+Create: admin_app/src/types/user.ts
+Create: admin_app/src/utils/storage.ts
+```
+
+App tests:
+
+```text
+Create: admin_app/tests/api-http.test.ts
+Create: admin_app/tests/app-auth-api.test.ts
+Create: admin_app/tests/app-routing.test.ts
+Create: admin_app/tests/router-guards.test.ts
+Create: admin_app/tests/session-controller.test.ts
+Create: admin_app/tests/uview-runtime.test.ts
+```
 
 ---
 
-### Task 1: Add current-user use case and provider
+### Task 1: Register admin_app in the agent framework
 
 **Files:**
-- Modify: `lib/src/domain/use_cases/authentication_use_case.dart`
-- Modify: `lib/src/core/di/parts/use_cases.dart`
-- Create: `lib/src/presentation/core/application_state/current_user_provider/current_user_provider.dart`
-- Test: `test/current_user_provider_test.dart`
+- Create: `admin_app/AGENTS.md`
+- Create: `admin_app/docs/architecture.md`
+- Create: `admin_app/docs/app-api-v1.md`
+- Modify: `docs/status/current-status.md`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the app execution rules**
 
-Create a provider test that overrides the auth repository with a fake current-user response and asserts the provider yields `UserEntity(id: 7, nickname: '移动端用户', avatar: 'avatar.png')`.
+Create `admin_app/AGENTS.md` with the app-specific boundary:
 
-- [ ] **Step 2: Run test to verify it fails**
+```text
+admin_app is a UniApp Vue3 mobile runtime.
+It only calls /api/app/v1.
+It does not reuse /api/admin/v1 menu/button/cookie semantics.
+First RBAC slice is login-state guard only.
+Visible copy must go through src/locales/zh-CN.ts and src/locales/en-US.ts.
+```
+
+- [x] **Step 2: Document architecture and API contract**
+
+Create `admin_app/docs/architecture.md` and `admin_app/docs/app-api-v1.md` covering:
+
+```text
+POST /api/app/v1/auth/login
+GET  /api/app/v1/users/me
+POST /api/app/v1/auth/logout
+```
+
+Record that App password login skips admin captcha and bearer requests use `platform=app`.
+
+- [x] **Step 3: Sync root current status**
+
+Update `docs/status/current-status.md` so `app auth baseline` points at `admin_app` UniApp docs and tests instead of the retired Flutter wording.
+
+### Task 2: Replace UniApp starter with the app shell routes
+
+**Files:**
+- Modify: `admin_app/package.json`
+- Create: `admin_app/package-lock.json`
+- Modify: `admin_app/src/pages.json`
+- Rename: `admin_app/src/shime-uni.d.ts -> admin_app/src/shim-uni.d.ts`
+- Delete: `admin_app/src/pages/index/index.vue`
+- Delete: `admin_app/src/static/logo.png`
+- Test: `admin_app/tests/app-routing.test.ts`
+
+- [x] **Step 1: Add routing regression tests**
+
+Create `tests/app-routing.test.ts` to prove:
+
+```text
+package name is admin-app
+login is the first page
+only tabbar pages are home and mine
+starter index page and logo asset are absent
+shim-uni.d.ts replaces shime-uni.d.ts
+```
+
+- [x] **Step 2: Configure pages**
+
+Set `src/pages.json` pages to:
+
+```json
+[
+  { "path": "pages/login/index" },
+  { "path": "pages/home/index" },
+  { "path": "pages/mine/index" }
+]
+```
+
+Set tabbar to:
+
+```json
+[
+  { "pagePath": "pages/home/index", "text": "首页" },
+  { "pagePath": "pages/mine/index", "text": "我的" }
+]
+```
+
+- [x] **Step 3: Remove starter leftovers**
+
+Delete the generated `pages/index/index.vue` and `static/logo.png`; rename the shim typo to `shim-uni.d.ts`.
+
+### Task 3: Build the app API and session boundary
+
+**Files:**
+- Create: `admin_app/src/api/http.ts`
+- Create: `admin_app/src/api/appAuth.ts`
+- Create: `admin_app/src/stores/session.ts`
+- Create: `admin_app/src/composables/useSession.ts`
+- Create: `admin_app/src/config/env.ts`
+- Create: `admin_app/src/constants/storage.ts`
+- Create: `admin_app/src/types/api.ts`
+- Create: `admin_app/src/types/auth.ts`
+- Create: `admin_app/src/types/user.ts`
+- Create: `admin_app/src/utils/storage.ts`
+- Test: `admin_app/tests/api-http.test.ts`
+- Test: `admin_app/tests/app-auth-api.test.ts`
+- Test: `admin_app/tests/session-controller.test.ts`
+
+- [x] **Step 1: Test the HTTP response boundary**
+
+Add tests for unified response unwrap, non-zero response errors, and bearer token lookup.
+
+- [x] **Step 2: Test the auth client contract**
+
+Add tests proving the app auth client calls these exact relative paths:
+
+```text
+/auth/login
+/users/me
+/auth/logout
+```
+
+- [x] **Step 3: Test the session controller**
+
+Add tests proving:
+
+```text
+no token -> guest
+stored token -> fetch /users/me and authenticated
+login -> persist token + user
+logout -> call backend logout and clear local state
+```
+
+- [x] **Step 4: Implement the boundary**
+
+Implement `appRequest`, `createAppAuthClient`, `createSessionController`, and UniApp storage adapters. Add `platform: app`, `Accept-Language: zh-CN`, and `Authorization: Bearer <token>` when authenticated.
+
+### Task 4: Add login-state route guards
+
+**Files:**
+- Create: `admin_app/src/router/guards.ts`
+- Test: `admin_app/tests/router-guards.test.ts`
+
+- [x] **Step 1: Test guard behavior with injected dependencies**
+
+Create tests for `createAuthGuards(authSession, navigator)` proving:
+
+```text
+authenticated session returns true and does not redirect
+guest session reLaunches to /pages/login/index
+login success can switchTab to /pages/home/index
+```
+
+- [x] **Step 2: Implement injected guards and default wrappers**
+
+Implement:
+
+```ts
+createAuthGuards(authSession, navigator)
+redirectToLogin()
+redirectToHome()
+requireAuthenticatedPage()
+```
+
+Default wrappers use the singleton `session` and `uni` navigator; tests use injected fakes.
+
+### Task 5: Implement i18n pages and uview-plus runtime
+
+**Files:**
+- Modify: `admin_app/src/main.ts`
+- Modify: `admin_app/src/App.vue`
+- Create: `admin_app/src/i18n.ts`
+- Create: `admin_app/src/locales/zh-CN.ts`
+- Create: `admin_app/src/locales/en-US.ts`
+- Create: `admin_app/src/pages/login/index.vue`
+- Create: `admin_app/src/pages/home/index.vue`
+- Create: `admin_app/src/pages/mine/index.vue`
+- Create: `admin_app/src/plugins/uview-runtime.ts`
+- Create: `admin_app/src/plugins/uview-luch-request-shim.ts`
+- Modify: `admin_app/vite.config.ts`
+- Test: `admin_app/tests/uview-runtime.test.ts`
+
+- [x] **Step 1: Add Vue I18n**
+
+Install `i18n` in `src/main.ts`; put every visible login/home/mine copy in `src/locales/zh-CN.ts` and `src/locales/en-US.ts`.
+
+- [x] **Step 2: Render the pages**
+
+Implement:
+
+```text
+pages/login/index.vue: account/password form -> session.login -> switchTab home
+pages/home/index.vue: session guard + current user greeting + app API status card
+pages/mine/index.vue: session guard + account card + logout modal -> backend logout -> login
+```
+
+- [x] **Step 3: Wire uview-plus without full install**
+
+Use `pages.json` `easycom` for `u-*` / `up-*` components and install a local minimal `$u` runtime in `src/plugins/uview-runtime.ts`. Do not call full `app.use(uviewPlus)`, because the H5 build pulls unused broken component internals from the published package.
+
+- [x] **Step 4: Shim the broken uview-plus relative import**
+
+Use `vite.config.ts` aliasing to point uview-plus internal `luch-request` import to `src/plugins/uview-luch-request-shim.ts`. The shim rejects if used; current app runtime does not use uview-plus HTTP.
+
+### Task 6: Verify app, live backend, and governance gates
+
+**Files:**
+- Runtime: `E:\admin_go\admin_app`
+- Runtime: `E:\admin_go\.docker\admin-go-backend`
+- Runtime: `http://127.0.0.1:8080`
+- Governance: `E:\admin_go`
+
+- [x] **Step 1: Run app unit tests**
 
 Run:
 
 ```powershell
-flutter test test/current_user_provider_test.dart -r expanded
+cd E:\admin_go\admin_app
+npm run test:unit
 ```
 
-Expected: compile or test failure because `currentUserProvider` and/or the new use case do not exist yet.
+Expected:
 
-- [ ] **Step 3: Write minimal implementation**
+```text
+6 files passed, 18 tests passed
+```
 
-Add `CurrentUserUseCase` to the auth use-case file, wire it in `use_cases.dart`, and create a `FutureProvider<UserEntity?>`-style current-user provider that calls the use case.
-
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 2: Run app type check**
 
 Run:
 
 ```powershell
-flutter test test/current_user_provider_test.dart -r expanded
+npm run type-check
 ```
 
-Expected: PASS.
+Expected:
+
+```text
+vue-tsc --noEmit exits 0
+```
+
+- [x] **Step 3: Run H5 build**
+
+Run:
+
+```powershell
+npm run build:h5
+```
+
+Expected:
+
+```text
+DONE Build complete
+```
+
+Known warnings are Sass and uview-plus deprecation warnings only; they are not build failures.
+
+- [x] **Step 4: Run live app-api smoke**
+
+With backend Docker already healthy on `127.0.0.1:8080`, call:
+
+```text
+GET  /health
+GET  /ready
+POST /api/app/v1/auth/login
+GET  /api/app/v1/users/me
+POST /api/app/v1/auth/logout
+```
+
+Expected:
+
+```text
+/health -> status ok
+/ready -> database/redis/token_redis/queue_redis/realtime up
+login -> code=0, token returned, user.id=1
+me -> code=0, user.id=1
+logout -> code=0
+```
+
+- [x] **Step 5: Run root governance gates**
+
+Run:
+
+```powershell
+cd E:\admin_go
+git diff --check
+powershell -ExecutionPolicy Bypass -File .\scripts\check-agent-governance.ps1 -Mode working
+```
+
+Expected:
+
+```text
+No whitespace errors.
+No blocking governance violations.
+```
 
 ---
 
-### Task 2: Render real current user in Home and Profile
+## Self-Review Checklist
 
-**Files:**
-- Modify: `lib/src/presentation/features/home/view/home_page.dart`
-- Modify: `lib/src/presentation/features/profile/view/profile_page.dart`
-- Modify: `lib/src/core/localization/intl_zh.arb`
-- Modify: `lib/src/core/localization/intl_en.arb`
-- Regenerate: `lib/src/core/gen/l10n/*`
-- Test: `test/widget_test.dart`
-
-- [ ] **Step 1: Write the failing widget assertions**
-
-Update the widget test so HomePage and ProfilePage both display the current user's nickname and avatar placeholder/title from an overridden current-user provider, not the old static placeholder copy.
-
-- [ ] **Step 2: Run test to verify it fails**
-
-Run:
-
-```powershell
-flutter test test/widget_test.dart -r expanded
-```
-
-Expected: FAIL because the pages still render template-style static content.
-
-- [ ] **Step 3: Write minimal implementation**
-
-Make HomePage show a compact current-user card plus logout button, and ProfilePage show a richer account card with id, nickname, and avatar. Keep the layout simple, mobile-first, and accessible.
-
-- [ ] **Step 4: Run test to verify it passes**
-
-Run:
-
-```powershell
-flutter test test/widget_test.dart -r expanded
-```
-
-Expected: PASS.
-
----
-
-### Task 3: Wire login/logout to the shared session state
-
-**Files:**
-- Modify: `lib/src/presentation/features/authentication/login/riverpod/login_provider.dart`
-- Modify: `lib/src/presentation/core/application_state/logout_provider/logout_provider.dart`
-- Test: `test/app_api_baseline_test.dart` or a new provider test if needed
-
-- [ ] **Step 1: Write the failing test**
-
-Add a small provider test that proves login success invalidates the current-user provider and logout clears the cached session without a fake delay.
-
-- [ ] **Step 2: Run test to verify it fails**
-
-Run:
-
-```powershell
-flutter test test/app_api_baseline_test.dart -r expanded
-```
-
-Expected: FAIL on the new session-state assertion.
-
-- [ ] **Step 3: Write minimal implementation**
-
-Invalidate `currentUserProvider` after successful login/logout, remove the artificial `Future.delayed`, and keep logout as a real `/auth/logout` call plus cache cleanup.
-
-- [ ] **Step 4: Run test to verify it passes**
-
-Run:
-
-```powershell
-flutter test test/app_api_baseline_test.dart -r expanded
-```
-
-Expected: PASS.
-
----
-
-### Task 4: Refresh generated code and project gates
-
-**Files:**
-- Modify: generated localization files under `lib/src/core/gen/l10n/*`
-- Modify: any generated Riverpod files changed by build_runner
-- Test: `flutter test`
-- Test: `flutter analyze`
-
-- [ ] **Step 1: Run generation/build**
-
-Run:
-
-```powershell
-flutter gen-l10n
-flutter pub run build_runner build --delete-conflicting-outputs
-```
-
-- [ ] **Step 2: Run the full Flutter gates**
-
-Run:
-
-```powershell
-flutter test
-flutter analyze
-```
-
-Expected: both pass with no new issues.
-
-- [ ] **Step 3: Commit**
-
-```powershell
-git add -A
-git commit -m "feat: bind app login shell to real user session"
-```
+- [x] Runtime identity: plan and docs say UniApp Vue3, not Flutter.
+- [x] API boundary: app only calls `/api/app/v1/auth/login`, `/api/app/v1/users/me`, and `/api/app/v1/auth/logout`.
+- [x] RBAC honesty: first version is login-state guard only; no fake admin menus, router trees, or buttonCodes.
+- [x] UI component choice: `uview-plus@3.8.37` is used through `easycom` on demand plus local `$u` runtime, not full plugin install.
+- [x] i18n: visible copy is in `zh-CN.ts` and `en-US.ts`.
+- [x] Verification: unit tests, type check, H5 build, live app-api smoke, `git diff --check`, and governance checker are required before final completion claim.
