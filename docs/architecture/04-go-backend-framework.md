@@ -189,12 +189,16 @@ permissions: DIR / PAGE / BUTTON
 role_permissions: DIR 不授权，PAGE 授权，BUTTON 授权并隐含父 PAGE
 Users/init 返回 permissions + router + buttonCodes + quick_entry
 platform 使用 session.platform，不盲信 header
-button cache key 语义保持稳定
+route access grant cache key 语义保持稳定
 show_menu 只控制菜单显示，不代表无页面权限
 PermissionCheck 必须 fail-closed：用户或角色不存在时拒绝，不允许绕过
-button grant cache 只做性能加速，cache miss/error 必须回源计算，不能成为权限真相源
-role/permission 变更必须清理受影响用户的 button grant cache
+route access grant cache 只做性能加速，cache miss/error 必须回源计算，不能成为权限真相源
+role/permission 变更必须清理受影响用户的 route access grant cache
 ```
+
+### RBAC RouteAccessCodes 与 buttonCodes 分离
+
+`users/init.buttonCodes` 是前端按钮显隐契约，只能包含 BUTTON code。后端 `PermissionCheck` 使用内部 `RouteAccessCodes` 判断 route metadata code；`RouteAccessCodes` 可包含 PAGE code 和 BUTTON code。不要为了读接口创建 `view` / `查看` BUTTON，也不要把 PAGE code 暴露成前端按钮能力。
 
 ## Middleware 顺序
 

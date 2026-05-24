@@ -391,8 +391,9 @@ Response example：
 ```text
 permissions/router/buttonCodes/quick_entry 是稳定字段名，不加兜底别名。
 show_menu 只控制菜单显示，不影响 router 页面权限真相。
-BUTTON 授权由 Go service 自动带出父 PAGE 和祖先 DIR；前端不能猜。
-前端按钮显隐只读 buttonCodes；API 放行只由 PermissionCheck 判断。
+PAGE 授权让 permissions tree + router 包含该 PAGE；PAGE code 可进入后端内部 RouteAccessCodes，但不返回到 users/init.buttonCodes。
+BUTTON 授权由 Go service 自动带出父 PAGE 和祖先 DIR；buttonCodes 只包含 BUTTON code。
+前端按钮显隐只读 buttonCodes；API 放行只由 PermissionCheck 使用内部 RouteAccessCodes 判断。
 ```
 
 ## Permission Definitions
@@ -617,7 +618,7 @@ type UserBatchProfileUpdateBody =
 
 ```text
 新 Go 契约只接受 address_id，不接受 legacy address 别名。
-编辑 role_id 后清理该用户 admin/app 平台 button grant cache。
+编辑 role_id 后清理该用户 admin/app 平台 route access grant cache。
 列表查询使用 prefix LIKE，避免默认全模糊扫表。
 用户删除是 users + user_profiles 软删除。
 ```
@@ -1267,8 +1268,9 @@ interface RoleMutationBody {
 ```text
 role_permissions 只保存 PAGE/BUTTON。
 提交 BUTTON 时 Go service 自动补父 PAGE。
-提交 DIR 会被忽略，DIR 只由 PAGE/BUTTON 计算上下文时带出。
-角色授权变更后清理绑定用户所有平台的 button grant cache。
+提交 DIR 会被归一化忽略；DIR 可存在于 permissions 定义树，但不作为 role_permissions 授权记录保存。
+不创建 view/查看 虚拟 BUTTON；角色编辑器里的“页面访问”映射真实 PAGE permission_id。
+角色授权变更后清理绑定用户所有平台的 route access grant cache。
 ```
 
 ### Set Default / Delete
