@@ -59,7 +59,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-contract.ps1
 | auth config/captcha/code/login/forgot-password/refresh | `/api/admin/v1/auth/login-config`, `/captcha`, `/send-code`, `/forgot-password`, `/login`, `/refresh` | public |
 | logout | `POST /api/admin/v1/auth/logout` | bearer token |
 | current user bootstrap | `GET /api/admin/v1/users/me`, `GET /api/admin/v1/users/init` | bearer token |
-| App auth baseline | `POST /api/app/v1/auth/login`, `GET /api/app/v1/users/me`, `POST /api/app/v1/auth/logout` | login: public; current user/logout: bearer token; app bearer requests default `platform=app` |
+| App auth baseline | `GET /api/app/v1/auth/login-config`, `GET /api/app/v1/auth/captcha`, `POST /api/app/v1/auth/send-code`, `POST /api/app/v1/auth/login`, `GET /api/app/v1/users/me`, `POST /api/app/v1/auth/logout` | auth config/captcha/send-code/login: public; current user/logout: bearer token; app bearer requests default `platform=app` |
 | read-only admin resources | permissions/auth-platforms/roles/users/profile/operation-logs/system-settings/mail/upload-drivers/upload-rules/upload-settings/notifications list or init | bearer token |
 | user quick-entry current-user write | `PUT /api/admin/v1/users/me/quick-entries` | bearer token; current user only, no user-manager button permission |
 | user login logs read | `GET /api/admin/v1/users/login-logs/page-init`, `GET /api/admin/v1/users/login-logs` | bearer token |
@@ -87,6 +87,9 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-contract.ps1
 状态：implemented for served runtime.
 
 ```text
+GET  /api/app/v1/auth/login-config
+GET  /api/app/v1/auth/captcha
+POST /api/app/v1/auth/send-code
 POST /api/app/v1/auth/login
 GET  /api/app/v1/users/me
 POST /api/app/v1/auth/logout
@@ -95,11 +98,36 @@ POST /api/app/v1/auth/logout
 规则：
 
 ```text
-login 只收 account/password，不走 admin captcha 流程。
-login 返回 data.token + data.user{id,nickname,avatar}。
+login-config / captcha / send-code / login 是 app 公共 auth 入口，不需要 bearer token。
+app login-config 强制按 platform=app 查询 auth_platforms，不信任前端 header。
+app 密码登录必须提交 slide captcha，遵守 auth_platforms.captcha_type，不再跳过验证码。
+app login 请求使用 login_type/login_account/password|code/captcha_id/captcha_answer，与 admin auth 入参语义一致，但返回 data.token + data.user{id,nickname,avatar}。
 users/me 只返回 id/nickname/avatar，不返回 admin RBAC 字段。
 logout 返回 data:null。
 App bearer 请求在路径为 /api/app/v1/* 时默认 platform=app。
+```
+
+请求：
+
+```ts
+type AppLoginBody =
+  | {
+      login_type: 'password'
+      login_account: string
+      password: string
+      captcha_id: string
+      captcha_answer: { x: number; y: number }
+    }
+  | {
+      login_type: 'email' | 'phone'
+      login_account: string
+      code: string
+    }
+
+interface AppSendCodeBody {
+  account: string
+  scene: 'login'
+}
 ```
 
 ## Health / Readiness
