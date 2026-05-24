@@ -137,6 +137,26 @@ DELETE /api/admin/v1/permissions/:id         delete one
 
 旧 action POST 接口只能作为 legacy mapping 文档或显式 adapter，不能污染新 REST 设计。
 
+## 平台 scope 不复制业务模块
+
+平台 scope 不是业务模块边界。新增端、平台、入口时先判断差异属于哪一层：
+
+```text
+route prefix 不同      -> route/handler
+请求字段不同          -> request DTO
+返回字段不同          -> presenter
+认证/会话策略不同     -> authplatform 或 session policy
+业务规则真的不同      -> capability service 的显式 policy/input
+```
+
+禁止为了端差异复制业务模块：
+
+```text
+appai / appwallet / xxauth / adminai
+```
+
+`appauth` 这类已经存在的过渡目录必须保持 adapter-only：不查 DB，不拥有 repository/model，不复制 shared service。它当前覆盖 `/api/app/v1/auth/*`、`/api/app/v1/users/me`、`/api/app/v1/profile`、`/api/app/v1/upload-tokens`，未来收敛时必须按 capability 回到 `auth` / `user` / `uploadtoken`。新增类似目录前必须先写 spec 并说明退出条件。
+
 ## TypeScript 规则
 
 前端新代码和被触碰代码必须完整 TypeScript。

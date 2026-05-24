@@ -1,92 +1,112 @@
 # Platform Scope Adapter Architecture Design
 
-状态：discussion draft for architecture review  
-日期：2026-05-24  
-范围：`admin_back_go` 多端 API 入口、平台差异、业务模块复用、Docker-first 运行时命名
+状态：review-ready spec for expert review
+日期：2026-05-24
+责任 agent：`architect`
+范围：`admin_back_go` 多端 API 入口、认证平台策略、业务模块复用、Docker-first `APP_NAME` 清理
 
-## 1. 背景
+## 1. 一句话结论
 
-当前 Go 后端已经同时服务两个 HTTP scope：
-
-```text
-/api/admin/v1  # 后台管理端
-/api/app/v1    # 用户 App / To C 端
-```
-
-`admin_app` 登录切片新增了 `/api/app/v1/auth/*`，后端当前通过 `internal/module/appauth` 暴露 App 登录入口。这个切片本身已经复用了 `auth.Service`，没有重新实现一套账号校验、验证码、session 创建逻辑。
-
-但这个命名和目录形态暴露了一个更大的架构风险：
+后端确实需要修正架构口径：
 
 ```text
-今天新增 appauth，
-明天接 App AI 就可能新增 appai，
-后天新增 xx 平台就可能新增 xxauth / xxai / xxwallet。
+/api/admin/v1 和 /api/app/v1 是 HTTP scope，不是业务模块边界。
+
+auth / AI / wallet / upload / notification 等业务能力必须按 capability 复用 service。
+admin/app/partner/merchant 这类差异只允许落在 route / handler / presenter / policy 层。
 ```
 
-这不是 Go 代码风格问题，而是业务边界问题。平台不同不应导致业务模块复制。入口和出参可以不同，业务逻辑必须复用。
+所以：
 
-## 2. 结论
+```text
+authplatform 继续和平台联动，但只管认证/会话策略。
+APP_NAME=admin-api 应该从共享 Docker-first env 和 Config.App.Name 中清理。
+appauth 当前可保留为过渡 adapter，但不能被理解成“App Auth 业务模块”。
+```
 
-本项目后端应采用：
+## 2. Linus 三问
+
+### 2.1 这是真问题吗？
+
+是。
+
+当前新增了 `admin_app` 登录入口，后端出现 `internal/module/appauth`。这次代码没有复制 auth 业务，仍然复用了 `internal/module/auth`，方向不算错；但命名会给后续开发者一个错误暗示：
+
+```text
+今天 appauth
+明天 appai
+后天 appwallet / xxauth / xxai
+```
+
+如果不立规则，平台维度会污染业务模块维度，最后变成同一套业务按端复制 N 份。
+
+### 2.2 有更简单的做法吗？
+
+有。不要上微服务，不要上大 DDD，不要为每个平台复制模块。
+
+当前阶段最小正确方案就是：
 
 ```text
 Platform Scope Adapter
 ```
 
-核心原则：
+也就是共享业务 service，只在 HTTP adapter 和 response presenter 上区分端。
+
+### 2.3 会破坏已有前端、接口、登录和权限吗？
+
+按本 spec 分阶段推进，短期不破坏：
 
 ```text
-平台 scope 是 HTTP 入口边界，不是业务模块边界。
-业务模块按业务能力命名，不按平台命名。
-平台差异只允许出现在 route / handler / presenter / policy 层。
-service / repository / model 不因 admin/app/xx 平台复制。
+Phase 1 只写架构治理文档。
+Phase 2 只清理无实际运行时身份语义的 APP_NAME。
+Phase 3 以后新增 App 业务按新规则落地。
+Phase 4 才考虑 appauth 结构收敛，且必须有路由和登录测试保护。
 ```
 
-标准调用链：
+## 3. 当前项目事实
+
+### 3.1 App auth 已经复用共享 auth service
+
+当前 App auth 路由在：
 
 ```text
-/api/admin/v1/...  -> admin handler -> shared service -> repository/model -> admin presenter
-/api/app/v1/...    -> app handler   -> shared service -> repository/model -> app presenter
+admin_back_go/internal/module/appauth/route.go
 ```
 
-不允许的方向：
+它注册：
 
 ```text
-adminauth + appauth + xxauth 各自一套业务
-adminai + appai + xxai 各自一套业务
-adminwallet + appwallet + xxwallet 各自一套业务
+GET  /api/app/v1/auth/login-config
+GET  /api/app/v1/auth/captcha
+POST /api/app/v1/auth/send-code
+POST /api/app/v1/auth/login
+GET  /api/app/v1/users/me
+POST /api/app/v1/auth/logout
+GET  /api/app/v1/profile
+PUT  /api/app/v1/profile
+POST /api/app/v1/upload-tokens
 ```
 
-允许的方向：
-
-```text
-auth       # 登录、验证码、token、session 策略
-aichat     # AI 会话、消息、模型调用、工具/RAG 编排
-wallet     # 钱包、余额、流水、消费
-upload     # 上传 token、COS 运行时能力
-
-admin/app 只作为这些模块的入口和出参投影。
-```
-
-## 3. 当前事实
-
-### 3.1 App auth 不是第二套 auth 业务
-
-当前 `appauth` 做了三件事：
-
-```text
-1. 注册 /api/app/v1/auth/* 路由。
-2. 将 platform 固定为 app，不信任前端 header。
-3. 将 auth/user/upload 的共享 service 响应裁剪为 App 需要的出参。
-```
-
-真实认证逻辑仍在：
+核心登录逻辑仍在：
 
 ```text
 admin_back_go/internal/module/auth/service.go
 ```
 
-`auth.Service.Login` 已经接收 `LoginInput.Platform`，并通过 `authplatform.Service` 读取平台策略：
+`auth.Service.Login` 已接收 `LoginInput.Platform`，并通过 `PlatformConfigProvider` 读取平台认证策略：
+
+```text
+LoginTypes(ctx, platform)
+CaptchaType(ctx, platform)
+AllowRegister(ctx, platform)
+session.Create(ctx, Platform: input.Platform)
+```
+
+这说明当前问题不是“已经复制业务”，而是“`appauth` 这个目录把 App scope 下的 auth / profile / upload-token adapter 放在了一起，目录命名和治理规则不足”。
+
+### 3.2 authplatform 的职责是认证平台策略，不是全局平台配置中心
+
+当前 `internal/module/authplatform` 管理的是 `auth_platforms`：
 
 ```text
 login_types
@@ -94,79 +114,80 @@ captcha_type
 allow_register
 access_ttl
 refresh_ttl
+bind_platform / bind_device / bind_ip
 single_session / max_sessions
 ```
 
-这说明当前方向有正确部分：业务逻辑已经初步 platform-aware。
+所以它应该继续参与登录、refresh、session 校验、自动注册等认证链路。
 
-### 3.2 当前坏味道
-
-坏味道不是“已经复制业务”，而是：
+但它不应该变成万能平台配置中心。比如 App AI 限流、钱包展示字段、通知推送策略，不应该塞进 `auth_platforms`，而应该由对应 capability 模块拥有自己的 policy：
 
 ```text
-appauth 这个模块名容易让后续实现者误以为“每个平台都需要一个业务模块”。
+AI    -> ai policy by platform / scene / agent
+wallet -> wallet policy by platform / user / scene
+notify -> notification target/platform policy
 ```
 
-如果不立规矩，后续 AI、wallet、payment、notification 都可能被平台名前缀污染。
+### 3.3 APP_NAME=admin-api 是共享 env 里的错误语义
 
-### 3.3 `APP_NAME=admin-api` 的实际问题
-
-`deploy/docker-first/admin-go.env` 当前包含：
+当前配置读取：
 
 ```text
-APP_NAME=admin-api
+admin_back_go/internal/config/config.go
+AppConfig.Name <- envString("APP_NAME", "admin-api")
 ```
 
-但 Docker-first Compose 使用同一个 `admin-go.env` 启动两个进程：
+但 Docker-first 运行时同一份 env 同时给两个进程用：
 
 ```text
 admin-api
 admin-worker
 ```
 
-运行时代码里，进程身份事实上由入口决定：
+真实进程身份已经由入口决定：
 
 ```text
 cmd/admin-api/main.go     -> logging.ForProcess("admin-api")
 cmd/admin-worker/main.go  -> logging.ForProcess("admin-worker")
 ```
 
-`APP_NAME` 当前主要被加载到 `Config.App.Name`，但没有成为稳定的进程身份来源。把 `APP_NAME=admin-api` 放进共享 runtime env，会造成语义误导：
+所以共享 `admin-go.env` 里写：
 
 ```text
-同一份 env 同时给 admin-api 和 admin-worker 用，
-但 APP_NAME 写成 admin-api。
+APP_NAME=admin-api
 ```
 
-这不是立即阻塞的问题，但应在后续 env cleanup 中收口。
-
-## 4. 架构设计
-
-### 4.1 Scope
-
-Scope 是 HTTP 命名空间：
+会误导后续设计：
 
 ```text
-admin
-app
+同一份 env 同时给 api 和 worker 用，却说 APP_NAME 是 admin-api。
 ```
 
-未来如果有新平台，例如：
+这不是未来扩展方向，而是应该清掉的历史残留。
+
+## 4. 架构决策：Platform Scope Adapter
+
+### 4.1 定义
 
 ```text
-partner
-merchant
-openapi
+Platform Scope Adapter = 多端 HTTP 入口 + 共享业务能力 + 端侧出参投影。
 ```
 
-它们也只是新的 HTTP scope 或 API consumer 类型，不自动等于新业务模块。
+标准链路：
+
+```text
+/api/admin/v1/... -> admin route/handler -> shared service -> repository/model -> admin presenter
+/api/app/v1/...   -> app route/handler   -> shared service -> repository/model -> app presenter
+```
+
+### 4.2 Scope 是 HTTP 入口，不是业务模块
 
 Scope 决定：
 
 ```text
 route prefix
 public path
-auth token 默认 platform
+token 默认 platform
 RBAC / permission policy
 operation log policy
 response presenter
@@ -179,19 +200,22 @@ Scope 不决定：
 是否复制 service
 是否复制 repository
 是否复制 model
-是否复制业务表
+是否复制数据库表
 ```
 
-### 4.2 Platform
-
-Platform 是业务策略参数：
+未来如果出现：
 
 ```text
-admin
-app
+partner
+merchant
+openapi
 ```
 
-平台进入 service 的方式应该是显式上下文：
+默认也只是新的 HTTP scope 或 consumer 类型，不自动产生 `partnerauth`、`merchantai`、`openapiwallet`。
+
+### 4.3 Platform 是业务策略参数
+
+Platform 应显式进入 service input：
 
 ```go
 type RequestContext struct {
@@ -202,7 +226,7 @@ type RequestContext struct {
 }
 ```
 
-或者在现有代码阶段先使用已经存在的输入字段：
+当前不用急着新增统一 `RequestContext` 类型，可以先沿用已有输入字段：
 
 ```go
 auth.LoginInput.Platform
@@ -210,11 +234,19 @@ user.InitInput.Platform
 session.CreateInput.Platform
 ```
 
-关键点：不要让 service 从 `gin.Context` 里偷读 header。service 只接收已经解析好的平台语义。
+关键规则：
 
-### 4.3 Adapter / Handler
+```text
+service 不依赖 gin.Context。
+service 不偷读 header。
+handler / middleware 解析平台语义后，以明确字段传给 service。
+```
 
-Handler 是 HTTP adapter，职责只有：
+### 4.4 Handler 是 adapter
+
+Handler 可以按端分开，因为 HTTP 入参、公开路径和响应字段可能不同。
+
+Handler 只做：
 
 ```text
 解析 path/query/body/header
@@ -225,40 +257,23 @@ Handler 是 HTTP adapter，职责只有：
 返回 response
 ```
 
-Handler 可以按 scope 分开，因为 HTTP 入参和出参可能不同。
-
-例如 auth：
+Handler 不做：
 
 ```text
-internal/module/auth/
-  route_admin.go
-  route_app.go
-  handler_admin.go
-  handler_app.go
-  presenter_admin.go
-  presenter_app.go
-  service.go
-  repository.go
+复制认证规则
+复制 AI runtime
+复制钱包余额计算
+直接查 DB/Redis
 ```
 
-短期也可以保留：
+### 4.5 Presenter 是出参投影
 
-```text
-internal/module/appauth/
-```
-
-但必须把它定义为“临时 App Auth HTTP adapter”，不能把它当成 App Auth 业务模块。
-
-### 4.4 Presenter
-
-Presenter 是出参投影层。
-
-同一份 service result，可以投影成不同 scope 响应：
+同一份 service result 可以投影成不同端响应：
 
 ```text
 Admin current user:
   user_id
-  role
+  roles
   router
   buttonCodes
   quick_entry
@@ -270,55 +285,21 @@ App current user:
   avatar
 ```
 
-不要让 service 为每个端拼不同 JSON。service 返回稳定业务结果，presenter 裁剪给不同端。
-
-建议命名：
-
-```go
-func presentAdminLogin(result *auth.LoginResponse, currentUser *user.InitResponse) adminLoginResponse
-func presentAppLogin(result *auth.LoginResponse, currentUser *user.InitResponse) appLoginResponse
-```
-
-或按文件拆：
+推荐形态：
 
 ```text
 presenter_admin.go
 presenter_app.go
 ```
 
-### 4.5 Policy
+或保持私有函数：
 
-不同平台的业务策略应进入独立 policy 或现有配置表：
-
-```text
-auth_platforms
-permission platform
-notification platform
-client_versions platform
+```go
+func presentAdminLogin(result *auth.LoginResponse, currentUser *user.InitResponse) adminLoginResponse
+func presentAppLogin(result *auth.LoginResponse, currentUser *user.InitResponse) appLoginResponse
 ```
 
-例如 auth：
-
-```text
-auth.Service.Login(ctx, input{Platform: "app"})
-  -> authplatform.LoginTypes(ctx, "app")
-  -> authplatform.CaptchaType(ctx, "app")
-  -> session.AuthPolicy(ctx, "app")
-```
-
-这是正确方向。
-
-如果未来 App AI 需要不同限制，应该是：
-
-```text
-ai policy by platform / scene / agent
-```
-
-而不是：
-
-```text
-appai.Service
-```
+不要让 service 为每个端拼不同 JSON。
 
 ## 5. 模块命名规则
 
@@ -333,6 +314,8 @@ user
 wallet
 payment
 uploadtoken
+aiprovider
+aiagent
 aichat
 aiconversation
 aimessage
@@ -342,7 +325,7 @@ aiknowledge
 notification
 ```
 
-禁止新增这类平台名前缀业务模块：
+禁止新增平台名前缀业务模块：
 
 ```text
 appauth
@@ -355,30 +338,30 @@ xxauth
 xxai
 ```
 
-例外：如果目录明确是 HTTP adapter，并且有删除/收敛计划，可以临时存在。
+### 5.2 例外：明确标注的临时 HTTP adapter
 
-### 5.2 临时 adapter 必须有边界说明
-
-如果保留 `appauth`，需要在文档中明确：
+`appauth` 可以作为过渡存在，但必须被定义为：
 
 ```text
-appauth = /api/app/v1/auth HTTP adapter only
-不拥有 auth 业务规则
-不拥有 auth repository
-不拥有 auth model
-不允许复制 auth service
-未来可收敛回 auth/route_app.go + auth/handler_app.go
+appauth = /api/app/v1 scope 下 auth / users/me / profile / upload-tokens 的临时 HTTP adapter bundle
+不拥有 auth / user / uploadtoken 业务规则
+不拥有 repository
+不拥有 model
+不允许复制 auth / user / uploadtoken service
+未来按 capability 收敛回 auth / user / uploadtoken 各自的 app route / handler / presenter
 ```
 
-## 6. AI 接入示例
+这个例外不能扩散成 `appai` / `appwallet`。
 
-当 App 接 AI，不要做：
+## 6. App AI 示例
+
+错误方向：
 
 ```text
 internal/module/appai
 ```
 
-应该做：
+正确方向（目标形态；当前 `aichat` 仍是 `route.go` / `handler.go` / `service.go` 等文件，不要求在本 spec 里立刻重命名）：
 
 ```text
 internal/module/aichat/
@@ -406,7 +389,7 @@ POST /api/app/v1/ai-conversations/:id/messages
   -> app presenter
 ```
 
-service 负责：
+`aichat.Service` 拥有：
 
 ```text
 会话归属校验
@@ -418,133 +401,156 @@ run/event/token 记录
 扣费或额度检查
 ```
 
-presenter 负责：
+Presenter 拥有：
 
 ```text
 Admin 是否暴露 run monitor / token / debug 字段
 App 是否只暴露消息展示字段
 ```
 
-## 7. Docker-first env 命名规则
+## 7. Docker-first APP_NAME 决策
 
-### 7.1 当前问题
+### 7.1 不再保留 APP_NAME
 
-当前 `admin-go.env` 是共享 runtime env：
-
-```text
-admin-api    使用它
-admin-worker 使用它
-```
-
-所以这里放：
+推荐删除：
 
 ```text
-APP_NAME=admin-api
+APP_NAME
+Config.App.Name
 ```
 
-不够准确。
-
-### 7.2 建议
-
-短期：
+保留：
 
 ```text
-不依赖 APP_NAME 做任何业务判断。
-文档标记 APP_NAME 为 legacy / cosmetic。
-不要基于 APP_NAME 判断当前进程是 api 还是 worker。
+APP_ENV
+APP_SECRET
 ```
 
-中期：
+理由：
 
 ```text
-删除 APP_NAME。
-保留 APP_ENV / APP_SECRET。
-进程身份由 cmd 入口和 Compose service name 决定。
+APP_NAME 当前没有提供可靠进程身份。
+admin-api / admin-worker 的身份已经由 cmd 入口和 Compose service name 决定。
+共享 admin-go.env 不应该写死 admin-api。
 ```
 
-如果未来确实需要产品名：
+### 7.2 不新增 PROCESS_NAME
+
+当前不建议新增：
 
 ```text
-PROJECT_NAME=admin-go
+PROCESS_NAME
+SERVICE_NAME
 ```
 
-如果未来确实需要进程名：
+因为现有代码已经有更可靠来源：
 
 ```text
-admin-api:
-  environment:
-    PROCESS_NAME: admin-api
-
-admin-worker:
-  environment:
-    PROCESS_NAME: admin-worker
+cmd/admin-api/main.go
+cmd/admin-worker/main.go
+logging.ForProcess("...")
 ```
 
-但当前阶段不建议新增 `PROCESS_NAME`，因为代码已经通过入口明确进程身份。
+如果未来确实需要“产品名”，另开 `PROJECT_NAME=admin-go` 讨论；不要把产品名、进程名、平台名混在 `APP_NAME` 里。
 
-## 8. 推荐推进路径
+## 8. 分阶段推进
 
-### Phase 1：先立规则，不重构运行时代码
+### Phase 1：治理文档先落地
 
 目标：
 
 ```text
-防止 appauth 命名坏味道继续扩散。
-防止新 App AI / App wallet 接入时复制业务模块。
+防止 appauth 命名坏味道扩散。
+防止后续 App AI / App wallet 复制业务模块。
+明确 authplatform 只管认证/会话策略。
 ```
 
 动作：
 
 ```text
-1. 在架构文档增加 Platform Scope Adapter 规则。
-2. 标记 appauth 是 adapter，不是业务模块。
-3. 标记 APP_NAME=admin-api 的语义风险。
+更新 docs/architecture/04-go-backend-framework.md。
+更新 docs/architecture/05-development-quality-rules.md。
+更新 admin_back_go/docs/architecture.md。
 ```
 
 不做：
 
 ```text
-不移动现有 appauth 代码。
+不移动 appauth 代码。
 不改接口路径。
 不改数据库。
 不影响正在跑的 admin_app 登录切片。
 ```
 
-### Phase 2：新 App 业务按新规则落地
+### Phase 2：清理 APP_NAME
 
-第一个适合验证的业务可以是：
+目标：
 
 ```text
-App AI 会话
+移除 Config.App.Name 和 Docker-first APP_NAME。
+让进程身份回到 cmd entry / Compose service。
+```
+
+动作：
+
+```text
+删除 AppConfig.Name。
+删除 envString("APP_NAME", ...)。
+更新 config tests。
+删除 admin-go.env.example / admin-go.env 中的 APP_NAME。
+更新后端架构文档 env 列表。
+```
+
+验证：
+
+```powershell
+cd E:\admin_go\admin_back_go
+go test ./internal/config -count=1
+rg -n "APP_NAME|App\.Name|cfg\.App\.Name" cmd internal deploy docs -S
+```
+
+### Phase 3：新增 App 业务按新规则落地
+
+第一个验证场景可以是：
+
+```text
+App AI conversation
 App wallet summary
 App profile
 ```
 
-落地时必须证明：
+验收标准：
 
 ```text
-没有新增 appai/appwallet 业务模块。
+没有新增 appai / appwallet 业务模块。
 只新增 app route / handler / presenter。
-service 复用已有业务能力。
+service 复用已有 capability。
+API contract 写清楚 app 出参。
 ```
 
-### Phase 3：收敛 appauth
+### Phase 4：可选收敛 appauth
 
-等当前 `admin_app` 登录稳定后，再考虑把：
+等 `admin_app` 登录稳定、另一个 Codex 长任务结束后，再考虑把：
 
 ```text
 internal/module/appauth
 ```
 
-收敛为：
+按 capability 拆回各自模块的 App adapter：
 
 ```text
 internal/module/auth/route_app.go
 internal/module/auth/handler_app.go
 internal/module/auth/presenter_app.go
+internal/module/user/route_app.go
+internal/module/user/handler_app.go
+internal/module/user/presenter_app.go
+internal/module/uploadtoken/route_app.go
+internal/module/uploadtoken/handler_app.go
+internal/module/uploadtoken/presenter_app.go
 ```
 
-这是结构优化，不是功能变化。必须有测试保护：
+这是结构优化，不是功能变化。必须先有测试保护：
 
 ```text
 GET  /api/app/v1/auth/login-config
@@ -553,80 +559,58 @@ POST /api/app/v1/auth/send-code
 POST /api/app/v1/auth/login
 GET  /api/app/v1/users/me
 POST /api/app/v1/auth/logout
+GET  /api/app/v1/profile
+PUT  /api/app/v1/profile
+POST /api/app/v1/upload-tokens
 ```
 
-## 9. 会破坏什么
+## 9. 风险与破坏面
 
-如果按本设计推进，短期不破坏运行时。
+### Phase 1 风险
 
-可能破坏的点只出现在 Phase 3 结构收敛：
+文档治理风险低，只影响后续开发规则。
+
+### Phase 2 风险
+
+`APP_NAME` 清理风险低。当前检索显示实际运行时身份由 `cmd/admin-api` / `cmd/admin-worker` 设置，不靠 `Config.App.Name`。
+
+需要防止：
+
+```text
+测试仍断言 cfg.App.Name。
+文档 env 列表仍包含 APP_NAME。
+ignored 的本机 admin-go.env 仍让用户误解。
+```
+
+### Phase 4 风险
+
+结构收敛风险中等，主要是路由和 public path：
 
 ```text
 路由漏注册
 public skip path 漏配
 platform=app 固定逻辑丢失
 App 出参误返回 admin RBAC 字段
-前端 admin_app contract test 失败
+admin_app contract test 失败
 ```
 
-因此 Phase 3 必须等当前长任务结束后单独做。
+所以 Phase 4 不能和当前登录长任务混做。
 
-## 10. 验证方式
+## 10. 专家审查问题
 
-docs-only 阶段：
-
-```powershell
-git diff --check
-powershell -ExecutionPolicy Bypass -File .\scripts\check-agent-governance.ps1 -Mode working
-```
-
-后续代码阶段：
-
-```powershell
-cd E:\admin_go\admin_back_go
-go test ./internal/module/auth ./internal/module/appauth ./internal/module/session ./internal/server -count=1
-```
-
-如果涉及 AI：
-
-```powershell
-cd E:\admin_go\admin_back_go
-go test ./internal/module/aichat ./internal/module/aiconversation ./internal/module/aimessage ./internal/server -count=1
-```
-
-如果涉及 `admin_app`：
-
-```powershell
-cd E:\admin_go\admin_app
-npm run test -- tests/app-auth-api.test.ts tests/session-controller.test.ts
-npx vue-tsc -b --pretty false
-npm run build:h5
-```
-
-## 11. Agent 分工
-
-下一步不应该由一个 agent 全做。
+请专家重点看这些点：
 
 ```text
-architect
-  固定 Platform Scope Adapter 规则和阶段边界。
-
-api-contract
-  为 /api/app/v1 的新增业务写清楚入参/出参，不让前后端猜字段。
-
-backend-worker
-  按契约实现 app route / handler / presenter，复用 service。
-
-frontend-adapter
-  admin_app 只按 /api/app/v1 contract 调用，不直接追后端内部结构。
-
-reviewer
-  专查是否出现 appai/appwallet/xxauth 这类平台复制坏味道。
+1. /api/{scope}/v1 是否应被定义为 HTTP scope，而不是 module boundary？
+2. authplatform 是否应该限制在认证/会话策略，而不是全局平台配置？
+3. APP_NAME 清理是否还有未发现的真实运行时依赖？
+4. appauth 是继续过渡保留，还是登录稳定后按 capability 拆回 auth / user / uploadtoken 的 app adapter？
+5. presenter 层是否足够表达 admin/app 出参差异，是否需要现在引入统一 RequestContext？
 ```
 
-## 12. 最终规则
+## 11. 最终治理规则
 
-可以直接贴进架构治理文档的规则：
+可直接进入架构文档的规则：
 
 ```text
 平台 scope 不是业务模块边界。
@@ -637,4 +621,3 @@ auth、AI、wallet、upload、notification 等业务能力必须由共享 servic
 
 临时平台 adapter 必须有名字、有边界、有收敛计划；禁止把平台 adapter 演变成第二套业务实现。
 ```
-

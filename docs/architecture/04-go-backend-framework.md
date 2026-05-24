@@ -102,6 +102,29 @@ dto.go         # service/input/output/response DTO，不放 Gin binding tag
 errors.go      # 模块错误
 ```
 
+## Platform Scope Adapter 规则
+
+`/api/admin/v1` 和 `/api/app/v1` 是 HTTP scope，不是业务模块边界。
+
+业务模块必须按 capability 命名，例如 `auth`、`aichat`、`wallet`、`uploadtoken`、`notification`。新增平台时，默认只新增 route / handler / presenter / policy，不新增 `appai`、`appwallet`、`xxauth` 这类平台名前缀业务模块。
+
+允许：
+
+```text
+/api/admin/v1/... -> admin route/handler -> shared service -> repository/model -> admin presenter
+/api/app/v1/...   -> app route/handler   -> shared service -> repository/model -> app presenter
+```
+
+禁止：
+
+```text
+adminauth + appauth + xxauth 各自实现业务
+adminai + appai + xxai 各自实现业务
+adminwallet + appwallet + xxwallet 各自实现业务
+```
+
+临时平台 adapter 必须有名字、有边界、有收敛计划。`appauth` 当前只能被理解为 `/api/app/v1` scope 下 auth / users/me / profile / upload-tokens 的临时 HTTP adapter bundle，不拥有 auth/user/uploadtoken service、repository、model 或认证策略。
+
 ## 调用方向
 
 允许：
