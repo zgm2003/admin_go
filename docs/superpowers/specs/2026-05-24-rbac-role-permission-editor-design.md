@@ -17,7 +17,7 @@ BUTTON 表示页面内动作权限。
 role_permissions 只保存 PAGE/BUTTON permission_id。
 选择 BUTTON 后，Go service 自动补齐父 PAGE。
 buttonCodes 永远只包含 BUTTON code。
-Redis button grant cache 只做性能加速，不是权限真相源。
+Redis route access grant cache 只做性能加速，不是权限真相源。
 ```
 
 UI 可以展示“页面访问”，但它必须映射真实 `PAGE permission_id`，不能变成一个 `xxx_view` / `view` / “查看” BUTTON。
@@ -30,7 +30,7 @@ UI 可以展示“页面访问”，但它必须映射真实 `PAGE permission_id
 
 ```text
 buttonCodes 语义
-Redis button grant cache
+Redis route access grant cache
 API route permission
 角色权限回显
 前端按钮显隐
@@ -68,7 +68,7 @@ UI 只负责把这个模型讲清楚：
 后端 PermissionCheck fail-closed
 role_permissions 现有 PAGE/BUTTON 数据
 buttonCodes 只用于按钮显隐的前端语义
-Redis button grant cache miss/error 回源计算
+Redis route access grant cache miss/error 回源计算
 角色授权变更后的缓存失效
 当前 basic/full smoke 的 RBAC loop
 ```
@@ -103,10 +103,31 @@ buttonCodes 只驱动按钮显隐。
 
 ```text
 MySQL 的 users.role_id / roles / permissions / role_permissions 是权限真相源。
-Redis 只做 button grant 缓存。
+Redis 只做 route access grant 缓存。
 PAGE 授权会让 permissions tree + router 包含该 PAGE，buttonCodes 不增加。
 BUTTON 授权会自动包含父 PAGE 和祖先 DIR，buttonCodes 包含 BUTTON code。
 ```
+
+## 3.1 当前旧实现待重构点
+
+需要在实现计划里显式处理一个旧实现问题：当前 Go runtime 里 `buildContext` 会把 `PAGE/BUTTON` 上非空 `code` 都放进 `buttonCodes`，而部分 GET/read route metadata 也复用了 PAGE code 做 `PermissionCheck`，例如 `payment_config_list`、`payment_order_list`、`wallet_transaction_list`。
+
+这说明当前实现把两个语义混在了同一个字段里：
+
+```text
+前端按钮显隐：应该只读 BUTTON code。
+后端 API 放行：需要能识别 PAGE 访问 code + BUTTON action code。
+```
+
+这不是要兼容旧语义，而是重构顺序问题：不能只改公开 `buttonCodes`，还必须同步把 `PermissionCheck` 切到内部 route access grant。正确 clean cut 方式是：
+
+```text
+Context.ButtonCodes / users/init.buttonCodes：只暴露 BUTTON code，给前端按钮显隐用。
+后端内部 route/API grant codes：包含 PAGE code + BUTTON code，只给 PermissionCheck 和 Redis route grant cache 用。
+项目未上线，不保留旧 button grant cache 命名；本轮直接改成 route access grant cache，避免继续误导。
+```
+
+这不等于新增“查看/view” BUTTON；PAGE code 仍然属于 PAGE 访问语义，不能作为页面内动作返回给前端。
 
 ## 4. Codex + Claude 讨论结论
 
@@ -120,7 +141,7 @@ Codex 和 Claude reviewer 对核心判断一致：
 UI 展示“页面访问”可以，但提交值必须是 PAGE permission_id。
 BUTTON 只表达页面内动作能力。
 buttonCodes 只返回 BUTTON code。
-Redis button grant cache 只做性能加速。
+Redis route access grant cache 只做性能加速。
 ```
 
 ### 4.2 Claude reviewer 修正点
@@ -300,7 +321,7 @@ buttonCodes 不包含 view 虚拟 code。
 ```text
 route metadata 明确声明需要哪个 BUTTON code。
 PermissionCheck 先验证 user/role。
-优先读 Redis button grant cache。
+优先读 Redis route access grant cache。
 cache miss/error 时回源构建 RBAC context。
 构建失败或没有权限时拒绝，不能放行。
 ```
@@ -315,7 +336,7 @@ cache miss/error 时回源构建 RBAC context。
 不为每个 PAGE 额外创建 view BUTTON，节点数量更少。
 role_permissions 只保存真实 PAGE/BUTTON，授权 diff 更简单。
 buttonCodes 只含 BUTTON，前端 can(code) 判断保持 O(1) Set 查询。
-Redis 只缓存 button grants，缓存语义稳定。
+Redis 只缓存 route access grants，缓存语义稳定。
 users/init 按 PAGE/BUTTON 推导 DIR，不需要处理虚拟权限。
 ```
 
@@ -333,8 +354,8 @@ users/init 按 PAGE/BUTTON 推导 DIR，不需要处理虚拟权限。
 
 ```text
 角色保存时一次性归一化 PAGE/BUTTON。
-users/init 构建权限上下文后写入 button grant cache，best-effort。
-角色权限变更后清理绑定用户所有平台的 button grant cache。
+users/init 构建权限上下文后写入 route access grant cache，best-effort。
+角色权限变更后清理绑定用户所有平台的 route access grant cache。
 cache 只是性能边界，不能替代 DB 真相源。
 ```
 
@@ -349,7 +370,7 @@ role normalizeMutation 过滤 DIR，保存 BUTTON 时补父 PAGE。
 role list 回显 permission_id 时只返回 PAGE/BUTTON。
 users/init 的 buttonCodes 只来自 BUTTON。
 PermissionCheck cache miss/error 能回源计算。
-角色授权变更清理绑定用户 admin/app button grant cache。
+角色授权变更清理绑定用户 admin/app route access grant cache。
 ```
 
 不做：
@@ -402,7 +423,7 @@ role/index.vue：负责 init/list/form/diff/submit 编排。
 提交 [DIR] -> role_permissions 不保存 DIR。
 users/init router 包含 PAGE。
 users/init buttonCodes 只包含 BUTTON code。
-角色授权变更后相关用户 button grant cache 被清理。
+角色授权变更后相关用户 route access grant cache 被清理。
 ```
 
 建议测试：
@@ -438,7 +459,7 @@ RBAC smoke 继续覆盖：
 login -> AuthToken -> users/me -> users/init
 permission create DIR/PAGE/BUTTON
 role update grants PAGE/BUTTON
-users/init returns temporary router + buttonCodes
+users/init returns temporary router + BUTTON-only buttonCodes
 role restore
 permission subtree delete
 logout
@@ -449,22 +470,32 @@ logout
 ```powershell
 cd E:\admin_go\admin_back_go
 powershell -ExecutionPolicy Bypass -File .\scripts\basic-admin-smoke.ps1 -Account 15671628271 -Password 123456
+powershell -ExecutionPolicy Bypass -File .\scripts\full-admin-smoke.ps1 -Account 15671628271 -Password 123456
 ```
 
-## 11. 迁移和兼容策略
+## 11. Clean-cut 迁移策略
 
-当前项目不应该产生新的 `view` 虚拟权限。如果已经有 UI 文案“查看”，先判断它只是展示文字还是已落为真实 BUTTON。
+项目未上线，不做兼容保留。当前项目不应该产生新的 `view` 虚拟权限；落地前只做一次审计，确认是否存在历史误造的 `view` / `xxx_view` BUTTON。
+
+审计规则：
+
+```sql
+SELECT id, code, name
+FROM permissions
+WHERE is_del = 2
+  AND type = 3
+  AND (code LIKE '%\_view' ESCAPE '\\' OR code = 'view' OR code LIKE '%page_view%');
+```
 
 处理规则：
 
 ```text
 只是 UI 文案：改成“页面访问”，数据仍用 PAGE id。
-已经有 view BUTTON 数据：先做 DB 审计，确认是否被 route metadata 或 userStore.can 使用。
-无人使用的 view BUTTON：写 migration 软删，并清理 role_permissions。
-有人使用的 view BUTTON：先替换调用点到 PAGE/BUTTON 正确模型，再删数据。
+审计 0 行：记录 verified clean，不写 migration。
+审计非 0 行：直接删除相关 role_permissions 和 permissions 误造 BUTTON，不保留兼容路径。
 ```
 
-任何 permission/menu 变更后，必须清理或等待 RBAC button grant cache，否则 Redis 旧授权可能遮住 DB 真相。
+任何 permission/menu 变更后，必须清理或等待 RBAC route access grant cache，否则 Redis 旧授权可能遮住 DB 真相。
 
 ## 12. Exit Criteria
 
