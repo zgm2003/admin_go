@@ -114,11 +114,20 @@
 
 第一版采用 Go 后端 + MySQL metadata + Qdrant vector store。
 
+Vector store 决策：
+
+- MVP 固定采用 Qdrant 作为专业向量库。
+- MySQL 只保存 corpus/document/chunk metadata、导入状态、业务过滤字段和 `vector_point_id`。
+- 相似度检索、向量 upsert、向量删除和 payload filter 都走 Qdrant，不在 MySQL 里自造向量检索。
+- pgvector 只作为后续如果引入 Postgres 时的替代方案，不作为第一版默认实现。
+- 不允许浏览器直连 Qdrant；所有向量库访问必须经过 Go 后端 platform wrapper。
+
 选择 Qdrant 的原因：
 
 - 不需要为了 pgvector 立即引入 Postgres，能贴合当前 MySQL 后端。
 - 支持 payload metadata 和 filter，适合按 domain/IP/source/status 过滤。
 - 向量数据和业务 metadata 解耦，后续可替换或并行接 pgvector。
+- 运维上可以作为独立容器接入现有 docker-first 本地环境，避免把实验性向量能力塞进主业务 MySQL。
 
 边界：
 
@@ -132,6 +141,8 @@ MySQL:
 Qdrant:
   chunk embedding vector
   minimal payload for filtering and result display
+  collection per embedding model/dimension
+  point id referenced by MySQL chunks
 
 AI provider:
   embedding model
@@ -189,6 +200,7 @@ internal/platform/embedding
 - `embedding_provider`
 - `embedding_model`
 - `embedding_dimension`
+- `vector_store`: fixed to qdrant in MVP
 - `vector_collection`
 - `status`: enabled/disabled
 - `is_del`
