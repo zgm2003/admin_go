@@ -85,7 +85,7 @@ Modify: admin_app/tests/app-profile-ui.test.ts
 - Modify: `admin_app/src/manifest.json`
 - Modify: `admin_app/docs/architecture.md`
 
-- [ ] **Step 1: Add failing platform-scope test**
+- [x] **Step 1: Add failing platform-scope test**
 
 Create `admin_app/tests/app-platform-scope.test.ts`:
 
@@ -145,7 +145,7 @@ describe('admin_app platform scope', () => {
 })
 ```
 
-- [ ] **Step 2: Run the failing test**
+- [x] **Step 2: Run the failing test**
 
 Run:
 
@@ -156,7 +156,7 @@ npm run test:unit -- tests/app-platform-scope.test.ts
 
 Expected now: FAIL because `package.json` still has `mp-*` / `quickapp` / `custom` scripts and `manifest.json` still has mini-program sections.
 
-- [ ] **Step 3: Update package scripts**
+- [x] **Step 3: Update package scripts**
 
 In `admin_app/package.json`, replace the current script block with:
 
@@ -174,25 +174,25 @@ In `admin_app/package.json`, replace the current script block with:
 
 Do not remove `@dcloudio/uni-mp-*` dependencies in this task. Dependency pruning creates large lockfile churn and is not required to stop advertising mini-program support. If dependency pruning is needed, write a separate cleanup spec.
 
-- [ ] **Step 4: Remove mini-program manifest sections and declare App permissions**
+- [x] **Step 4: Remove mini-program manifest sections and declare App permissions**
 
 In `admin_app/src/manifest.json`, remove:
 
 ```json
-"quickapp": {},
-"mp-weixin": { ... },
-"mp-alipay": { ... },
-"mp-baidu": { ... },
-"mp-toutiao": { ... }
+quickapp
+mp-weixin
+mp-alipay
+mp-baidu
+mp-toutiao
 ```
 
 Keep `app-plus`, `uniStatistics`, and `vueVersion`. Under `app-plus.distribute.android.permissions`, ensure these declarations exist before implementing runtime permission requests:
 
 ```json
-"<uses-permission android:name="android.permission.CAMERA"/>",
-"<uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>",
-"<uses-permission android:name="android.permission.READ_MEDIA_VIDEO"/>",
-"<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>"
+"<uses-permission android:name=\"android.permission.CAMERA\"/>",
+"<uses-permission android:name=\"android.permission.READ_MEDIA_IMAGES\"/>",
+"<uses-permission android:name=\"android.permission.READ_MEDIA_VIDEO\"/>",
+"<uses-permission android:name=\"android.permission.READ_EXTERNAL_STORAGE\" android:maxSdkVersion=\"32\"/>"
 ```
 
 Under `app-plus.distribute.ios`, add privacy descriptions so iOS has Info.plist usage strings before camera or photo library access:
@@ -204,7 +204,7 @@ Under `app-plus.distribute.ios`, add privacy descriptions so iOS has Info.plist 
 }
 ```
 
-- [ ] **Step 5: Update architecture wording**
+- [x] **Step 5: Update architecture wording**
 
 In `admin_app/docs/architecture.md`, replace the UI selection paragraph with:
 
@@ -225,7 +225,7 @@ build:h5：证明浏览器/H5 构建链路可跑。
 build:app：证明 UniApp App target 可编译；真机权限流仍需要后续设备 smoke。
 ```
 
-- [ ] **Step 6: Re-run platform-scope test**
+- [x] **Step 6: Re-run platform-scope test**
 
 Run:
 
@@ -245,7 +245,7 @@ Expected: PASS.
 - Modify: `admin_app/tests/app-upload-runtime.test.ts`
 - Modify: `admin_app/tests/app-profile-ui.test.ts`
 
-- [ ] **Step 1: Add failing permission resolver test**
+- [x] **Step 1: Add failing permission resolver test**
 
 Create `admin_app/tests/app-upload-permission.test.ts`:
 
@@ -262,6 +262,7 @@ describe('app media upload permissions', () => {
       source: 'camera',
       mediaKind: 'image',
     })).toEqual({
+      shouldShowRationale: false,
       shouldRequestNativePermission: false,
       permissions: [],
     })
@@ -275,6 +276,7 @@ describe('app media upload permissions', () => {
       source: 'camera',
       mediaKind: 'image',
     })).toEqual({
+      shouldShowRationale: true,
       shouldRequestNativePermission: true,
       permissions: ['android.permission.CAMERA'],
     })
@@ -288,6 +290,7 @@ describe('app media upload permissions', () => {
       source: 'album',
       mediaKind: 'image',
     })).toEqual({
+      shouldShowRationale: true,
       shouldRequestNativePermission: true,
       permissions: ['android.permission.READ_MEDIA_IMAGES'],
     })
@@ -301,6 +304,7 @@ describe('app media upload permissions', () => {
       source: 'album',
       mediaKind: 'image',
     })).toEqual({
+      shouldShowRationale: true,
       shouldRequestNativePermission: true,
       permissions: ['android.permission.READ_EXTERNAL_STORAGE'],
     })
@@ -308,7 +312,7 @@ describe('app media upload permissions', () => {
 })
 ```
 
-- [ ] **Step 2: Update upload runtime static contract test**
+- [x] **Step 2: Update upload runtime static contract test**
 
 In `admin_app/tests/app-upload-runtime.test.ts`, change the second test to read the new component:
 
@@ -322,7 +326,7 @@ it('keeps app media upload permission-gated and wired to COS runtime', () => {
   expect(uploader).toContain(':auto-upload="false"')
   expect(uploader).toContain('ensureAppMediaPermission')
   expect(uploader).toContain('uploadAppFileToCloud')
-  expect(uploader).toContain("@tap.stop=\"handleChoose\"")
+  expect(uploader).toContain("@tap.stop.prevent=\"handleChoose\"")
   expect(uploader).not.toContain('uni.chooseImage({')
   expect(uploader).not.toContain('wx.')
   expect(uploader).not.toContain('MP-WEIXIN')
@@ -341,7 +345,7 @@ it('keeps app media upload permission-gated and wired to COS runtime', () => {
 })
 ```
 
-- [ ] **Step 3: Update profile UI contract test**
+- [x] **Step 3: Update profile UI contract test**
 
 In `admin_app/tests/app-profile-ui.test.ts`, replace:
 
@@ -370,7 +374,22 @@ expect(minePage).not.toContain('AppMediaUploader')
 expect(minePage).not.toContain('AppAvatarUploader')
 ```
 
-- [ ] **Step 4: Run failing tests**
+And replace the locale-copy assertions:
+
+```ts
+expect(source).toContain('uploadingAvatar')
+expect(source).toContain('avatarUploadSuccess')
+```
+
+with:
+
+```ts
+expect(source).toContain('mediaUpload')
+expect(source).toContain('uploading')
+expect(source).toContain('uploadSuccess')
+```
+
+- [x] **Step 4: Run failing tests**
 
 Run:
 
@@ -390,7 +409,7 @@ Expected now: FAIL because the new permission helper and `AppMediaUploader` do n
 - Modify: `admin_app/src/locales/zh-CN.ts`
 - Modify: `admin_app/src/locales/en-US.ts`
 
-- [ ] **Step 1: Create platform permission helper**
+- [x] **Step 1: Create platform permission helper**
 
 Create `admin_app/src/lib/platform/appMediaPermission.ts`:
 
@@ -573,7 +592,7 @@ function getPlusRuntime(): Partial<typeof plus> | null {
 
 Use the existing named export from `src/i18n.ts`; do not create a second i18n instance and do not redeclare the global `plus` type.
 
-- [ ] **Step 2: Add common cancel key**
+- [x] **Step 2: Add common cancel key**
 
 In both locale files, add `cancel` under `common`:
 
@@ -585,7 +604,7 @@ cancel: '取消',
 cancel: 'Cancel',
 ```
 
-- [ ] **Step 3: Add upload permission i18n keys**
+- [x] **Step 3: Add upload permission i18n keys**
 
 In `admin_app/src/locales/zh-CN.ts`, add top-level `upload`:
 
@@ -599,6 +618,8 @@ upload: {
   chooseSource: '选择上传来源',
   chooseAlbum: '从相册选择',
   chooseCamera: '拍照上传',
+  mediaUpload: '上传文件',
+  mediaUploadHint: '点击选择文件，将上传到当前 COS 配置。',
   uploading: '上传中...',
   uploadSuccess: '上传成功',
   uploadFailed: '上传失败',
@@ -617,23 +638,15 @@ upload: {
   chooseSource: 'Choose source',
   chooseAlbum: 'Photo library',
   chooseCamera: 'Camera',
+  mediaUpload: 'Upload file',
+  mediaUploadHint: 'Tap to choose a file. It will upload through the current COS configuration.',
   uploading: 'Uploading...',
   uploadSuccess: 'Upload completed',
   uploadFailed: 'Upload failed',
 },
 ```
 
-Also remove now-dead generic upload status keys from the `mine` namespace after deleting the old avatar-only component:
-
-```ts
-uploadingAvatar
-avatarUploadSuccess
-avatarUploadFailed
-```
-
-Keep `mine.avatarUpload` and `mine.avatarUploadHint` because the profile page passes them as avatar-specific title/hint.
-
-- [ ] **Step 4: Run permission tests**
+- [x] **Step 4: Run permission tests**
 
 Run:
 
@@ -653,7 +666,7 @@ Expected: PASS.
 - Create: `admin_app/src/components/AppMediaUploader/src/AppMediaUploader.vue`
 - Modify: `admin_app/src/lib/appUploadRuntime.ts`
 
-- [ ] **Step 1: Create component export**
+- [x] **Step 1: Create component export**
 
 Create `admin_app/src/components/AppMediaUploader/index.ts`:
 
@@ -661,7 +674,7 @@ Create `admin_app/src/components/AppMediaUploader/index.ts`:
 export { default as AppMediaUploader } from './src/AppMediaUploader.vue'
 ```
 
-- [ ] **Step 2: Create AppMediaUploader component**
+- [x] **Step 2: Create AppMediaUploader component**
 
 Create `admin_app/src/components/AppMediaUploader/src/AppMediaUploader.vue`:
 
@@ -926,7 +939,7 @@ function resolveUploadErrorMessage(error: unknown): string {
 </style>
 ```
 
-- [ ] **Step 3: Adjust app upload runtime body resolution and token-rule guard**
+- [x] **Step 3: Adjust app upload runtime body resolution and token-rule guard**
 
 In `admin_app/src/lib/appUploadRuntime.ts`, export `AppUploadFileLike` and keep `body` as `Blob`; do not widen it to a path string:
 
@@ -966,12 +979,29 @@ export async function uploadAppFileToCloud(
     throw new Error('Unsupported upload provider')
   }
 
-  const cos = new CosClientConstructor({ ... })
+  const cos = new CosClientConstructor({
+    getAuthorization(_options, callback) {
+      callback({
+        TmpSecretId: token.credentials.tmp_secret_id,
+        TmpSecretKey: token.credentials.tmp_secret_key,
+        SecurityToken: token.credentials.session_token,
+        StartTime: token.start_time,
+        ExpiredTime: token.expired_time,
+      })
+    },
+  })
+
   await new Promise<void>((resolve, reject) => {
-    cos.putObject({ Bucket: token.bucket, Region: token.region, Key: token.key, Body: body }, (error) => {
-      if (error) reject(error)
-      else resolve()
-    })
+    cos.putObject(
+      { Bucket: token.bucket, Region: token.region, Key: token.key, Body: body },
+      (error) => {
+        if (error) {
+          reject(error)
+          return
+        }
+        resolve()
+      },
+    )
   })
 
   return {
@@ -1072,7 +1102,7 @@ function validateUploadTokenRule(payload: AppUploadTokenPayload, rule: AppUpload
 
 The important invariant is: `cos.putObject.Body` receives `Blob`, never an App local path string.
 
-- [ ] **Step 4: Run upload runtime tests**
+- [x] **Step 4: Run upload runtime tests**
 
 Run:
 
@@ -1090,10 +1120,12 @@ Expected: PASS.
 **Files:**
 - Modify: `admin_app/src/pages/profile/edit.vue`
 - Modify: `admin_app/tests/app-profile-ui.test.ts`
+- Modify: `admin_app/src/locales/zh-CN.ts`
+- Modify: `admin_app/src/locales/en-US.ts`
 - Delete: `admin_app/src/components/AppUpload/index.ts`
 - Delete: `admin_app/src/components/AppUpload/src/AppAvatarUploader.vue`
 
-- [ ] **Step 1: Update import**
+- [x] **Step 1: Update import**
 
 In `admin_app/src/pages/profile/edit.vue`, replace:
 
@@ -1107,7 +1139,7 @@ with:
 import { AppMediaUploader } from '@/components/AppMediaUploader'
 ```
 
-- [ ] **Step 2: Update template**
+- [x] **Step 2: Update template**
 
 Replace:
 
@@ -1128,7 +1160,7 @@ with:
 />
 ```
 
-- [ ] **Step 3: Delete old avatar-only shared component**
+- [x] **Step 3: Delete old avatar-only shared component**
 
 After `profile/edit.vue` imports `AppMediaUploader`, remove the old component:
 
@@ -1137,7 +1169,19 @@ admin_app/src/components/AppUpload/index.ts
 admin_app/src/components/AppUpload/src/AppAvatarUploader.vue
 ```
 
-- [ ] **Step 4: Run profile UI tests**
+- [x] **Step 4: Remove old avatar-only upload status locale keys**
+
+After deleting `AppUpload`, remove these now-dead keys from `mine` in both locale files:
+
+```ts
+uploadingAvatar
+avatarUploadSuccess
+avatarUploadFailed
+```
+
+Keep `mine.avatarUpload` and `mine.avatarUploadHint`; they are still passed by `profile/edit.vue` as avatar-specific title/hint.
+
+- [x] **Step 5: Run profile UI tests**
 
 Run:
 
@@ -1156,7 +1200,7 @@ Expected: PASS.
 - Modify: `admin_app/docs/architecture.md`
 - Modify: `admin_app/docs/app-api-v1.md`
 
-- [ ] **Step 1: Update architecture component flow**
+- [x] **Step 1: Update architecture component flow**
 
 In `admin_app/docs/architecture.md`, replace:
 
@@ -1172,7 +1216,7 @@ AppMediaUploader -> App permission preflight on APP-PLUS, no native permission p
 AppMediaUploader -> /api/app/v1/upload-tokens + COS-only upload runtime
 ```
 
-- [ ] **Step 2: Add upload platform rule**
+- [x] **Step 2: Add upload platform rule**
 
 Add this section to `admin_app/docs/architecture.md` after `UI 选型`:
 
@@ -1186,7 +1230,7 @@ Add this section to `admin_app/docs/architecture.md` after `UI 选型`:
 H5 不做 native permission preflight，由浏览器文件选择器接管。App 打开相册或相机前必须先检查是否已授权；已授权直接打开选择器，未授权或未知状态才展示用途说明并请求对应权限。权限拒绝时不打开选择器、不请求 upload token、不改变表单值。`manifest.json` 必须声明 Android CAMERA/READ_MEDIA_IMAGES/READ_MEDIA_VIDEO/READ_EXTERNAL_STORAGE 和 iOS NSCameraUsageDescription/NSPhotoLibraryUsageDescription。
 ```
 
-- [ ] **Step 3: Update app API upload token note**
+- [x] **Step 3: Update app API upload token note**
 
 In `admin_app/docs/app-api-v1.md`, under `Upload token`, replace the existing rule with:
 
@@ -1194,7 +1238,7 @@ In `admin_app/docs/app-api-v1.md`, under `Upload token`, replace the existing ru
 规则：头像等 App 侧媒体上传走当前 COS-only upload token runtime。前端统一通过 `AppMediaUploader` 选择文件并上传；H5 由浏览器文件选择器接管权限，App 在打开相册/相机前必须先走权限前置。前端用 `cos-js-sdk-v5` 直传，不走 Vite 反代，不使用 uview-plus `autoUpload`。App 本地路径必须先通过 `plus.io` 读取成 Blob，获取 upload token 后、PUT COS 前再按 `token.rule` 做一次大小和后缀校验。
 ```
 
-- [ ] **Step 4: Re-run docs-related tests**
+- [x] **Step 4: Re-run docs-related tests**
 
 Run:
 
@@ -1212,7 +1256,7 @@ Expected: PASS.
 **Files:**
 - Verify only.
 
-- [ ] **Step 1: Run full app unit tests**
+- [x] **Step 1: Run full app unit tests**
 
 Run:
 
@@ -1223,7 +1267,7 @@ npm run test:unit
 
 Expected: all Vitest suites PASS.
 
-- [ ] **Step 2: Run app typecheck**
+- [x] **Step 2: Run app typecheck**
 
 Run:
 
@@ -1234,7 +1278,7 @@ npm run type-check
 
 Expected: PASS with no TypeScript errors.
 
-- [ ] **Step 3: Run H5 build**
+- [x] **Step 3: Run H5 build**
 
 Run:
 
@@ -1245,7 +1289,7 @@ npm run build:h5
 
 Expected: H5 build PASS.
 
-- [ ] **Step 4: Run App build**
+- [x] **Step 4: Run App build**
 
 Run:
 
@@ -1256,7 +1300,7 @@ npm run build:app
 
 Expected: App build PASS. If local CLI lacks native packaging prerequisites, record the exact failure and do not claim App upload runtime is fully verified.
 
-- [ ] **Step 5: Run root whitespace and governance gates**
+- [x] **Step 5: Run root whitespace and governance gates**
 
 Run:
 
@@ -1297,21 +1341,24 @@ Coverage check:
 
 ```text
 Component name issue -> Task 2/4/5 create AppMediaUploader and remove AppAvatarUploader usage.
-App permission requirement -> Task 2/3/4 add resolver and pre-choose ensureAppMediaPermission.
+App permission requirement -> Task 1/2/3/4 add manifest permissions, resolver, granted-check skip, and pre-choose ensureAppMediaPermission.
 H5/App/no-mini platform concept -> Task 1 and Task 6.
 uview-plus upload decision -> Task 4 uses up-upload with autoUpload=false and project COS runtime.
+COS Body / file_size safety -> Task 4 converts App local paths to Blob, rejects unknown size, and validates token.rule before PUT.
+i18n path / plus typing safety -> Task 3 imports named i18n from src/i18n.ts and reuses global @dcloudio plus type without redeclare.
+Task ordering safety -> Task 5 deletes AppUpload only after profile/edit import/template migration.
 Verification -> Task 7.
 ```
 
 Placeholder scan:
 
 ```text
-No TBD/TODO remains.
+No executable TBD/TODO remains.
 Every task has exact files and commands.
 ```
 
 Type consistency:
 
 ```text
-AppMediaUploader, ensureAppMediaPermission, resolveAppMediaPermissionPlan, AppMediaSource, AppMediaKind names are consistent across tasks.
+AppMediaUploader, ensureAppMediaPermission, resolveAppMediaPermissionPlan, AppMediaSource, AppMediaKind, AppUploadFileLike, readAppLocalFileAsBlob, and validateUploadTokenRule names are consistent across tasks.
 ```

@@ -469,4 +469,5 @@ Scope 聚焦在 admin_app 上传组件、平台边界和权限前置。
 不改后端 API，不扩大到全量文件中心。
 H5/App/小程序边界明确。
 uview-plus 只作为 UI/选择组件，不接管 COS 上传。
+App manifest 权限、iOS privacyDescription、App 本地路径转 Blob、token.rule 二次校验已经纳入约束。
 ```
