@@ -50,7 +50,7 @@ ADMIN_BACK_GO_DIR=E:/admin_go/admin_back_go
 ADMIN_GO_ENV_FILE=./admin-go.env
 ADMIN_GO_RUNTIME_DIR=./runtime
 ADMIN_GO_EXPORTS_DIR=./exports
-ADMIN_API_HOST_BIND=127.0.0.1
+ADMIN_API_HOST_BIND=0.0.0.0
 ADMIN_API_HOST_PORT=8080
 ```
 
@@ -60,8 +60,14 @@ ADMIN_API_HOST_PORT=8080
 MYSQL_DSN=你的 MySQL DSN
 REDIS_ADDR=host.docker.internal:6379
 APP_SECRET=本地长随机字符串，至少 32 位
-CORS_ALLOW_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174
+CORS_ALLOW_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,http://192.168.5.20:5173
 ```
+
+局域网真机调试固定使用这组本地形态：`ADMIN_API_HOST_BIND=0.0.0.0` 让手机能访问开发机 `8080`，`http://192.168.5.20:5173` 是当前 H5/LAN dev origin。生产环境不要照搬开发 IP，`CORS_ALLOW_ORIGINS` 应改成实际部署域名。
+
+Windows Docker Desktop 如果 `docker compose ps` 已显示 `0.0.0.0:8080->8080/tcp`，但 `http://192.168.5.20:8080` 仍超时，而 `http://127.0.0.1:8080` 正常，说明宿主 LAN 转发/防火墙还没放通。此时需要在管理员 PowerShell 中单独加宿主转发或防火墙规则；不要把这个问题误判成 Go CORS 失败。
+
+本机 Docker Desktop 还可能出现宿主 `8080` 被 Docker 转发表占住，导致 Windows `portproxy` 规则存在但没有真正监听。这个情况下采用更窄的本地 fallback：Docker API 只绑定 `127.0.0.1:18081`，再用宿主转发把 `192.168.5.20:8080` 转到 `127.0.0.1:18081`。手机和 `admin_app` 仍访问 `http://192.168.5.20:8080/api/app/v1`，只是开发机内部不再让 Docker 直接占宿主 `8080`。
 
 启动后端：
 
