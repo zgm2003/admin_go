@@ -675,4 +675,3 @@ Expected: no matches for active code/tests/docs. If matches are in comments docu
 - Placeholder scan: no unfinished placeholder markers are used.
 - Type consistency: moved imports use `hooks`, `store`, `enums`, `i18n`, `lib/http`, `lib/upload`, `platform/app`, `platform/uview`, and `views` consistently.
 - Scope control: no UI rewrite, API contract change, DB change, or PC admin business copy is included.
-
