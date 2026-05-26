@@ -32,21 +32,17 @@ MySQL/Redis 可以也推荐用宝塔 Docker 管，但必须属于独立的 `admi
 
 ```text
 docker-compose.yml
-compose.env.example
 admin-go.env.example
 README.md
 ```
 
-不要在这个目录里放真实 `.env`、`admin-go.env`、`runtime/`、`exports/`。真实运行文件属于服务器 Compose 工作目录：
+当前 docker-first compose 以开发者默认值为主，不再依赖 Compose `.env`。运行配置由 `admin-go.env` 注入容器；新环境可从 `admin-go.env.example` 复制。
 
 ```text
-/www/docker/admin-go-backend/.env
-/www/docker/admin-go-backend/admin-go.env
-/www/docker/admin-go-backend/runtime/
-/www/docker/admin-go-backend/exports/
+admin-go.env
+runtime/
+exports/
 ```
-
-本地如果只是验证 Compose 结构，使用 `compose.env.example` / `admin-go.env.example` 做只读 config 校验，不在 deploy 目录生成真实 env。
 
 ## 0. Linus 三问
 
@@ -218,11 +214,10 @@ PAYMENT_CERT_BASE_DIR=/app
 ```bash
 mkdir -p /www/docker/admin-go-backend
 cp /www/project/admin_back_go/deploy/docker-first/docker-compose.yml /www/docker/admin-go-backend/docker-compose.yml
-cp /www/project/admin_back_go/deploy/docker-first/compose.env.example /www/docker/admin-go-backend/.env
 cd /www/docker/admin-go-backend
 ```
 
-复制 `/www/docker/admin-go-backend/.env` 后按需调整 `ADMIN_BACK_GO_DIR`、`ADMIN_GO_ENV_FILE`、挂载目录和端口。`.env` 是 Docker Compose 项目变量，不是后端业务运行配置；后端业务配置仍在 `/www/docker/admin-go-backend/admin-go.env`。
+如果 Compose 工作目录移动了，直接按实际目录修改 `docker-compose.yml` 里的 `build.context`、`env_file`、`ports` 和挂载路径；不要再为这些字段引入 Compose `.env`。
 
 确保挂载目录能被容器内 `app` 用户写入：
 
@@ -230,7 +225,7 @@ cd /www/docker/admin-go-backend
 chown -R 10001:10001 /www/docker/admin-go-backend/runtime /www/docker/admin-go-backend/exports
 ```
 
-如果使用宝塔 Docker 面板创建 Compose 项目，后端应用项目命名为 `admin-go-backend`，Compose 工作目录使用 `/www/docker/admin-go-backend`，Compose 文件使用 `/www/docker/admin-go-backend/docker-compose.yml`。项目环境变量可以来自 `/www/docker/admin-go-backend/.env`，至少包含 `ADMIN_BACK_GO_DIR=/www/project/admin_back_go` 和 `ADMIN_GO_ENV_FILE=./admin-go.env`。宝塔 Docker 负责启动、停止、重启、查看容器日志；宝塔 Nginx 仍负责 SSL 和反向代理。
+如果使用宝塔 Docker 面板创建 Compose 项目，后端应用项目命名为 `admin-go-backend`，Compose 文件使用 `docker-compose.yml`；路径、端口这类 Compose 参数直接改 compose 文件。宝塔 Docker 负责启动、停止、重启、查看容器日志；宝塔 Nginx 仍负责 SSL 和反向代理。
 
 MySQL/Redis 即便也用 Docker，也放在独立的 `admin-go-state` 项目，不写进后端 Compose。
 
@@ -350,11 +345,14 @@ www.zgm2003.cn -> 118.126.104.244 Nginx -> 127.0.0.1:8080 admin-api
 
 第二台后端 B 跑起来后，B 的 Docker 端口不能只绑定 `127.0.0.1`，否则机器 A 的 Nginx 访问不到 B。B 启动时要显式绑定内网地址或 `0.0.0.0`，并用安全组/防火墙只允许机器 A 访问 B 的 8080：
 
+```yaml
+ports:
+  - "0.0.0.0:8080:8080"
+```
+
+然后重新启动：
+
 ```bash
-ADMIN_BACK_GO_DIR=/www/project/admin_back_go \
-ADMIN_GO_ENV_FILE=/www/docker/admin-go-backend/admin-go.env \
-ADMIN_API_HOST_BIND=0.0.0.0 \
-ADMIN_API_HOST_PORT=8080 \
 docker compose up -d --build
 ```
 

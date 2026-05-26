@@ -22,39 +22,26 @@ WebSocket 当前由 admin-api 承载；连接数/内存/fd 压力上来后再拆
 
 ## 后端本地启动
 
-后端本地开发统一 Docker-first，不再使用 `.env + go run` 启动 `admin-api` / `admin-worker`。
+后端本地开发统一 Docker-first，不再使用仓库根 `.env + go run` 启动 `admin-api` / `admin-worker`。
 
-`admin_back_go/deploy/docker-first/` 只保存可提交模板；真实运行文件放 root 仓忽略的本地 Compose 工作目录：
+`admin_back_go/deploy/docker-first/docker-compose.yml` 已经固定开发者默认值，不再需要 Compose `.env`：
 
 ```text
-E:\admin_go\.docker\admin-go-backend\.env
-E:\admin_go\.docker\admin-go-backend\admin-go.env
-E:\admin_go\.docker\admin-go-backend\runtime\
-E:\admin_go\.docker\admin-go-backend\exports\
+源码目录:   ../..
+运行配置:   ./admin-go.env
+运行目录:   ./runtime -> /app/runtime
+导出目录:   ./exports -> /app/exports
+API 端口:   127.0.0.1:8080 -> container 8080
 ```
 
 首次准备：
 
 ```powershell
-cd E:\admin_go
-New-Item -ItemType Directory -Force -Path .docker\admin-go-backend\runtime\logs, .docker\admin-go-backend\exports
-Copy-Item admin_back_go\deploy\docker-first\docker-compose.yml .docker\admin-go-backend\docker-compose.yml
-Copy-Item admin_back_go\deploy\docker-first\compose.env.example .docker\admin-go-backend\.env
-Copy-Item admin_back_go\deploy\docker-first\admin-go.env.example .docker\admin-go-backend\admin-go.env
+cd E:dmin_godmin_back_go\deploy\docker-first
+New-Item -ItemType Directory -Force -Path runtime\logs, exports
 ```
 
-编辑 `.env`：
-
-```env
-ADMIN_BACK_GO_DIR=E:/admin_go/admin_back_go
-ADMIN_GO_ENV_FILE=./admin-go.env
-ADMIN_GO_RUNTIME_DIR=./runtime
-ADMIN_GO_EXPORTS_DIR=./exports
-ADMIN_API_HOST_BIND=0.0.0.0
-ADMIN_API_HOST_PORT=8080
-```
-
-编辑 `admin-go.env`，至少设置：
+确认 `admin-go.env` 至少设置：
 
 ```env
 MYSQL_DSN=你的 MySQL DSN
@@ -63,16 +50,10 @@ APP_SECRET=本地长随机字符串，至少 32 位
 CORS_ALLOW_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,http://192.168.5.20:5173
 ```
 
-局域网真机调试固定使用这组本地形态：`ADMIN_API_HOST_BIND=0.0.0.0` 让手机能访问开发机 `8080`，`http://192.168.5.20:5173` 是当前 H5/LAN dev origin。生产环境不要照搬开发 IP，`CORS_ALLOW_ORIGINS` 应改成实际部署域名。
-
-Windows Docker Desktop 如果 `docker compose ps` 已显示 `0.0.0.0:8080->8080/tcp`，但 `http://192.168.5.20:8080` 仍超时，而 `http://127.0.0.1:8080` 正常，说明宿主 LAN 转发/防火墙还没放通。此时需要在管理员 PowerShell 中单独加宿主转发或防火墙规则；不要把这个问题误判成 Go CORS 失败。
-
-本机 Docker Desktop 还可能出现宿主 `8080` 被 Docker 转发表占住，导致 Windows `portproxy` 规则存在但没有真正监听。这个情况下采用更窄的本地 fallback：Docker API 只绑定 `127.0.0.1:18081`，再用宿主转发把 `192.168.5.20:8080` 转到 `127.0.0.1:18081`。手机和 `admin_app` 仍访问 `http://192.168.5.20:8080/api/app/v1`，只是开发机内部不再让 Docker 直接占宿主 `8080`。
-
 启动后端：
 
 ```powershell
-cd E:\admin_go\.docker\admin-go-backend
+cd E:dmin_godmin_back_go\deploy\docker-first
 docker compose up -d --build
 docker compose ps
 ```
@@ -84,7 +65,9 @@ curl.exe http://127.0.0.1:8080/health
 curl.exe http://127.0.0.1:8080/ready
 ```
 
-如果 8080 被占用，改 `.env` 中的 `ADMIN_API_HOST_PORT`，不要用 `go run` 临时绕过。
+如果宿主 `8080` 被占用，直接改 `docker-compose.yml` 的 `ports` 行，例如改成 `127.0.0.1:18081:8080`，不要为了端口再引入 Compose `.env`。
+
+局域网真机调试时，再把 `ports` 行按需改成 `0.0.0.0:8080:8080`，并确认防火墙和 `CORS_ALLOW_ORIGINS` 覆盖当前 H5/LAN dev origin。
 
 ## 前端启动
 
@@ -179,7 +162,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\full-admin-smoke.ps1 -Account
 支付宝根证书：alipay_root_cert
 ```
 
-`.env` 的证书根目录必须是本地文件系统目录，不是 URL：
+支付证书根目录必须是本地文件系统目录，不是 URL：
 
 ```text
 PAYMENT_CERT_BASE_DIR=E:/admin_go/admin_back_go

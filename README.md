@@ -89,38 +89,18 @@ admin_back_go/README.md
 
 后端本地开发也统一 Docker-first，不再使用 `go run` 启动 API 或 Worker。
 
-推荐本地 Compose 工作目录放在 root 仓库忽略的 `.docker/admin-go-backend/`：
+`deploy/docker-first/docker-compose.yml` 已经固定开发者默认值，不再需要 Compose `.env`：源码目录 `../..`、运行目录 `./runtime`、导出目录 `./exports`、API 端口 `127.0.0.1:8080`。
 
-```powershell
-cd E:\admin_go
-New-Item -ItemType Directory -Force -Path .docker\admin-go-backend\runtime\logs, .docker\admin-go-backend\exports
-Copy-Item admin_back_go\deploy\docker-first\docker-compose.yml .docker\admin-go-backend\docker-compose.yml
-Copy-Item admin_back_go\deploy\docker-first\compose.env.example .docker\admin-go-backend\.env
-Copy-Item admin_back_go\deploy\docker-first\admin-go.env.example .docker\admin-go-backend\admin-go.env
-```
-
-然后编辑：
+首次启动前只确认运行时配置文件：
 
 ```text
-E:\admin_go\.docker\admin-go-backend\.env
-E:\admin_go\.docker\admin-go-backend\admin-go.env
-```
-
-至少把 `.env` 里的源码目录改成本机路径：
-
-```env
-ADMIN_BACK_GO_DIR=E:/admin_go/admin_back_go
-ADMIN_GO_ENV_FILE=./admin-go.env
-ADMIN_GO_RUNTIME_DIR=./runtime
-ADMIN_GO_EXPORTS_DIR=./exports
-ADMIN_API_HOST_BIND=127.0.0.1
-ADMIN_API_HOST_PORT=8080
+E:\admin_go\admin_back_go\deploy\docker-first\admin-go.env
 ```
 
 启动：
 
 ```powershell
-cd E:\admin_go\.docker\admin-go-backend
+cd E:\admin_go\admin_back_go\deploy\docker-first
 docker compose up -d --build
 docker compose ps
 ```
