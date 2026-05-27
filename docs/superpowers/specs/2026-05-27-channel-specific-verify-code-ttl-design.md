@@ -271,4 +271,3 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-agent-governance.ps1 -M
 - 范围只覆盖验证码 TTL 归属，不扩大到真实短信发送。
 - 设计与用户要求一致：系统设置删除全局 TTL，邮件和短信单独配置。
 - 运行时读取路径、迁移路径、前端文案、文档验证都有明确边界。
-

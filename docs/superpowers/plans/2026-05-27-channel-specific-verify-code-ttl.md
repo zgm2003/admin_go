@@ -1076,4 +1076,3 @@ Expected:
 - 占位扫描：未发现未明确的实施项或空泛步骤。
 - Type consistency：`VerifyCodeTTL(ctx context.Context)`、`VerifyCodeTTL(ctx context.Context, accountType string)`、`VerifyCodeTTLMinutes` 字段名在各任务中一致。
 - Scope control：没有把手机号验证码接入真实短信发送，没有新增系统设置分类框架，没有改 token/captcha/auth_platforms 策略。
-

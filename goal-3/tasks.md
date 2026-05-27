@@ -470,7 +470,3 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-agent-governance.ps1 -M
 - Verification result: 最终强验证均为当前轮新鲜输出：`admin_front_ts` 依次执行 `npm run typecheck` exit=0、`npm run test -- tests/shared/user/users-api.test.ts` exit=0（1 file / 9 tests passed）、`npm run build` exit=0（`✓ built in 4.49s`，仅 plugin timings warning）；`admin_app` 依次执行 `npm run type-check` exit=0、`npm run test -- tests/app-auth-api.test.ts tests/app-backend-base.test.ts` exit=0（2 files / 7 tests passed）、`npm run build:h5` exit=0（`DONE Build complete.`，仅 Vite CJS 与 Sass/uview-plus deprecation warning）。`rg -n "/api/Users" admin_front_ts\src admin_front_ts\tests admin_app\src admin_app\tests admin_app\docs docs admin_back_go\docs ... -g "!docs/superpowers/**"` 输出 `active_zero=true`；current docs legacy term grep 输出 `current_docs_legacy_terms_zero=true`。提交后复查：root `git diff --check` exit=0；`powershell -ExecutionPolicy Bypass -File .\scripts\check-agent-governance.ps1 -Mode working` PASS，working changed files=none，root/admin_back_go/admin_front_ts clean；hooks diff/status 无变更，因此无需 `/hooks` 提醒。
 - Remaining risks: `docs/superpowers/**` 历史/spec/plan 文件仍保留 `/api/Users` 作为来源证据，不属于 active runtime/current docs；若未来要求全 repo 字面量零旧路径，需要单独改写历史记录。`admin_app` 仍有现有 Sass/uview-plus deprecation warning，非 blocking。未跑手动浏览器登录流程；本 plan 要求已由 API tests/typecheck/build/grep/governance 覆盖。root、admin_back_go、admin_front_ts 均有本地 ahead commits，尚未 push。
 - Next step: Goal complete；调用 goal completion 工具。
-
-
-
-

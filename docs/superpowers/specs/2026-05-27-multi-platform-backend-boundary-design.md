@@ -1028,4 +1028,3 @@ O8. infra/ 下的目录是否需要强制区分 wrapper / adapter 命名？
 1. `admin_back_go/docs/architecture.md` 需要按本 spec 重写（精简到 < 500 行，删除全部 legacy 段落）。
 2. `E:/admin_go/docs/architecture/04-go-backend-framework.md` 与 `05-development-quality-rules.md` 中跟本 spec 冲突的条目需要同步更新（在第五刀完成）。
 3. 根架构文档（`E:/admin_go/docs/architecture/`）补一份 `00-platform-and-module-rules.md`，把 R1-R8 写进去作为项目级硬规则。
-
