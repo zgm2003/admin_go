@@ -4,6 +4,8 @@
 
 本文只记录已经验证的 Go/Vue 运行时事实。不要把 planned 写成 implemented。
 
+架构方向更新：本项目按 new-system-first / multi-platform-first 推进。后端目标是一套核心能力服务 admin/app/openapi/merchant 等多个前端或平台入口；后续架构讨论以 `api/domain/shared/platform` 为目标边界。当前 `internal/module` 是过渡事实，不代表未来所有平台入口和公共能力都继续平铺在 module 下。
+
 | Module | Go backend status | Frontend status | Tests | Smoke | Docs | Remaining risk |
 | --- | --- | --- | --- | --- | --- | --- |
 | health / ready | implemented: liveness separated from DB/Redis readiness, checks include database/redis/token_redis/queue_redis/realtime; not-ready response now uses localized backend error key | n/a | `internal/readiness`, `internal/module/system`, `internal/bootstrap`, `internal/i18n` | `/ready` in basic smoke | architecture + contract + deployment docs | readiness does not replace full smoke |

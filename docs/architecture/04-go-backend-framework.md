@@ -2,29 +2,32 @@
 
 ## 结论
 
-`admin_back_go` 采用 **Gin modular monolith**。
+`admin_back_go` 采用 **Gin modular monolith**，但架构口径从 2026-05-27 起明确为 **new-system-first / multi-platform-first**。
 
-不是 Java 式分层，也不是微服务，也不是闭门造车。它是一个能承接当前 admin 系统、RBAC、AI 应用接入、WebSocket realtime、队列和未来模块演进的 Go 后端骨架。
+不是 Java 式分层，也不是微服务，也不是闭门造车。它是一个新 Go 后端，要用一套核心能力服务 admin / app / openapi / merchant 等多个前端或平台入口。旧 PHP/Webman 项目只能作为设计参考，不是新项目的兼容包袱。
 
 一句话：
 
 ```text
-cmd -> bootstrap -> server -> module -> platform
+cmd -> bootstrap -> api -> domain -> shared -> platform
 ```
 
-业务模块内部固定为：
+当前代码仍大量存在于 `internal/module`，这是过渡事实，不是长期唯一边界。目标边界是：
 
 ```text
-route -> handler -> service -> repository -> model
+api      多平台 HTTP 入口：admin/app/openapi/merchant
+domain   业务领域能力：auth/user/permission/payment/wallet/ai/system
+shared   跨领域公共能力：dict/enum/validate/i18n/setting/pagination/errors
+platform 外部资源适配：db/redis/queue/storage/tencent/openai/alipay
 ```
 
-但这不是让每个模块都硬塞 5 个文件。没有数据库就没有 repository，没有表就没有 model。少一层是一层。
+单体仍然是单体，只是内部边界从模糊的 `module` 逐步收口到 `api/domain/shared/platform`。
 
 ## 为什么选这个架构
 
 ### 真问题
 
-我们要承接的是已有 admin 系统，不是写 demo。
+我们要建设的是未来能接入多个平台的新后端，不是写 demo，也不是维护旧接口兼容层。
 
 它必须承接：
 
@@ -32,10 +35,11 @@ route -> handler -> service -> repository -> model
 现有 RBAC 契约
 现有前端动态菜单和路由
 用户登录和 session
-平台隔离 admin/app
+多平台入口 admin/app/openapi/merchant
 WebSocket / AI streaming
 队列和定时任务
-业务模块渐进演进
+业务领域能力渐进演进
+公共能力统一治理
 ```
 
 ### 简单做法
@@ -43,9 +47,9 @@ WebSocket / AI streaming
 先保持单体。不要一上来微服务，不要一上来 DDD 包袱，不要一上来生成器驱动。
 
 ```text
-一个 Go 进程
-一个 Gin HTTP API
-一套清楚的模块边界
+一个 Go 单体
+一组 Gin HTTP API 平台入口
+一套清楚的 api/domain/shared/platform 边界
 一套可测试的契约
 ```
 
@@ -53,7 +57,7 @@ WebSocket / AI streaming
 
 不破坏现有前端，不破坏现有 RBAC 语义，不破坏用户登录路径。
 
-现有产品事实和契约是输入。Go 运行时按当前契约实现，但不重新发明权限模型。
+现有产品事实和契约是输入。Go 运行时按当前契约实现，但不把旧系统路径当成长期架构主线。
 
 ## 顶层目录
 
@@ -64,18 +68,64 @@ admin_back_go/
   docs/                       # 本仓库架构、状态和契约文档
   internal/bootstrap/         # 应用装配：config/logger/server/resources
   internal/config/            # 配置读取和默认值
-  internal/server/            # Gin engine、全局 middleware、路由挂载
+  internal/server/            # Gin engine、全局 middleware、路由挂载；后续逐步变薄
   internal/middleware/        # HTTP middleware
   internal/response/          # 统一响应和错误映射
-  internal/module/            # 业务模块
+  internal/module/            # 当前过渡业务模块目录；后续按 api/domain/shared 收口
+  internal/dict/              # 当前过渡字典公共包；后续收口为 shared/dict 服务
+  internal/enum/              # 当前过渡枚举公共包；后续归 shared/enum
+  internal/validate/          # 当前过渡校验公共包；后续归 shared/validate
   internal/jobs/              # 队列任务类型、handler 注册、cron 投递注册
   internal/platform/          # DB/Redis/queue/storage/AI clients 等外部资源
   internal/version/           # 版本信息
 ```
 
-## module 规则
+## 目标分层规则
 
-模块是业务边界，不是技术分层垃圾桶。
+长期目标：
+
+```text
+internal/api/admin/...    # admin 平台 HTTP 入口
+internal/api/app/...      # app 平台 HTTP 入口
+internal/domain/user/...  # 用户领域能力
+internal/domain/auth/...  # 认证领域能力
+internal/shared/dict/...  # 统一字典服务
+internal/shared/enum/...  # 跨领域枚举
+internal/platform/...     # 外部资源适配
+```
+
+`api` 层负责：
+
+```text
+route prefix
+request DTO
+认证入口
+权限入口
+operation log 策略
+平台 presenter
+```
+
+`domain` 层负责：
+
+```text
+业务规则
+状态变更
+事务边界
+领域错误
+调用 shared/platform
+```
+
+`shared` 层负责：
+
+```text
+dict/enum/validate/i18n/setting/pagination/errors
+```
+
+`platform` 层只负责外部资源和 SDK 适配，不表达 admin/app 业务平台。
+
+## module 过渡规则
+
+`internal/module` 是当前过渡目录。模块仍然可以承接当前运行时，但新增平台入口和公共能力时，不再默认继续往 module 里堆。
 
 推荐模块：
 
@@ -89,7 +139,7 @@ auth        # 登录、登出、me、init
 operationlog
 ```
 
-模块内部最多这些文件：
+当前 module 内部最多这些文件：
 
 ```text
 route.go       # 注册路由，只绑定 handler
@@ -102,18 +152,22 @@ dto.go         # service/input/output/response DTO，不放 Gin binding tag
 errors.go      # 模块错误
 ```
 
-## Platform Scope Adapter 规则
+## 多平台入口规则
 
-`/api/admin/v1` 和 `/api/app/v1` 是 HTTP scope，不是业务模块边界。
+admin/app/openapi/merchant 是 API 入口，不是复制业务包的理由。
 
-业务模块必须按 capability 命名，例如 `auth`、`aichat`、`wallet`、`uploadtoken`、`notification`。新增平台时，默认只新增 route / handler / presenter / policy，不新增 `appai`、`appwallet`、`xxauth` 这类平台名前缀业务模块。
+不要把任何业务能力定义成长期 `admin-only`。当前只有 admin 路由，只能说明当前暴露面先是 admin；未来 app / openapi / merchant 等入口仍应从同一 capability 扩展。
 
-允许：
+推荐方向：
 
 ```text
-/api/admin/v1/... -> admin route/handler -> shared service -> repository/model -> admin presenter
-/api/app/v1/...   -> app route/handler   -> shared service -> repository/model -> app presenter
+api/admin/auth -> domain/auth
+api/app/auth   -> domain/auth
+api/admin/user -> domain/user
+api/app/user   -> domain/user
 ```
+
+当前过渡期可以仍由 `internal/module/<name>` 注册路由，但不再把它当长期目标。admin/app 差异应该逐步进入 api 层，领域能力进入 domain 层。
 
 禁止：
 
@@ -121,9 +175,10 @@ errors.go      # 模块错误
 adminauth + appauth + xxauth 各自实现业务
 adminai + appai + xxai 各自实现业务
 adminwallet + appwallet + xxwallet 各自实现业务
+在一个巨大 module/<name>/route.go 里长期堆所有平台入口
 ```
 
-平台不是 module。新增平台不得默认新增 `xxxauth` / `xxxuser` / `xxxupload` 这类平台命名业务模块。平台差异通过 route prefix、platform 字段、策略表和 presenter 表达；业务能力仍归属 `auth` / `user` / `uploadtoken` 等 capability module。
+admin user 和 app user 可以有不同 API 表达，但底层用户核心实体、账号安全、profile 基础能力应通过 domain 复用，而不是复制两套业务。
 
 ## 调用方向
 
@@ -152,30 +207,18 @@ handler 直接查 DB/Redis
 
 跨模块调用必须走 service 层，并且先问：是不是模块边界错了？
 
-## 旧接口与新接口
+## 新项目 API 口径
 
-为了不破坏前端，允许存在边界明确的 compatibility adapter：
-
-```text
-/api/Users/init
-/api/admin/Permission/list
-```
-
-但它们不能污染新模块内部。做法是：
-
-```text
-legacy route adapter -> module service -> repository
-```
-
-新接口另走：
+本项目不是 legacy migration。后续文档和代码不再以 legacy/compat 作为主叙事。API 统一按平台和资源表达：
 
 ```text
 /api/{scope}/v1/...
 当前 admin = /api/admin/v1/...
-未来 app   = /api/app/v1/...
+当前 app   = /api/app/v1/...
+未来 openapi/merchant 按产品决策扩展
 ```
 
-旧接口兼容层不是新世界规则。
+如果当前运行时代码里仍有旧命名路径，视为待治理事实，不再作为新设计模板。新功能必须按新项目 API 口径设计。
 
 ## RBAC 决策
 

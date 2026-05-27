@@ -2,7 +2,26 @@
 
 ## 核心判断
 
-这是一个 **open-source-first Go/Vue admin workspace**。当前事实源是 Go 后端、Vue 前端、契约文档、smoke 和运行时行为；不要再把本项目当成旧系统收尾半成品。
+这是一个 **open-source-first / new-system-first / multi-platform-first Go/Vue workspace**。当前事实源是 Go 后端、Vue 前端、契约文档、smoke 和运行时行为；不要再把本项目当成旧系统收尾半成品，也不要把旧 PHP/Webman 设计当成新 Go 项目的兼容包袱。
+
+后端长期目标是：
+
+```text
+一套后端核心能力，一对多服务 admin / app / openapi / merchant 等前端或平台入口。
+```
+
+默认架构讨论使用：
+
+```text
+api      = 多平台 HTTP 入口：admin/app/openapi/merchant
+domain   = 业务领域能力：auth/user/permission/payment/wallet/ai/system
+shared   = 跨领域公共能力：dict/enum/validate/i18n/setting/pagination/errors
+platform = 外部资源适配：db/redis/queue/storage/tencent/openai/alipay
+```
+
+`internal/module` 是当前过渡事实，不再是未来唯一边界。新增平台、公共能力或大模块重构时，优先按 `api/domain/shared/platform` 思考。
+
+不要把任何业务能力定义成长期 `admin-only`。当前只有 admin 入口，只能说明当前先暴露 `admin` 平台；未来 app / openapi / merchant 等入口仍应在同一 capability 下扩展，而不是复制新业务模块。
 
 冷启动判断顺序固定：
 

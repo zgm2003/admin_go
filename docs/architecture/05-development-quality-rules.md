@@ -4,7 +4,7 @@
 
 这个项目不允许靠“兜底字段”“兼容猜测”“全 POST”“any TS”堆出一个看似能跑、实际不可维护的 admin。
 
-要重构，就写清楚契约；要兼容，就显式写 adapter；要替换旧链路，就一条真实链路一条真实链路收。
+当前架构口径是 new-system-first / multi-platform-first：这是新 Go/Vue 多平台系统，不是 legacy migration。要重构，就写清楚契约；要接入新平台，就先定 api/domain/shared/platform 边界；要替换不合理链路，就一条真实链路一条真实链路收。
 
 ## Linus 三问
 
@@ -97,12 +97,12 @@ official vendor docs when the behavior is tool/provider-specific
 
 ```text
 业务上明确的默认值，例如新增根菜单 parent_id=0
-显式 legacy adapter，例如 /api/Users/init -> service -> repository
-显式兼容边界，例如新页面走 request，保留 adapter 只服务未收口旧调用
+历史路径在当前运行时仍存在时，必须显式标注为待治理事实，不能作为新设计模板
+显式平台入口边界，例如 admin/app 分别在 api 层表达，再调用 domain 能力
 对外部不可信输入做严格校验后拒绝
 ```
 
-规则很简单：**兼容必须有名字、有边界、有删除计划；静默兜底就是垃圾代码。**
+规则很简单：**新项目能力必须有明确 owner、边界和验证证据；静默兜底就是垃圾代码。**
 
 ## RESTful API 规则
 
@@ -135,18 +135,21 @@ DELETE /api/admin/v1/permissions/:id         delete one
 让前端先定义后端契约
 ```
 
-旧 action POST 接口只能作为 legacy mapping 文档或显式 adapter，不能污染新 REST 设计。
+旧 action POST 形态如果仍在当前运行时出现，只能作为待治理事实记录，不能污染新 REST 设计。
 
-## 平台 scope 不复制业务模块
+## 多平台入口不复制业务模块
 
-平台 scope 不是业务模块边界。新增端、平台、入口时先判断差异属于哪一层：
+admin/app/openapi/merchant 是 API 入口，不是复制业务包的理由。新增端、平台、入口时先判断差异属于哪一层：
+
+不要把任何业务能力定义成长期 `admin-only`。当前只有 admin 入口，只是当前暴露面，不是能力边界；未来 app / openapi / merchant 等入口仍应在同一 capability 下扩展。
 
 ```text
-route prefix 不同      -> route/handler
-请求字段不同          -> request DTO
-返回字段不同          -> presenter
-认证/会话策略不同     -> authplatform 或 session policy
-业务规则真的不同      -> capability service 的显式 policy/input
+route prefix 不同      -> api 层 route
+请求字段不同          -> api 层 request DTO
+返回字段不同          -> api 层 presenter
+认证/会话策略不同     -> domain auth/session policy
+业务规则真的不同      -> domain service 的显式 policy/input
+跨领域公共数据        -> shared/dict 或 shared/setting
 ```
 
 禁止为了端差异复制业务模块：
@@ -155,7 +158,33 @@ route prefix 不同      -> route/handler
 appai / appwallet / xxauth / adminai
 ```
 
-平台不是 module。新增平台不得默认新增 `xxxauth` / `xxxuser` / `xxxupload` 这类平台命名业务模块；`/api/app/v1` 这类差异只能通过 route prefix、platform 字段、策略表和 presenter 表达，业务能力仍归属 `auth` / `user` / `uploadtoken` 等 capability module。
+平台不是业务复制理由。新增平台不得默认新增 `xxxauth` / `xxxuser` / `xxxupload` 这类平台命名业务模块；`/api/app/v1` 这类差异优先通过 api 层入口、platform 字段、策略表和 presenter 表达，业务能力进入 domain，共享能力进入 shared。
+
+## 公共能力先归 shared
+
+字典、枚举、校验、系统配置、分页、错误、i18n 都是跨领域公共能力。新增或触碰这类能力时，先判断是否属于 shared，不要顺手塞进业务 module。
+
+`dict` 特别规则：
+
+```text
+字典是统一公共服务，不是每个业务 module 自己手写 option 的工具角落。
+```
+
+禁止：
+
+```text
+业务 module 重复手写 common status / platform / login type options
+业务 module 自己决定共享树形字典 Redis key
+业务 module 自己解释同一个 system_settings key 的默认值
+```
+
+允许：
+
+```text
+domain 暴露业务候选项查询
+shared/dict 统一组装前端字典形态
+api page-init 只声明需要哪些字典和领域 options
+```
 
 ## TypeScript 规则
 
