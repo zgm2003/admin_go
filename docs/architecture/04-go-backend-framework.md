@@ -123,7 +123,7 @@ adminai + appai + xxai 各自实现业务
 adminwallet + appwallet + xxwallet 各自实现业务
 ```
 
-临时平台 adapter 必须有名字、有边界、有收敛计划。`appauth` 当前只能被理解为 `/api/app/v1` scope 下 auth / users/me / profile / upload-tokens 的临时 HTTP adapter bundle，不拥有 auth/user/uploadtoken service、repository、model 或认证策略。
+平台不是 module。新增平台不得默认新增 `xxxauth` / `xxxuser` / `xxxupload` 这类平台命名业务模块。平台差异通过 route prefix、platform 字段、策略表和 presenter 表达；业务能力仍归属 `auth` / `user` / `uploadtoken` 等 capability module。
 
 ## 调用方向
 

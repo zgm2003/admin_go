@@ -59,7 +59,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-contract.ps1
 | auth config/captcha/code/login/forgot-password/refresh | `/api/admin/v1/auth/login-config`, `/captcha`, `/send-code`, `/forgot-password`, `/login`, `/refresh` | public |
 | logout | `POST /api/admin/v1/auth/logout` | bearer token |
 | current user bootstrap | `GET /api/admin/v1/users/me`, `GET /api/admin/v1/users/init` | bearer token |
-| App auth baseline | `GET /api/app/v1/auth/login-config`, `GET /api/app/v1/auth/captcha`, `POST /api/app/v1/auth/send-code`, `POST /api/app/v1/auth/login`, `GET /api/app/v1/users/me`, `POST /api/app/v1/auth/logout` | auth config/captcha/send-code/login: public; current user/logout: bearer token; app bearer requests default `platform=app` |
+| App auth baseline | `GET /api/app/v1/auth/login-config`, `GET /api/app/v1/auth/captcha`, `POST /api/app/v1/auth/send-code`, `POST /api/app/v1/auth/login`, `GET /api/app/v1/users/me`, `GET/PUT /api/app/v1/profile`, `POST /api/app/v1/upload-tokens`, `POST /api/app/v1/auth/logout` | auth config/captcha/send-code/login: public; current user/profile/upload-token/logout: bearer token; app bearer requests default `platform=app` |
 | read-only admin resources | permissions/auth-platforms/roles/users/profile/operation-logs/system-settings/mail/upload-drivers/upload-rules/upload-settings/notifications list or init | bearer token |
 | user quick-entry current-user write | `PUT /api/admin/v1/users/me/quick-entries` | bearer token; current user only, no user-manager button permission |
 | user login logs read | `GET /api/admin/v1/users/login-logs/page-init`, `GET /api/admin/v1/users/login-logs` | bearer token |
@@ -92,6 +92,9 @@ GET  /api/app/v1/auth/captcha
 POST /api/app/v1/auth/send-code
 POST /api/app/v1/auth/login
 GET  /api/app/v1/users/me
+GET  /api/app/v1/profile
+PUT  /api/app/v1/profile
+POST /api/app/v1/upload-tokens
 POST /api/app/v1/auth/logout
 ```
 
@@ -105,6 +108,7 @@ app login 请求使用 login_type/login_account/password|code/captcha_id/captcha
 users/me 只返回 id/nickname/avatar，不返回 admin RBAC 字段。
 logout 返回 data:null。
 App bearer 请求在路径为 /api/app/v1/* 时默认 platform=app。
+Ownership：/api/app/v1/auth/* 归属 internal/module/auth；/api/app/v1/users/me 和 /api/app/v1/profile 归属 internal/module/user；/api/app/v1/upload-tokens 归属 internal/module/uploadtoken。平台 app 是 route/policy scope，不是 appauth module。
 ```
 
 请求：

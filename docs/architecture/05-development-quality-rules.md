@@ -155,7 +155,7 @@ route prefix 不同      -> route/handler
 appai / appwallet / xxauth / adminai
 ```
 
-`appauth` 这类已经存在的过渡目录必须保持 adapter-only：不查 DB，不拥有 repository/model，不复制 shared service。它当前覆盖 `/api/app/v1/auth/*`、`/api/app/v1/users/me`、`/api/app/v1/profile`、`/api/app/v1/upload-tokens`，未来收敛时必须按 capability 回到 `auth` / `user` / `uploadtoken`。新增类似目录前必须先写 spec 并说明退出条件。
+平台不是 module。新增平台不得默认新增 `xxxauth` / `xxxuser` / `xxxupload` 这类平台命名业务模块；`/api/app/v1` 这类差异只能通过 route prefix、platform 字段、策略表和 presenter 表达，业务能力仍归属 `auth` / `user` / `uploadtoken` 等 capability module。
 
 ## TypeScript 规则
 
