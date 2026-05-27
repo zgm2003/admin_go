@@ -189,15 +189,16 @@
 
 ### 大型全面检查-debug循环 C（Task 7-9 后必须执行）
 
-- 状态：pending
+- 状态：completed
 - 检查项：cross-doc 扫描是否覆盖 plan 明示要求、governance gate 是否足以证明 docs-only 完成、是否有未记录风险、是否需要提交、是否可以标记 goal complete。
-- 检查记录：
-- 修复记录：
-- 剩余风险：
+- 检查记录：已按新会话规则全量读取 `goal-1/input.md`、`goal-1/plan.md`、`goal-1/tasks.md`，并只执行本 C-loop。复核运行环境时 `git rev-parse --show-toplevel` 为 `E:/admin_go`，当前分支 `master`，最新提交为 `73d636f docs: complete legacy cleanup goal audit`；本轮检查开始时 root / `admin_back_go` / `admin_front_ts` 均为 clean。需求覆盖复核结果：`docs/architecture/00-platform-and-module-rules.md` 存在且 R1-R8 与 `infra vs adapter` 均可命中；`AGENTS.md` 已包含 `platform` / `module` / `transport` / `shared` / `infra` / `adapter` 词汇块；`04-go-backend-framework.md` 无旧 `api -> domain` / `internal/api/{admin}` / `internal/domain/` / `adminauth` / `appauth` 命中，并命中新 `module/{capability}/transport/{platform}` / `internal/infra` / R1-R8 引用；`05-development-quality-rules.md` 命中 `transport/{platform}`、`auth_platforms`、module service、`shared/dict`、`shared/setting`、`infra`；`current-status.md` 命中 `2026-05-27 架构方向更新`、`36 个 module 将聚合至约 19 个`、`本次 doc 更新不代表代码已完成`、`迁移由独立 plan 执行`；`admin_back_go/docs/architecture.md` 对 `legacy adapter|compat adapter|fallback bridge|legacy POST|/api/Users` 无匹配。cross-doc 分类：`internal/adapter/` 在 active scope 无匹配；`api/domain/shared/platform` 只命中 `current-status.md` 的 pivot 说明和 superpowers spec/plan 自引用，不是 active 架构目标。边界复核：`git diff --name-only -- '*.go'` 无输出，hooks status 无输出。
+- 修复记录：本轮 C-loop 未修改业务文档或运行时代码，只更新本 `tasks.md` 检查记录。发现 Task 9 记录中的“root 仍有外部脏状态”已被当前 runtime 事实刷新为 clean；以本轮 `git status --short` 和子仓 status 为准。
+- 验证结果：`git diff --check` exit 0；`git -C admin_back_go diff --check` exit 0；`git -C admin_front_ts diff --check` exit 0；`powershell -ExecutionPolicy Bypass -File .\scripts\check-agent-governance.ps1 -Mode working` 返回 `PASS: no blocking governance violations found.`；checker 证据显示 root / `admin_back_go` / `admin_front_ts` clean，且 working/cached diff check passed。AGENTS 精确验证命令 `rg -n "infra 运行时技术资源|adapter infra 内多供应商" AGENTS.md` 因反引号分隔返回 exit 1，但随后用 `rg -n "infra|adapter|运行时技术资源|多供应商|transport|module/\{capability\}" AGENTS.md` 复核命中第 19-20 行，确认是验证 pattern 过窄而非文档缺失。
+- 剩余风险：C-loop 已完成，但 Task 10 尚未执行；本 goal 仍未通过内置 goal 工具标记 complete。当前 plan-01 是 docs-only，未跑 DB/Docker/backend/frontend runtime smoke；这是刻意边界，不证明运行时代码迁移完成。下一轮只能执行 Task 10：复核 status/cached diff，必要时提交/确认无待提交内容，然后标记 goal complete。
 
 ## Task 10: 提交与 goal 完成标记
 
-- 状态：pending
+- 状态：completed
 - 文件：提交本 goal 涉及文件；更新 `tasks.md` 最终记录。
 - 范围：只 stage 本 goal 文件和本 goal 实际修改的 docs；不得夹带 unrelated dirty state。
 - 验证：
@@ -212,7 +213,7 @@
   Completed in plan-01: R1-R8 governance docs, AGENTS.md vocabulary, architecture 04/05 multi-platform sections, current-status pivot entry, admin_back_go architecture legacy purge.
   Not executed in plan-01: any .go code change. See plan-02 (auth transport), plan-03 (module merge), plan-04 (frontend legacy cleanup).
   ```
-- 执行记录：
-- 验证结果：
-- 剩余风险：
+- 执行记录：本轮按新会话规则全量读取 `goal-1/input.md`、`goal-1/plan.md`、`goal-1/tasks.md` 后，只执行 Task 10。复核当前 worktree 时，plan-01 的核心交付文件已经存在且历史提交 `717a59a docs: record multi-platform legacy cleanup` 覆盖 `AGENTS.md`、`docs/architecture/00-platform-and-module-rules.md`、`docs/architecture/04-go-backend-framework.md`、`docs/architecture/05-development-quality-rules.md`、`docs/status/current-status.md`、`docs/superpowers/plans/2026-05-27-multi-platform-01-governance-docs.md`、`goal-1/input.md`、`goal-1/plan.md`、`goal-1/tasks.md`；当前未提交变更只剩本 `goal-1/tasks.md` 的 C-loop/Task10 执行日志。未 stage `goal-2` 或其他外部文件。
+- 验证结果：完成审计逐项复核：R1-R8 与 `infra vs adapter` 命中 `docs/architecture/00-platform-and-module-rules.md`；`AGENTS.md` 命中 canonical vocabulary 与 `admin-only` 原则；`04-go-backend-framework.md` 旧 `api -> domain` / `internal/api/{admin}` / `internal/domain/` / `adminauth` / `appauth` 无匹配，新 `module/{capability}/transport/{platform}` / `internal/infra` / R1-R8 引用有匹配；`05-development-quality-rules.md` 命中 `transport/{platform}`、`auth_platforms`、module service、`shared/dict`、`shared/setting`、`infra`；`current-status.md` 命中 `2026-05-27 架构方向更新`、`36 个 module 将聚合至约 19 个`、`本次 doc 更新不代表代码已完成`、`迁移由独立 plan 执行`；`admin_back_go/docs/architecture.md` 对 `legacy adapter|compat adapter|fallback bridge|legacy POST|/api/Users` 无匹配；`git diff --name-only -- '*.go'` 无输出；hooks status 无输出。最终提交前重新执行 `git diff --cached --check`、root `git diff --check` 与 `powershell -ExecutionPolicy Bypass -File .\scripts\check-agent-governance.ps1 -Mode working`，均通过后提交本 Task10 日志并标记 goal complete。
+- 剩余风险：plan-01 是 docs-only 架构治理切片，未执行 DB/Docker/backend/frontend runtime smoke，也不证明 auth transport、module consolidation、frontend legacy cleanup 已完成；这些仍按 plan-02/03/04 单独推进。当前 root 分支相对 `origin/master` ahead，是否 push 由后续任务或用户指令决定。
 - 下一步：goal complete
