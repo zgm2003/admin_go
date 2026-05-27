@@ -434,7 +434,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-agent-governance.ps1 -M
 
 ## Task 12: FINAL LARGE REVIEW, commit, and goal completion audit
 
-- [ ] Status: pending
+- [x] Status: completed
 
 ### Scope
 
@@ -466,10 +466,10 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-agent-governance.ps1 -M
 
 ### Result log
 
-- Completed content:
-- Verification result:
-- Remaining risks:
-- Next step:
+- Completed content: 已完成最终大型 review、提交边界审计和 goal completion audit。逐项审计结果：1) admin 端 login-config/code/login/refresh/logout/forgot-password/current-user bootstrap 均走 `/api/admin/v1/*`，app auth 均走 `/api/app/v1/*` base URL + 相对路径；2) URL/method/baseURL 由现有 API tests、typecheck 和 build 覆盖，无双 prefix 或旧 fallback；3) 未触碰 token/hash/secret、未放宽 auth/permission；4) 未改 DB/schema/migration；5) admin RBAC init/current-user 与 app `/users/me` 不混用，app 未误接 admin init；6) 未新增静默 fallback 到旧接口；7) Task 3/6/10/11 证据已重新跑新鲜验证；8) current contract/smoke/runtime docs 不再宣传旧路径；9) diff 按 root/admin_front_ts/admin_app/admin_back_go 边界审计并提交；10) plan-04 与“架构重构，一定要好”的目标已以 current runtime truth 校验。提交：`admin_front_ts` 提交 `55d2a01 test: guard legacy users path cleanup`；root 提交 `717a59a docs: record multi-platform legacy cleanup`，包含 docs/plan/goal 记录；`admin_app` 无改动；`admin_back_go` 工作区 clean、无需本 task 新提交。
+- Verification result: 最终强验证均为当前轮新鲜输出：`admin_front_ts` 依次执行 `npm run typecheck` exit=0、`npm run test -- tests/shared/user/users-api.test.ts` exit=0（1 file / 9 tests passed）、`npm run build` exit=0（`✓ built in 4.49s`，仅 plugin timings warning）；`admin_app` 依次执行 `npm run type-check` exit=0、`npm run test -- tests/app-auth-api.test.ts tests/app-backend-base.test.ts` exit=0（2 files / 7 tests passed）、`npm run build:h5` exit=0（`DONE Build complete.`，仅 Vite CJS 与 Sass/uview-plus deprecation warning）。`rg -n "/api/Users" admin_front_ts\src admin_front_ts\tests admin_app\src admin_app\tests admin_app\docs docs admin_back_go\docs ... -g "!docs/superpowers/**"` 输出 `active_zero=true`；current docs legacy term grep 输出 `current_docs_legacy_terms_zero=true`。提交后复查：root `git diff --check` exit=0；`powershell -ExecutionPolicy Bypass -File .\scripts\check-agent-governance.ps1 -Mode working` PASS，working changed files=none，root/admin_back_go/admin_front_ts clean；hooks diff/status 无变更，因此无需 `/hooks` 提醒。
+- Remaining risks: `docs/superpowers/**` 历史/spec/plan 文件仍保留 `/api/Users` 作为来源证据，不属于 active runtime/current docs；若未来要求全 repo 字面量零旧路径，需要单独改写历史记录。`admin_app` 仍有现有 Sass/uview-plus deprecation warning，非 blocking。未跑手动浏览器登录流程；本 plan 要求已由 API tests/typecheck/build/grep/governance 覆盖。root、admin_back_go、admin_front_ts 均有本地 ahead commits，尚未 push。
+- Next step: Goal complete；调用 goal completion 工具。
 
 
 
