@@ -101,7 +101,7 @@ future AI streaming/cancellation
 
 ```powershell
 cd E:/admin_go/admin_back_go
-go test -race ./internal/module/auth ./internal/module/session ./internal/platform/taskqueue ./internal/platform/scheduler ./internal/platform/realtime ./internal/module/realtime ./internal/jobs ./internal/bootstrap
+go test -race ./internal/module/auth ./internal/platform/taskqueue ./internal/platform/scheduler ./internal/platform/realtime ./internal/module/realtime ./internal/jobs ./internal/bootstrap
 ```
 
 当前 Windows 环境注意：

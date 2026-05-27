@@ -64,6 +64,8 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-contract.ps1
 | user quick-entry current-user write | `PUT /api/admin/v1/users/me/quick-entries` | bearer token; current user only, no user-manager button permission |
 | user login logs read | `GET /api/admin/v1/users/login-logs/page-init`, `GET /api/admin/v1/users/login-logs` | bearer token |
 | user sessions read/revoke | `GET /api/admin/v1/user-sessions/page-init`, `GET /api/admin/v1/user-sessions`, `GET /api/admin/v1/user-sessions/stats`, `PATCH /api/admin/v1/user-sessions/:id/revoke`, `PATCH /api/admin/v1/user-sessions/revoke` | read routes: bearer token; revoke routes: bearer token + `user_userManager_kick` |
+
+2026-05-27 auth-adjacent module consolidation only changed internal ownership (`captcha` / `session` / `usersession` / `userloginlog` -> `internal/module/auth`); it does not change the API contract URLs listed above.
 | current user notifications | `GET/PATCH/DELETE /api/admin/v1/notifications...` | bearer token; current-user ownership only, no RBAC button permission |
 | permission mutations | permissions create/update/status/delete | bearer token + `permission_permission_*` route permission |
 | role mutations | roles create/update/default/delete | bearer token + `permission_role_*` route permission |
