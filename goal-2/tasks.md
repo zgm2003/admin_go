@@ -339,30 +339,56 @@ Plan-03 must execute next to fully complete spec §12.1.
 
 ## Task 8: Final largest review, repair, and goal completion
 
-- [ ] 完整读取 goal 三文件并注册本轮小 todo。
-- [ ] 从 C 端/API 行为、代码边界、安全性、权限、错误处理、测试、构建、文档、回滚角度做最终审计。
-- [ ] 对所有 explicit requirements 建立完成证据矩阵，不用窄检查证明宽范围。
-- [ ] 若发现高风险问题，修缮并重新运行相关测试；若有代码修改，提交对应 commit。
-- [ ] 更新 `tasks.md` 最终记录。
-- [ ] 调用 goal tool 标记 complete。
+- [x] 完整读取 goal 三文件并注册本轮小 todo。
+- [x] 从 C 端/API 行为、代码边界、安全性、权限、错误处理、测试、构建、文档、回滚角度做最终审计。
+- [x] 对所有 explicit requirements 建立完成证据矩阵，不用窄检查证明宽范围。
+- [x] 若发现高风险问题，修缮并重新运行相关测试；若有代码修改，提交对应 commit。
+- [x] 更新 `tasks.md` 最终记录。
+- [x] 调用 goal tool 标记 complete。
 
 完成记录预留：
-- 动作：
+- 动作：完成 plan-02 最终最大 review。重新读取 `input.md` / `plan.md` / `tasks.md` / plan-02 原文 / `agents/backend-worker.md` / `docs/status/current-status.md` / `docs/testing/pre-push-gates.md`；审计 auth transport route/bootstrap、user route、auth-token whitelist、architecture guard、server legacy route test、frontend/admin_app legacy grep、root governance gate。发现一个测试覆盖缝隙：`TestAuthTokenDefaultSkipPathsExcludeLegacyUsersRoutes` 只覆盖 4 条旧 auth whitelist，未覆盖 `logout` 与 user `init`，已补齐并提交 backend commit `5a9bb89 test: cover legacy users auth skip paths`。
 - 验证：
-- 剩余风险：
-- 下一步：
+  - 证据矩阵：
+    - auth admin/app routes 位于 `internal/module/auth/transport/{admin,app}`：10/10 required files 存在；auth root 只剩 `code_store.go`、`dto.go`、`jobs*.go`、`model.go`、`repository.go`、`service*.go`、`verify_code_policy*.go` 等跨平台合约/业务文件。
+    - old root/platform HTTP files 删除：`route.go`、`handler.go`、`handler_test.go`、`request.go`、`platform_route.go`、`platform_handler.go`、`platform_handler_test.go`、`platform_dto.go` 均不存在；auth root offender count=0。
+    - bootstrap 通过新 transport 注册：`router.go` 使用 `authadmin.Register(router, deps.AuthService)` 与 `authapp.Register(router, authapp.RouteOptions{Prefix: "/api/app/v1/auth", Platform: enum.PlatformApp, ...})`。
+    - `/api/Users/*` backend runtime 删除：`rg -n "RegisterPlatformRoutes|platform_handler|platform_route|platform_dto|/api/Users|auth\.RegisterRoutes" internal` exit 1；`TestLegacyUsersRoutesAreNotRegistered` 覆盖旧 `POST /api/Users/getLoginConfig|sendCode|login|refresh|logout|init`。
+    - auth-token public whitelist 安全收口：`DefaultAuthSkipPaths` 仅含新 admin/app auth public paths，修缮后的 `TestAuthTokenDefaultSkipPathsExcludeLegacyUsersRoutes` 覆盖旧 `getLoginConfig|sendCode|login|refresh|logout|init`。
+    - C端/API 行为：admin auth 路径仍为 `/api/admin/v1/auth/login-config|send-code|forgot-password|login|refresh|logout`；app auth 路径仍为 `/api/app/v1/auth/login-config|captcha|send-code|login|logout`；admin/app user/profile 路由仍由 `user.RegisterRoutes` 保留。
+    - 权限/RBAC：middleware 顺序仍为 CORS -> I18n -> AuthToken -> PermissionCheck -> OperationLog；auth route 移动未新增 permission rule，也未绕过已有 PermissionCheck 机制。
+    - 错误处理/i18n：handler 继续走 `response.Error` / `response.OK*`；app transport 继续使用 keyed `apperror.*Key`，admin transport 未在本 plan 新增错误语义，`go test ./...` 覆盖 response/i18n 相关包。
+    - 文档边界：root governance/status 文档按 plan-01 owning，不在本 plan 扩写；本 plan 只同步了 backend `docs/architecture.md` 与 middleware README 的 runtime truth。
+  - `go test ./internal/middleware -run TestAuthTokenDefaultSkipPathsExcludeLegacyUsersRoutes -count=1`：exit 0。
+  - `go test ./internal/server -run TestLegacyUsersRoutesAreNotRegistered -count=1`：exit 0。
+  - `go build ./...` in `admin_back_go`：exit 0。
+  - `go test ./internal/architecture ./internal/module/auth ./internal/module/auth/transport/admin ./internal/module/auth/transport/app ./internal/module/user ./internal/server ./internal/middleware -count=1`：exit 0，七个 focused packages 均 `ok`。
+  - `go test ./... -count=1`：exit 0，backend full test 全量通过。
+  - required transport files：10/10 存在，`required_missing_count=0`。
+  - `rg -n "/api/Users" admin_front_ts\src admin_front_ts\tests admin_app\src admin_app\tests -g "!*node_modules*" -g "!*dist*"`：exit 1，无 frontend/admin_app legacy literal 命中。
+  - backend `git diff --check`：exit 0；root `git diff --check`：exit 0。
+  - root `powershell -ExecutionPolicy Bypass -File .\scripts\check-agent-governance.ps1 -Mode working`：PASS；修缮提交前报告 changed files 为 `admin_back_go/internal/middleware/auth_token_test.go` 与当时的 `goal-1/tasks.md`，最终记录更新后报告 changed files 为 `AGENTS.md` 与 `goal-2/tasks.md`，均无 blocking governance violations。
+  - 收尾状态：backend `master...origin/master [ahead 8]` clean；frontend `master...origin/master [ahead 1]` clean；admin_app clean；root `master...origin/master [ahead 10]` 当前存在非本 goal 修改 `AGENTS.md`，本轮只提交 `goal-2/tasks.md`，不混入 AGENTS plan-01 文档改动。
+- 剩余风险：本 plan 明确不执行 plan-03 的 captcha/session/usersession/userloginlog merge，也不执行 plan-01 root governance docs、plan-04 frontend cleanup、shared/dict、small module shells、AI aggregation、`internal/platform -> internal/infra` rename；这些仍按后续 plan 推进。未做 live HTTP smoke，因为本 plan 的完成标准是 compile/tests/static route evidence，且 pre-push gate 文档明确默认 gate 不替代 smoke。
+- 下一步：标记 goal complete；后续应执行 plan-03 才能完整完成 spec §12.1 的 module consolidation。
 
 ---
 
 ## Final Checkpoint: 最终最大 review
 
 必须覆盖并记录：
-- [ ] C 端/API：admin/app auth 路径仍正确，legacy `/api/Users/*` 确认 404/unregistered。
-- [ ] 代码：transport/admin 与 transport/app package 边界清晰；root auth 只保留 service/dto/repository/model/code/jobs 等跨平台合约。
-- [ ] 安全：public whitelist 只保留新登录路径；删除旧路径不创建绕过。
-- [ ] 权限：RBAC/PermissionCheck 不因 auth route 移动改变语义。
-- [ ] 错误处理：apperror/response/i18n 路径不退化。
-- [ ] 测试：RED->GREEN guard、focused tests、full backend tests 有证据。
-- [ ] 构建：`go build ./...` 或 `go test ./...` 覆盖编译。
-- [ ] 文档：不把 planned 写成 implemented；如根 docs 未改，说明 plan-01 owns docs。
-- [ ] 回滚：记录 task commits/revert 路径。
+- [x] C 端/API：admin/app auth 路径仍正确，legacy `/api/Users/*` 确认 404/unregistered。
+- [x] 代码：transport/admin 与 transport/app package 边界清晰；root auth 只保留 service/dto/repository/model/code/jobs 等跨平台合约。
+- [x] 安全：public whitelist 只保留新登录路径；删除旧路径不创建绕过。
+- [x] 权限：RBAC/PermissionCheck 不因 auth route 移动改变语义。
+- [x] 错误处理：apperror/response/i18n 路径不退化。
+- [x] 测试：RED->GREEN guard、focused tests、full backend tests 有证据。
+- [x] 构建：`go build ./...` 或 `go test ./...` 覆盖编译。
+- [x] 文档：不把 planned 写成 implemented；如根 docs 未改，说明 plan-01 owns docs。
+- [x] 回滚：记录 task commits/revert 路径。
+
+最终结论：
+- Completed in plan-02: auth transport reorg (`transport/{admin,app}`) + `/api/Users` backend removal + boundary architecture guard.
+- Not executed in plan-02: captcha/session/usersession/userloginlog merge (plan-03), governance docs (plan-01), frontend legacy cleanup (plan-04), shared/dict, smaller module shells, AI aggregation, internal/platform -> internal/infra rename.
+- Plan-03 must execute next to fully complete spec §12.1.
+- 回滚路径：按 backend commits 逐 task revert：`e3e807e`、`e2d3442`、`d31cc6d`、`5e86c1c`、`98a2c6a`、`74e8c82`、`7075171`、`5a9bb89`；root goal records 可按 root commits `19271d9` 与本轮最终记录 commit 回滚。
