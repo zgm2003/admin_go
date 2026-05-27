@@ -4,7 +4,21 @@
 
 本文只记录已经验证的 Go/Vue 运行时事实。不要把 planned 写成 implemented。
 
-架构方向更新：本项目按 new-system-first / multi-platform-first 推进。后端目标是一套核心能力服务 admin/app/openapi/merchant 等多个前端或平台入口；后续架构讨论以 `api/domain/shared/platform` 为目标边界。当前 `internal/module` 是过渡事实，不代表未来所有平台入口和公共能力都继续平铺在 module 下。
+架构方向：本项目按 new-system-first / multi-platform-first 推进。后端目标是一套核心能力服务 admin/app/openapi/merchant 等多个前端或平台入口；后续架构讨论以 `module/{capability}/transport/{platform}` + `shared` + `infra` 为目标边界。当前 `internal/module` 是过渡事实，不代表未来所有平台入口和公共能力都继续平铺在 module 下。
+
+## 2026-05-27 架构方向更新
+
+- 多平台后端架构原则 R1-R8 落地为 `docs/architecture/00-platform-and-module-rules.md`。
+- `platform` 词汇收紧：仅指业务平台 admin / app / openapi / merchant。
+- 技术资源目录目标从 `internal/platform/` 改名为 `internal/infra/`；迁移由独立 plan 执行，当前表格里的运行时路径仍以已验证代码事实为准。
+- 顶层目标分层从 `api/domain/shared/platform` 四层改为 `module/{capability}/transport/{platform}` + `shared` + `infra`。
+- `internal/module/` 当前 36 个 module 将聚合至约 19 个（含新增 profile）。
+- 上述变化按多刀迁移路线执行；本次 doc 更新不代表代码已完成。
+
+参见：
+
+- spec：`docs/superpowers/specs/2026-05-27-multi-platform-backend-boundary-design.md`
+- plans：`docs/superpowers/plans/2026-05-27-multi-platform-{01..04}-*.md`
 
 | Module | Go backend status | Frontend status | Tests | Smoke | Docs | Remaining risk |
 | --- | --- | --- | --- | --- | --- | --- |

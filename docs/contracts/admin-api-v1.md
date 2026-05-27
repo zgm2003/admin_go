@@ -1,6 +1,6 @@
 # Admin API v1 Contract
 
-状态：partially implemented。本文只记录 Go 新接口已经明确落地或正在本阶段收口的契约；旧 all POST 接口只作为 legacy adapter，不定义新契约。
+状态：partially implemented。本文只记录 Go 新接口已经明确落地或正在本阶段收口的契约；旧 all POST 接口只作为历史兼容事实，不定义新契约。
 
 统一响应：
 
@@ -37,9 +37,9 @@ App 端：/api/app/v1
 ```text
 每个迁移到 Go 的资源必须先更新本文，再改前端调用。
 新 Go API 只能使用 /api/admin/v1 或 /api/app/v1 命名空间。
-新 Go API 使用 RESTful resource，不允许 /api/admin/Xxx/list、/api/admin/Xxx/add、/api/admin/Xxx/edit、/api/admin/Xxx/del 这种 legacy action path。
+新 Go API 使用 RESTful resource，不允许 /api/admin/Xxx/list、/api/admin/Xxx/add、/api/admin/Xxx/edit、/api/admin/Xxx/del 这种旧动作式 path。
 init/page-init 属于页面字典或 bootstrap contract，必须显式写清用途和 enum/dict 来源。
-旧接口兼容入口必须标注 legacy adapter，不得伪装成新契约。
+旧接口兼容入口必须标注兼容来源、退出条件和验证边界，不得伪装成新契约。
 ```
 
 本地 contract gate：
@@ -258,8 +258,8 @@ Response:
 account 必须是当前 users.email 或 users.phone 中存在且未删除的账号。
 用户必须处于启用状态。
 成功后写入 users.password 的 bcrypt $2y$ hash，并消费 Redis 验证码。
-前端必须使用 Go request 调用本接口，不允许再走 legacy /api/Users/forgetPassword。
-新 Go 契约不接受 legacy 字段：newpassword、respassword、account_type。
+前端必须使用 Go request 调用本接口，不允许保留旧用户域重置密码调用。
+新 Go 契约不接受旧字段：newpassword、respassword、account_type。
 ```
 
 错误：
@@ -353,7 +353,6 @@ Logout 需要 `Authorization: Bearer <access_token>`。
 ```text
 GET /api/admin/v1/users/me
 GET /api/admin/v1/users/init
-POST /api/Users/init                 # legacy-compatible adapter，返回同一份 data
 ```
 
 Response `data`：
@@ -3817,13 +3816,13 @@ DELETE /api/admin/v1/auth-platforms    body: { ids: number[] }
 每次迁移或修改接口必须检查：
 
 ```text
-method/path 是否符合 RESTful resource，不是 legacy action path。
+method/path 是否符合 RESTful resource，不是旧动作式 path。
 是否写明 auth requirement：public / bearer token / permission code。
 request query/body 是否有 TypeScript shape。
 response data 是否有 TypeScript shape 或 JSON example。
 错误场景是否写清：参数错误、权限失败、资源不存在、业务冲突。
 dict/init 是否写明 enum 来源：internal/enum -> internal/dict。
-前端调用是否使用 request，不使用 legacyRequest，除非明确 legacy adapter。
+前端调用是否使用 request，不使用 legacyRequest；如处于已批准的历史兼容边界，必须写清退出条件。
 是否需要 operation log route metadata；需要就同步 route_meta 和本文。
 是否需要 smoke 覆盖；需要就同步 smoke matrix。
 ```

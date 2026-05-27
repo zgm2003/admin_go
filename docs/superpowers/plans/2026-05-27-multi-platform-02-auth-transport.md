@@ -1,29 +1,70 @@
-# Multi-platform Auth Transport Boundary Implementation Plan
+# Plan 02: Auth Transport Pattern + `/api/Users` Backend Cleanup
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Implement the first executable slice of `2026-05-27-multi-platform-backend-boundary-design.md`: make auth the reference `module/{capability}/transport/{platform}` module, remove `/api/Users/*` backend compatibility routes, and sync root governance docs with module/transport/shared/infra rules.
+**Goal:** Establish `internal/module/auth/transport/{admin,app}` as the reference multi-platform module pattern, and remove the `/api/Users/*` legacy POST routes from the Go runtime. This plan is the **sequential prerequisite for plan-03** (module consolidation), because plan-03 modifies files created here.
 
-**Architecture:** `platform` means business entry (`admin/app/openapi/merchant`); `infra` means external technical resources. `internal/module/auth/transport/{admin,app}` owns HTTP/Gin request binding and routes; `internal/module/auth` keeps shared auth service/repository/model code. The source spec has five migration knives, so this plan implements knife `12.1A` only and records the rest as separate plans for clean rollback.
+**Source spec:** `docs/superpowers/specs/2026-05-27-multi-platform-backend-boundary-design.md` §12.1.
 
-**Tech Stack:** Go, Gin, PowerShell, Markdown governance docs, `go test`, `rg`, `git diff --check`, `scripts/check-agent-governance.ps1`.
+**Tech Stack:** Go, Gin, PowerShell, `go test`, `rg`, `git diff --check`.
 
 ---
 
 ## Scope Check
 
-Source spec: `docs/superpowers/specs/2026-05-27-multi-platform-backend-boundary-design.md`.
-
 This plan executes:
 
 ```text
-1. Root governance docs align with R1-R8, infra naming, and no admin-only capability rule.
-2. Auth admin/app routes move under transport/{admin,app}.
-3. /api/Users/* backend compatibility routes are removed.
-4. Static architecture tests protect the new boundary.
+1. Auth admin/app routes move under transport/{admin,app} per spec §4 four-file convention.
+2. /api/Users/* backend POST routes are removed (auth + user + middleware whitelist).
+3. Static architecture tests protect the new boundary.
+4. Bootstrap rewires through new Register entry points.
 ```
 
-This plan does not merge `captcha`, `session`, `usersession`, or `userloginlog` into `auth`; that becomes knife `12.1B`. It also does not execute shared/dict, small module shells, module aggregation, or `internal/platform -> internal/infra` import rename.
+This plan does **not**:
+- Merge `captcha` / `session` / `usersession` / `userloginlog` into auth (plan-03).
+- Write or update governance docs (plan-01).
+- Clean frontend `/api/Users` references (plan-04).
+- Execute shared/dict, smaller module shells, AI aggregation, or `internal/platform -> internal/infra` rename (queued as later plans).
+
+**Sibling plans (can run in parallel from t=0):**
+- `2026-05-27-multi-platform-01-governance-docs.md` — pure markdown, zero `.go` touch
+- `2026-05-27-multi-platform-04-frontend-legacy-cleanup.md` — touches admin_front_ts/admin_app
+
+**Blocks:** `2026-05-27-multi-platform-03-module-consolidation.md` must wait until this plan merges.
+
+---
+
+## Task 0: Pre-flight checks (run before any code change)
+
+**Files:**
+
+- Validate only.
+
+- [ ] **Step 1: Confirm no frontend caller still hits `/api/Users/*`**
+
+Per spec §14.1 R-3, frontend references must be enumerated **before** the backend routes are deleted, so frontend PRs can land in sync.
+
+Run:
+
+```powershell
+cd E:\admin_go
+rg -n "/api/Users" admin_front_ts\src admin_front_ts\tests admin_app\lib admin_app\test -g "!*node_modules*" -g "!*dist*" -g "!*build*"
+```
+
+Expected: empty output. If any reference exists, **stop** this plan and either (a) coordinate a frontend PR that removes the call first, or (b) re-scope the backend deletion to keep that one route as a planned remaining legacy endpoint (not preferred — spec §1.3 reject this).
+
+- [ ] **Step 2: Confirm current backend baseline compiles and tests pass**
+
+Run:
+
+```powershell
+cd E:\admin_go\admin_back_go
+go build ./...
+go test ./internal/module/auth ./internal/module/user ./internal/server -count=1
+```
+
+Expected: PASS. Establishes the regression baseline. If any test currently fails, **stop** — fix the baseline first; do not move into a refactor on broken ground.
 
 ---
 
@@ -44,18 +85,23 @@ Auth transport refactor:
 
 - Create: `admin_back_go/internal/module/auth/transport/admin/route.go`
 - Create: `admin_back_go/internal/module/auth/transport/admin/handler.go`
+- Create: `admin_back_go/internal/module/auth/transport/admin/handler_test.go` (relocated from `auth/handler_test.go`)
 - Create: `admin_back_go/internal/module/auth/transport/admin/request.go`
+- Create: `admin_back_go/internal/module/auth/transport/admin/presenter.go` (per spec §4)
 - Create: `admin_back_go/internal/module/auth/transport/app/route.go`
 - Create: `admin_back_go/internal/module/auth/transport/app/handler.go`
+- Create: `admin_back_go/internal/module/auth/transport/app/handler_test.go` (relocated from `auth/platform_handler_test.go`)
 - Create: `admin_back_go/internal/module/auth/transport/app/request.go`
-- Modify: `admin_back_go/internal/module/auth/service.go`
-- Modify: `admin_back_go/internal/module/auth/dto.go`
+- Create: `admin_back_go/internal/module/auth/transport/app/presenter.go` (carries former `platform_dto.go` response types)
+- Keep unchanged at module root: `service.go`, `dto.go` (service input/output types — cross-platform contracts), `repository.go`, `model.go`, `code_store.go`, `verify_code_policy.go`, `service_test.go`, `jobs.go`, `jobs_test.go`
 - Delete: `admin_back_go/internal/module/auth/route.go`
 - Delete: `admin_back_go/internal/module/auth/handler.go`
+- Delete: `admin_back_go/internal/module/auth/handler_test.go` (after content relocates to `transport/admin/`)
 - Delete: `admin_back_go/internal/module/auth/request.go`
 - Delete: `admin_back_go/internal/module/auth/platform_route.go`
 - Delete: `admin_back_go/internal/module/auth/platform_handler.go`
-- Delete: `admin_back_go/internal/module/auth/platform_dto.go`
+- Delete: `admin_back_go/internal/module/auth/platform_handler_test.go` (after content relocates to `transport/app/`)
+- Delete: `admin_back_go/internal/module/auth/platform_dto.go` (content moves to `transport/app/presenter.go` and `transport/app/request.go`)
 
 Route/bootstrap cleanup:
 
@@ -65,77 +111,11 @@ Route/bootstrap cleanup:
 - Modify: `admin_back_go/internal/server/router_test.go`
 - Modify: `admin_back_go/internal/module/user/handler_test.go`
 
----
-
-## Task 1: Sync root architecture docs with spec decisions
-
-**Files:**
-
-- Modify: `AGENTS.md`
-- Modify: `docs/architecture/04-go-backend-framework.md`
-- Modify: `docs/architecture/05-development-quality-rules.md`
-- Modify: `docs/status/current-status.md`
-
-- [ ] **Step 1: Update `AGENTS.md` vocabulary**
-
-Ensure `AGENTS.md` says:
-
-```markdown
-module    = 业务能力归属：auth/user/profile/permission/payment/wallet/ai/system
-transport = 多平台 HTTP 表面：admin/app/openapi/merchant
-shared    = 跨领域公共能力：dict/enum/validate/i18n/setting/pagination/errors
-infra     = 运行时技术资源：db/redis/queue/storage/tencent/openai/alipay/logging
-```
-
-Expected: `platform` is no longer used for external resources.
-
-- [ ] **Step 2: Update `docs/architecture/04-go-backend-framework.md` conclusion**
-
-Use this sentence:
-
-```markdown
-cmd -> bootstrap -> server -> module/{capability}/transport/{platform} -> module service -> shared/infra
-```
-
-Add: `platform` only means business platform; external technical resources are `infra`; adapter is a role inside infra, not the layer name.
-
-- [ ] **Step 3: Update `docs/architecture/05-development-quality-rules.md` multi-platform rule**
-
-Ensure the layer decision table says:
-
-```text
-route prefix 不同      -> transport/{platform}
-请求字段不同          -> transport request DTO
-返回字段不同          -> transport presenter
-认证/会话策略不同     -> auth/session policy 或 auth_platforms 策略
-业务规则真的不同      -> module service 的显式 policy/input
-跨领域公共数据        -> shared/dict 或 shared/setting
-外部 SDK/基础设施差异 -> infra
-```
-
-- [ ] **Step 4: Update `docs/status/current-status.md` without fake implementation claims**
-
-Use wording like:
-
-```markdown
-架构方向更新：`platform` 只表示业务平台：admin/app/openapi/merchant；外部技术资源层叫 `infra`。当前 `internal/module` 与 `internal/platform` 仍是过渡事实，目录迁移必须逐刀验证。
-```
-
-- [ ] **Step 5: Verify docs wording**
-
-Run:
-
-```powershell
-cd E:\admin_go
-rg -n "platform = 外部|api/domain/shared/platform|internal/adapter|adapter/\s+★" AGENTS.md docs\architecture docs\status
-rg -n "module/\{capability\}/transport/\{platform\}|shared/infra|外部技术资源层叫 `infra`|不要把任何业务能力定义成长期" AGENTS.md docs\architecture docs\status
-```
-
-Expected: first `rg` has no matches; second `rg` has matches in root governance docs.
+**Note:** Root governance docs (AGENTS.md, docs/architecture/*, docs/status/current-status.md) are owned by **plan-01-governance-docs**, not this plan. Do not touch them here even if you see them appearing inconsistent — plan-01 lands separately.
 
 ---
 
-## Task 2: Add RED architecture guard for auth transport boundary
+## Task 1: Add RED architecture guard for auth transport boundary
 
 **Files:**
 
@@ -185,19 +165,25 @@ func TestAuthTransportBoundaryShape(t *testing.T) {
 	for _, rel := range []string{
 		"internal/module/auth/transport/admin/route.go",
 		"internal/module/auth/transport/admin/handler.go",
+		"internal/module/auth/transport/admin/handler_test.go",
 		"internal/module/auth/transport/admin/request.go",
+		"internal/module/auth/transport/admin/presenter.go",
 		"internal/module/auth/transport/app/route.go",
 		"internal/module/auth/transport/app/handler.go",
+		"internal/module/auth/transport/app/handler_test.go",
 		"internal/module/auth/transport/app/request.go",
+		"internal/module/auth/transport/app/presenter.go",
 	} {
 		mustExist(t, root, rel)
 	}
 	for _, rel := range []string{
 		"internal/module/auth/route.go",
 		"internal/module/auth/handler.go",
+		"internal/module/auth/handler_test.go",
 		"internal/module/auth/request.go",
 		"internal/module/auth/platform_route.go",
 		"internal/module/auth/platform_handler.go",
+		"internal/module/auth/platform_handler_test.go",
 		"internal/module/auth/platform_dto.go",
 	} {
 		mustNotExist(t, root, rel)
@@ -272,17 +258,19 @@ Expected: FAIL with missing `internal/module/auth/transport/...` files and `/api
 
 ---
 
-## Task 3: Move admin auth HTTP surface to `transport/admin`
+## Task 2: Move admin auth HTTP surface to `transport/admin`
 
 **Files:**
 
 - Create: `admin_back_go/internal/module/auth/transport/admin/route.go`
 - Create: `admin_back_go/internal/module/auth/transport/admin/handler.go`
+- Create: `admin_back_go/internal/module/auth/transport/admin/handler_test.go`
 - Create: `admin_back_go/internal/module/auth/transport/admin/request.go`
+- Create: `admin_back_go/internal/module/auth/transport/admin/presenter.go`
 - Delete: `admin_back_go/internal/module/auth/route.go`
 - Delete: `admin_back_go/internal/module/auth/handler.go`
+- Delete: `admin_back_go/internal/module/auth/handler_test.go`
 - Delete: `admin_back_go/internal/module/auth/request.go`
-- Modify: `admin_back_go/internal/module/auth/dto.go`
 
 - [ ] **Step 1: Create admin transport directory**
 
@@ -386,7 +374,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterRoutes(router *gin.Engine, service auth.SessionService) {
+func Register(router *gin.Engine, service auth.SessionService) {
 	validate.MustRegister()
 	handler := NewHandler(service)
 
@@ -400,18 +388,32 @@ func RegisterRoutes(router *gin.Engine, service auth.SessionService) {
 }
 ```
 
-- [ ] **Step 5: Delete old admin HTTP files**
+Per spec §5.3, transport package exports `Register` (not `RegisterRoutes` / `RegisterAdminRoutes`).
+
+- [ ] **Step 5: Create `transport/admin/presenter.go`**
+
+Move any response-mapping helpers that currently live inline in `auth/handler.go` (e.g. struct-to-JSON shaping if any) into `presenter.go`. If no admin-specific presenter logic exists today, create the file with package declaration and a comment so the four-file convention (`route/handler/request/presenter`) is satisfied — future admin-specific response shaping lands here. Do not move cross-platform DTOs from `auth/dto.go` (those are service contracts, stay at module root).
+
+- [ ] **Step 6: Relocate admin handler tests**
+
+Move `internal/module/auth/handler_test.go` to `internal/module/auth/transport/admin/handler_test.go`:
+- Change package declaration to `package admin`
+- Update any references to old `auth.Handler` / `auth.NewHandler` to local `Handler` / `NewHandler`
+- Update imports for `LoginInput` / `LoginResponse` / `SendCodeInput` / `ForgetPasswordInput` to use `authmodule.X` alias
+- Tests that exercised the old `/api/Users/*` legacy POST routes are deleted (not migrated)
+
+- [ ] **Step 7: Delete old admin HTTP files**
 
 Run:
 
 ```powershell
 cd E:\admin_go\admin_back_go
-Remove-Item -LiteralPath .\internal\module\auth\route.go,.\internal\module\auth\handler.go,.\internal\module\auth\request.go -Force
+Remove-Item -LiteralPath .\internal\module\auth\route.go,.\internal\module\auth\handler.go,.\internal\module\auth\handler_test.go,.\internal\module\auth\request.go -Force
 ```
 
 Expected: files are removed.
 
-- [ ] **Step 6: Compile admin transport package**
+- [ ] **Step 8: Compile admin transport package**
 
 Run:
 
@@ -424,15 +426,18 @@ Expected: PASS after import and type-prefix fixes.
 
 ---
 
-## Task 4: Move app auth HTTP surface to `transport/app`
+## Task 3: Move app auth HTTP surface to `transport/app`
 
 **Files:**
 
 - Create: `admin_back_go/internal/module/auth/transport/app/route.go`
 - Create: `admin_back_go/internal/module/auth/transport/app/handler.go`
+- Create: `admin_back_go/internal/module/auth/transport/app/handler_test.go`
 - Create: `admin_back_go/internal/module/auth/transport/app/request.go`
+- Create: `admin_back_go/internal/module/auth/transport/app/presenter.go`
 - Delete: `admin_back_go/internal/module/auth/platform_route.go`
 - Delete: `admin_back_go/internal/module/auth/platform_handler.go`
+- Delete: `admin_back_go/internal/module/auth/platform_handler_test.go`
 - Delete: `admin_back_go/internal/module/auth/platform_dto.go`
 
 - [ ] **Step 1: Create app transport directory**
@@ -493,7 +498,7 @@ type RouteOptions struct {
 	UserService    UserInitService
 }
 
-func RegisterRoutes(router *gin.Engine, opts RouteOptions) {
+func Register(router *gin.Engine, opts RouteOptions) {
 	validate.MustRegister()
 	prefix := strings.TrimRight(strings.TrimSpace(opts.Prefix), "/")
 	if prefix == "" {
@@ -512,6 +517,8 @@ func RegisterRoutes(router *gin.Engine, opts RouteOptions) {
 }
 ```
 
+Per spec §5.3, transport package exports `Register` (not `RegisterRoutes` / `RegisterPlatformRoutes`).
+
 - [ ] **Step 4: Create app handler**
 
 Move old `platform_handler.go` into `transport/app/handler.go`, change package name to `app`, and rename symbols:
@@ -526,18 +533,57 @@ PlatformRouteOptions    -> RouteOptions
 
 Use `authmodule "admin_back_go/internal/module/auth"` for shared auth types.
 
-- [ ] **Step 5: Delete platform-prefixed files**
+- [ ] **Step 5: Create `transport/app/presenter.go` from `platform_dto.go` content**
+
+Migrate response types and helpers from the deleted `platform_dto.go`:
+
+```go
+package app
+
+import "admin_back_go/internal/module/user"
+
+type loginResponse struct {
+	Token string       `json:"token"`
+	User  userSummary  `json:"user"`
+}
+
+type userSummary struct {
+	ID       int64  `json:"id"`
+	Nickname string `json:"nickname"`
+	Avatar   string `json:"avatar"`
+}
+
+func userSummaryFromInit(currentUser *user.InitResponse) userSummary {
+	if currentUser == nil {
+		return userSummary{}
+	}
+	return userSummary{ID: currentUser.UserID, Nickname: currentUser.Username, Avatar: currentUser.Avatar}
+}
+```
+
+Type rename rationale: in original `platform_dto.go` they were prefixed `platform*` because the package was `auth` and needed to disambiguate from admin variants. In the new `package app` scope the `platform` prefix is redundant and confusing (the package itself is the platform).
+
+The `request.go` already holds `LoginRequest` / `SendCodeRequest` from Step 2; do not duplicate them here.
+
+- [ ] **Step 6: Relocate app handler tests**
+
+Move `internal/module/auth/platform_handler_test.go` to `internal/module/auth/transport/app/handler_test.go`:
+- Change package declaration to `package app`
+- Rename test helper references: `PlatformHandler` → `Handler`, `NewPlatformHandler` → `NewHandler`, `PlatformRouteOptions` → `RouteOptions`
+- Adjust imports for `authmodule` alias
+
+- [ ] **Step 7: Delete platform-prefixed files**
 
 Run:
 
 ```powershell
 cd E:\admin_go\admin_back_go
-Remove-Item -LiteralPath .\internal\module\auth\platform_route.go,.\internal\module\auth\platform_handler.go,.\internal\module\auth\platform_dto.go -Force
+Remove-Item -LiteralPath .\internal\module\auth\platform_route.go,.\internal\module\auth\platform_handler.go,.\internal\module\auth\platform_handler_test.go,.\internal\module\auth\platform_dto.go -Force
 ```
 
 Expected: files are removed.
 
-- [ ] **Step 6: Compile app transport package**
+- [ ] **Step 8: Compile app transport package**
 
 Run:
 
@@ -550,7 +596,7 @@ Expected: PASS after import and type-prefix fixes.
 
 ---
 
-## Task 5: Rewire router and remove `/api/Users/*`
+## Task 4: Rewire router and remove `/api/Users/*`
 
 **Files:**
 
@@ -572,8 +618,8 @@ authapp "admin_back_go/internal/module/auth/transport/app"
 Replace old calls with:
 
 ```go
-authadmin.RegisterRoutes(router, deps.AuthService)
-authapp.RegisterRoutes(router, authapp.RouteOptions{
+authadmin.Register(router, deps.AuthService)
+authapp.Register(router, authapp.RouteOptions{
 	Prefix:         "/api/app/v1/auth",
 	Platform:       enum.PlatformApp,
 	AuthService:    deps.AuthService,
@@ -582,7 +628,7 @@ authapp.RegisterRoutes(router, authapp.RouteOptions{
 })
 ```
 
-Expected: `rg -n "RegisterPlatformRoutes" admin_back_go/internal` has no matches.
+Expected: `rg -n "RegisterPlatformRoutes|auth\.RegisterRoutes" admin_back_go/internal` has no matches.
 
 - [ ] **Step 2: Remove user legacy init route**
 
@@ -642,15 +688,15 @@ cd E:\admin_go\admin_back_go
 go test ./internal/server ./internal/middleware ./internal/module/user -run 'TestLegacyUsersRoutesAreNotRegistered|TestAuth|TestApp|TestUser|TestPublic' -count=1
 ```
 
-Expected: PASS. If the regex misses local test names, run the full package set in Task 6.
+Expected: PASS. If the regex misses local test names, run the full package set in Task 5.
 
 ---
 
-## Task 6: Make the boundary guard GREEN
+## Task 5: Make the boundary guard GREEN
 
 **Files:**
 
-- Validate only, with fixes in files touched by Tasks 3-5 if checks fail.
+- Validate only, with fixes in files touched by Tasks 2-4 if checks fail.
 
 - [ ] **Step 1: Run architecture guard**
 
@@ -669,11 +715,11 @@ Run:
 
 ```powershell
 cd E:\admin_go\admin_back_go
-rg -n "RegisterPlatformRoutes|platform_handler|platform_route|platform_dto|/api/Users" internal
-Get-ChildItem .\internal\module\auth -File | Where-Object { $_.Name -in @('route.go','handler.go','request.go') -or $_.Name -like 'platform_*' -or $_.Name -like 'app_*' -or $_.Name -like 'admin_*' }
+rg -n "RegisterPlatformRoutes|platform_handler|platform_route|platform_dto|/api/Users|auth\.RegisterRoutes" internal
+Get-ChildItem .\internal\module\auth -File | Where-Object { $_.Name -in @('route.go','handler.go','request.go','handler_test.go') -or $_.Name -like 'platform_*' -or $_.Name -like 'app_*' -or $_.Name -like 'admin_*' }
 ```
 
-Expected: both commands produce no output.
+Expected: both commands produce no output. The PowerShell file check now also catches stale `handler_test.go` at module root (which would mean the tests were not relocated to `transport/admin/`).
 
 - [ ] **Step 3: Check required transport files**
 
@@ -683,18 +729,15 @@ Run:
 cd E:\admin_go\admin_back_go
 Test-Path .\internal\module\auth\transport\admin\route.go
 Test-Path .\internal\module\auth\transport\admin\handler.go
+Test-Path .\internal\module\auth\transport\admin\handler_test.go
+Test-Path .\internal\module\auth\transport\admin\presenter.go
 Test-Path .\internal\module\auth\transport\app\route.go
 Test-Path .\internal\module\auth\transport\app\handler.go
+Test-Path .\internal\module\auth\transport\app\handler_test.go
+Test-Path .\internal\module\auth\transport\app\presenter.go
 ```
 
-Expected:
-
-```text
-True
-True
-True
-True
-```
+Expected: eight `True` lines.
 
 - [ ] **Step 4: Run focused auth/server package tests**
 
@@ -709,63 +752,7 @@ Expected: PASS.
 
 ---
 
-## Task 7: Update docs after code movement
-
-**Files:**
-
-- Modify: `admin_back_go/docs/architecture.md`
-- Modify: `docs/status/current-status.md`
-- Modify: `docs/architecture/04-go-backend-framework.md`
-- Modify: `docs/architecture/05-development-quality-rules.md`
-- Modify: `docs/testing/smoke-matrix.md` if it mentions `/api/Users/*`
-- Modify: `docs/contracts/admin-api-v1.md` if it mentions `/api/Users/*`
-
-- [ ] **Step 1: Remove active legacy route docs**
-
-Run:
-
-```powershell
-cd E:\admin_go
-rg -n "/api/Users|legacy adapter|compat adapter|fallback bridge" docs admin_back_go\docs
-```
-
-Expected before edit: matches may exist. Rewrite them as removed historical notes or delete active-runtime references.
-
-- [ ] **Step 2: Document auth as the first reference transport module**
-
-Add wording to backend architecture docs:
-
-```markdown
-Auth is the first reference multi-platform module:
-
-```text
-internal/module/auth/service.go                  # shared auth business capability
-internal/module/auth/transport/admin/route.go    # /api/admin/v1/auth/*
-internal/module/auth/transport/app/route.go      # /api/app/v1/auth/*
-```
-
-`transport/admin` is the current admin exposure, not an admin-only capability. Future platforms extend the same `auth` capability with `transport/{platform}`.
-```
-
-- [ ] **Step 3: Update current status precisely**
-
-In `docs/status/current-status.md`, say auth transport boundary is implemented only after code passes. Do not claim shared/dict, all module shells, or `internal/infra` rename are implemented.
-
-- [ ] **Step 4: Verify docs search**
-
-Run:
-
-```powershell
-cd E:\admin_go
-rg -n "/api/Users|legacy adapter|compat adapter|fallback bridge" docs admin_back_go\docs admin_back_go\internal
-rg -n "transport/\{admin,app\}|module/auth/transport|internal/module/auth/transport" docs admin_back_go\docs
-```
-
-Expected: first command has no active runtime references; second command documents the auth transport boundary.
-
----
-
-## Task 8: Final verification gate for knife 12.1A
+## Task 6: Final verification gate for plan-02
 
 **Files:**
 
@@ -821,42 +808,57 @@ Expected: `git diff --check` exits 0 and governance checker prints `PASS: no blo
 Use this exact scope statement in the implementation handoff:
 
 ```text
-Completed in this plan: knife 12.1A auth transport boundary + /api/Users cleanup.
-Not executed in this plan: 12.1B captcha/session/usersession/userloginlog consolidation, 12.2 shared/dict, 12.3 smaller module transport shells, 12.4 module aggregation/profile split, 12.5 internal/platform -> internal/infra rename.
+Completed in plan-02: auth transport reorg (transport/{admin,app}) + /api/Users backend removal + boundary architecture guard.
+Not executed in plan-02: captcha/session/usersession/userloginlog merge (plan-03), governance docs (plan-01), frontend legacy cleanup (plan-04), shared/dict, smaller module shells, AI aggregation, internal/platform -> internal/infra rename.
+Plan-03 must execute next to fully complete spec §12.1.
 ```
 
 ---
 
-## Follow-up Plan Queue
+## Sibling and follow-up plans
 
-Create separate Superpowers plans in this order after knife `12.1A` is green:
+**Parallel siblings (can run from t=0 alongside this plan):**
 
 ```text
-1. 2026-05-27-auth-adjacent-module-consolidation.md
-   Scope: move captcha/session/usersession/userloginlog under auth or prove why one stays separate.
+2026-05-27-multi-platform-01-governance-docs.md
+    Pure markdown, R1-R8 + AGENTS.md + status doc. Zero .go touch.
 
-2. 2026-05-27-shared-dict-service.md
-   Scope: internal/dict -> internal/shared/dict Service + Registry, register providers, migrate one page-init.
-
-3. 2026-05-27-small-module-transport-shells.md
-   Scope: permission/auth_platform/system_setting/system_log/operation_log/cron_task/queue_monitor one module per task.
-
-4. 2026-05-27-profile-boundary-and-module-aggregation.md
-   Scope: profile split, user self-service, notification task merge, AI module aggregation.
-
-5. 2026-05-27-infra-rename.md
-   Scope: internal/platform -> internal/infra import rename and wrapper/adapter role documentation.
+2026-05-27-multi-platform-04-frontend-legacy-cleanup.md
+    admin_front_ts + admin_app: rewrite or remove /api/Users callers.
 ```
 
-Each follow-up plan starts with RED tests or static architecture guards and ends with task-specific tests plus root governance checks when root docs are touched.
+**Sequential after this plan (must wait until plan-02 merges):**
+
+```text
+2026-05-27-multi-platform-03-module-consolidation.md
+    Merge captcha/session/usersession/userloginlog into auth.
+    Touches files this plan creates (auth/transport/{admin,app}/handler.go imports).
+```
+
+**Later follow-ups (one plan per spec knife, scheduled after plan-03):**
+
+```text
+2026-05-27-shared-dict-service.md            spec §12.2
+2026-05-27-small-module-transport-shells.md  spec §12.3
+2026-05-27-profile-and-ai-aggregation.md     spec §12.4
+2026-05-27-infra-rename.md                   spec §12.5
+```
+
+Each follow-up plan starts with RED tests or static architecture guards.
 
 ---
 
 ## Plan self-review
 
-- Spec coverage: covers spec knife `12.1A` and explicitly queues `12.1B` plus `12.2`-`12.5` as separate plans.
+- Spec coverage: covers spec §12.1 auth transport reorg + `/api/Users` cleanup. Adjacent module merge (captcha/session/usersession/userloginlog) is split to plan-03 to allow plan-01/02/04 parallelism; full spec §12.1 completion requires plan-03 to follow.
 - Boundary consistency: uses `platform` only for business entry dimension and `infra` for external technical resources.
 - No admin-only drift: current admin exposure is `transport/admin`, not a capability boundary.
 - TDD: starts with failing static architecture tests before moving auth route files.
-- Runtime safety: removes `/api/Users/*` only with architecture guard, route test, middleware cleanup, and frontend grep.
+- Pre-flight gate: Task 0 enforces frontend grep and baseline-green before any code change, per spec §14.1 R-3.
+- File completeness: all 18 `auth/*.go` files have a destination (move / delete / keep at module root), including `handler_test.go` and `platform_handler_test.go` which would otherwise break the build.
+- DTO disposition: `dto.go` stays at module root as service-contract types; `platform_dto.go` content explicitly migrates to `transport/app/presenter.go` (response) and was already covered by `request.go`.
+- Naming: transport packages export `Register` per spec §5.3, not `RegisterRoutes` / `RegisterPlatformRoutes`.
+- Four-file convention: each `transport/{platform}/` has `route.go` + `handler.go` + `request.go` + `presenter.go` per spec §4.
+- Runtime safety: removes `/api/Users/*` only with architecture guard, route test, middleware cleanup, and frontend grep (pre + post).
 - Verification: requires focused Go tests, full backend test attempt, frontend grep, `git diff --check`, and root governance checker.
+- Parallelism: zero file overlap with plan-01 (only `.go` and bootstrap touched). Zero file overlap with plan-04 (only backend touched). Sequential w.r.t. plan-03 (plan-03 modifies files this plan creates).

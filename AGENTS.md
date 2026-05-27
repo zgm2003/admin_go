@@ -10,16 +10,19 @@
 一套后端核心能力，一对多服务 admin / app / openapi / merchant 等前端或平台入口。
 ```
 
-默认架构讨论使用：
+## 架构词汇（与 docs/architecture/00-platform-and-module-rules.md 对齐）
 
-```text
-api      = 多平台 HTTP 入口：admin/app/openapi/merchant
-domain   = 业务领域能力：auth/user/permission/payment/wallet/ai/system
-shared   = 跨领域公共能力：dict/enum/validate/i18n/setting/pagination/errors
-platform = 外部资源适配：db/redis/queue/storage/tencent/openai/alipay
-```
+- `platform` 仅指业务平台：admin / app / openapi / merchant / miniapp
+- `module` 业务能力归属：`internal/module/{capability}/`
+- `transport` 能力对某平台的 HTTP 表面：`internal/module/{capability}/transport/{platform}/`
+- `shared` 跨领域公共服务：dict / enum / validate / i18n / response / apperror / pagination / setting
+- `infra` 运行时技术资源层：DB / Redis / Queue / Storage / SDK / Logging
+- `adapter` infra 内多供应商实现的角色名，不是层名
 
-`internal/module` 是当前过渡事实，不再是未来唯一边界。新增平台、公共能力或大模块重构时，优先按 `api/domain/shared/platform` 思考。
+不再使用：
+- `internal/platform/` 作为外部资源目录名（与业务 platform 撞车，迁至 `internal/infra/`）
+- `api/{platform}/` 顶层分包（弃用 DDD 风格四层）
+- "admin only" 作为能力定义（当前 admin 入口 ≠ admin-only）
 
 不要把任何业务能力定义成长期 `admin-only`。当前只有 admin 入口，只能说明当前先暴露 `admin` 平台；未来 app / openapi / merchant 等入口仍应在同一 capability 下扩展，而不是复制新业务模块。
 

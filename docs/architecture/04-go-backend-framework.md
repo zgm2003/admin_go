@@ -9,19 +9,12 @@
 一句话：
 
 ```text
-cmd -> bootstrap -> api -> domain -> shared -> platform
+cmd -> bootstrap -> server -> module/{capability}/transport/{platform} -> module service -> shared / infra
 ```
 
-当前代码仍大量存在于 `internal/module`，这是过渡事实，不是长期唯一边界。目标边界是：
+当前代码仍大量存在于 `internal/module`，这是过渡事实；长期边界按业务能力收敛到 `module/{capability}`，平台差异显式落到 `transport/{platform}`，公共能力进入 `shared`，运行时技术资源进入 `infra`。
 
-```text
-api      多平台 HTTP 入口：admin/app/openapi/merchant
-domain   业务领域能力：auth/user/permission/payment/wallet/ai/system
-shared   跨领域公共能力：dict/enum/validate/i18n/setting/pagination/errors
-platform 外部资源适配：db/redis/queue/storage/tencent/openai/alipay
-```
-
-单体仍然是单体，只是内部边界从模糊的 `module` 逐步收口到 `api/domain/shared/platform`。
+单体仍然是单体，只是内部边界从模糊的平铺 module 逐步收口到 `module / transport / shared / infra`。
 
 ## 为什么选这个架构
 
@@ -49,7 +42,7 @@ WebSocket / AI streaming
 ```text
 一个 Go 单体
 一组 Gin HTTP API 平台入口
-一套清楚的 api/domain/shared/platform 边界
+一套清楚的 module/transport/shared/infra 边界
 一套可测试的契约
 ```
 
@@ -71,57 +64,32 @@ admin_back_go/
   internal/server/            # Gin engine、全局 middleware、路由挂载；后续逐步变薄
   internal/middleware/        # HTTP middleware
   internal/response/          # 统一响应和错误映射
-  internal/module/            # 当前过渡业务模块目录；后续按 api/domain/shared 收口
+  internal/module/            # 业务能力目录；长期按 capability + transport/{platform} 收口
   internal/dict/              # 当前过渡字典公共包；后续收口为 shared/dict 服务
   internal/enum/              # 当前过渡枚举公共包；后续归 shared/enum
   internal/validate/          # 当前过渡校验公共包；后续归 shared/validate
   internal/jobs/              # 队列任务类型、handler 注册、cron 投递注册
-  internal/platform/          # DB/Redis/queue/storage/AI clients 等外部资源
+  internal/infra/             # 运行时技术资源层；承接 DB/Redis/queue/storage/AI clients
   internal/version/           # 版本信息
 ```
 
-## 目标分层规则
-
-长期目标：
+## 长期目标分层
 
 ```text
-internal/api/admin/...    # admin 平台 HTTP 入口
-internal/api/app/...      # app 平台 HTTP 入口
-internal/domain/user/...  # 用户领域能力
-internal/domain/auth/...  # 认证领域能力
-internal/shared/dict/...  # 统一字典服务
-internal/shared/enum/...  # 跨领域枚举
-internal/platform/...     # 外部资源适配
+internal/module/{capability}/                       业务能力归属（auth/user/payment/ai/...）
+internal/module/{capability}/transport/{platform}/  能力对某平台的 HTTP 表面
+internal/shared/                                    跨能力公共服务
+internal/infra/                                     运行时技术资源层（原外部资源目录）
 ```
 
-`api` 层负责：
+不采用顶层平台 API 包 + 顶层领域包的 4 层切分。
+理由：service 已经天然跨平台（入参带 platform），抽领域目录容易变成空抽象；
+跨平台字段改动高频的项目，HTTP 表面与业务能力拆成远距离大目录会让日常修改成本变高。
 
-```text
-route prefix
-request DTO
-认证入口
-权限入口
-operation log 策略
-平台 presenter
-```
-
-`domain` 层负责：
-
-```text
-业务规则
-状态变更
-事务边界
-领域错误
-调用 shared/platform
-```
-
-`shared` 层负责：
-
-```text
-dict/enum/validate/i18n/setting/pagination/errors
-```
-
-`platform` 层只负责外部资源和 SDK 适配，不表达 admin/app 业务平台。
+`transport/{platform}` 只表达 HTTP 表面差异：route prefix、request DTO、presenter、认证入口、权限入口、operation log 策略。
+module service 负责业务规则、状态变更、事务边界和领域错误，并只依赖 `shared` / `infra`。
+`shared` 负责 dict / enum / validate / i18n / setting / pagination / errors 等跨能力公共服务。
+`infra` 负责 DB / Redis / Queue / Storage / SDK / Logging 等运行时技术资源，不表达 admin/app/openapi/merchant 业务平台。
 
 ## module 过渡规则
 
@@ -152,33 +120,18 @@ dto.go         # service/input/output/response DTO，不放 Gin binding tag
 errors.go      # 模块错误
 ```
 
-## 多平台入口规则
+## 多平台规则
 
-admin/app/openapi/merchant 是 API 入口，不是复制业务包的理由。
+参见 `docs/architecture/00-platform-and-module-rules.md`（R1-R8）。
+
+admin/app/openapi/merchant 是业务 platform，不是复制业务包的理由。
 
 不要把任何业务能力定义成长期 `admin-only`。当前只有 admin 路由，只能说明当前暴露面先是 admin；未来 app / openapi / merchant 等入口仍应从同一 capability 扩展。
 
-推荐方向：
+当前过渡期可以仍由 `internal/module/<name>` 注册既有路由，但新平台入口和触碰到的入口治理应按 `internal/module/{capability}/transport/{platform}/` 收口。
+admin/app 差异进入 transport 层；业务规则进入 module service；跨能力公共能力进入 shared；外部技术资源进入 infra。
 
-```text
-api/admin/auth -> domain/auth
-api/app/auth   -> domain/auth
-api/admin/user -> domain/user
-api/app/user   -> domain/user
-```
-
-当前过渡期可以仍由 `internal/module/<name>` 注册路由，但不再把它当长期目标。admin/app 差异应该逐步进入 api 层，领域能力进入 domain 层。
-
-禁止：
-
-```text
-adminauth + appauth + xxauth 各自实现业务
-adminai + appai + xxai 各自实现业务
-adminwallet + appwallet + xxwallet 各自实现业务
-在一个巨大 module/<name>/route.go 里长期堆所有平台入口
-```
-
-admin user 和 app user 可以有不同 API 表达，但底层用户核心实体、账号安全、profile 基础能力应通过 domain 复用，而不是复制两套业务。
+admin user 和 app user 可以有不同 HTTP 表达，但底层用户核心实体、账号安全、profile 基础能力应通过同一 capability 复用，而不是复制两套业务。
 
 ## 调用方向
 
@@ -186,8 +139,8 @@ admin user 和 app user 可以有不同 API 表达，但底层用户核心实体
 
 ```text
 cmd -> bootstrap
-bootstrap -> config/server/platform
-server -> middleware/module route
+bootstrap -> config/server/infra
+server -> middleware/module transport route
 route -> handler
 handler -> service
 service -> repository
@@ -279,8 +232,8 @@ scheduler = github.com/go-co-op/gocron/v2
 边界固定：
 
 ```text
-internal/platform/taskqueue  # 封装 Asynq，不让业务到处 import asynq
-internal/platform/scheduler  # 封装 gocron，不让业务直接跑 cron 业务
+internal/infra/taskqueue  # 封装 Asynq，不让业务到处 import asynq
+internal/infra/scheduler  # 封装 gocron，不让业务直接跑 cron 业务
 internal/jobs                # 任务类型、handler 注册、schedule 注册
 ```
 
@@ -323,7 +276,7 @@ internal/jobs/fast
 internal/jobs/slow
 ```
 
-`fast/slow` 只存在于队列 lane、worker 部署和任务 SLA 文档里，不成为业务代码目录。当前 lane 名称和权重由 `internal/platform/taskqueue` 代码内置，普通 Docker-first env 不暴露 lane 权重。
+`fast/slow` 只存在于队列 lane、worker 部署和任务 SLA 文档里，不成为业务代码目录。当前 lane 名称和权重由 `internal/infra/taskqueue` 代码内置，普通 Docker-first env 不暴露 lane 权重。
 
 ### Go concurrency model
 
@@ -411,7 +364,7 @@ AbstractBaseWhatever
 Phase A: 架构骨架文档和目录边界
 Phase B: 整理当前最小 system 模块到 route/handler/service
 Phase C: 接入 config/log/response/error/middleware 基线
-Phase D: 接入 MySQL/Redis platform 层
+Phase D: 接入 MySQL/Redis infra 层
 Phase E: 接入 RBAC read path: CheckToken / CheckPermission / Users/init
 Phase F: 接入 RBAC write path: Permission / Role / AuthPlatform
 Phase G: 业务模块演进

@@ -4,7 +4,7 @@
 
 这个项目不允许靠“兜底字段”“兼容猜测”“全 POST”“any TS”堆出一个看似能跑、实际不可维护的 admin。
 
-当前架构口径是 new-system-first / multi-platform-first：这是新 Go/Vue 多平台系统，不是 legacy migration。要重构，就写清楚契约；要接入新平台，就先定 api/domain/shared/platform 边界；要替换不合理链路，就一条真实链路一条真实链路收。
+当前架构口径是 new-system-first / multi-platform-first：这是新 Go/Vue 多平台系统，不是 legacy migration。要重构，就写清楚契约；要接入新平台，就先定 `module/{capability}/transport/{platform}` + `shared` + `infra` 边界；要替换不合理链路，就一条真实链路一条真实链路收。
 
 ## Linus 三问
 
@@ -98,7 +98,7 @@ official vendor docs when the behavior is tool/provider-specific
 ```text
 业务上明确的默认值，例如新增根菜单 parent_id=0
 历史路径在当前运行时仍存在时，必须显式标注为待治理事实，不能作为新设计模板
-显式平台入口边界，例如 admin/app 分别在 api 层表达，再调用 domain 能力
+显式平台入口边界，例如 admin/app 分别在 `transport/{platform}` 表达，再调用同一 capability 的 module service
 对外部不可信输入做严格校验后拒绝
 ```
 
@@ -139,18 +139,19 @@ DELETE /api/admin/v1/permissions/:id         delete one
 
 ## 多平台入口不复制业务模块
 
-admin/app/openapi/merchant 是 API 入口，不是复制业务包的理由。新增端、平台、入口时先判断差异属于哪一层：
+admin/app/openapi/merchant 是业务 platform 入口，不是复制业务包的理由。新增端、平台、入口时先判断差异属于哪一层：
 
 不要把任何业务能力定义成长期 `admin-only`。当前只有 admin 入口，只是当前暴露面，不是能力边界；未来 app / openapi / merchant 等入口仍应在同一 capability 下扩展。
 
-```text
-route prefix 不同      -> api 层 route
-请求字段不同          -> api 层 request DTO
-返回字段不同          -> api 层 presenter
-认证/会话策略不同     -> domain auth/session policy
-业务规则真的不同      -> domain service 的显式 policy/input
-跨领域公共数据        -> shared/dict 或 shared/setting
-```
+| 差异类型 | 落位 |
+|---|---|
+| route prefix 不同 | `transport/{platform}` 的 `route.go` |
+| 请求字段不同 | `transport/{platform}` 的 `request.go` |
+| 返回字段不同 | `transport/{platform}` 的 `presenter.go` |
+| 认证/会话策略不同 | auth 模块策略 + `auth_platforms` 表 |
+| 业务规则不同 | module service 显式 policy/input |
+| 跨领域公共数据 | `shared/dict` 或 `shared/setting` |
+| 外部 SDK/技术资源差异 | `infra` |
 
 禁止为了端差异复制业务模块：
 
@@ -158,7 +159,7 @@ route prefix 不同      -> api 层 route
 appai / appwallet / xxauth / adminai
 ```
 
-平台不是业务复制理由。新增平台不得默认新增 `xxxauth` / `xxxuser` / `xxxupload` 这类平台命名业务模块；`/api/app/v1` 这类差异优先通过 api 层入口、platform 字段、策略表和 presenter 表达，业务能力进入 domain，共享能力进入 shared。
+平台不是业务复制理由。新增平台不得默认新增 `xxxauth` / `xxxuser` / `xxxupload` 这类平台命名业务模块；`/api/app/v1` 这类路径差异优先通过 `transport/{platform}` 的 route/request/presenter 表达；认证会话走 auth 模块策略 + `auth_platforms` 表；业务能力进入 module service，共享能力进入 shared，技术资源进入 infra。
 
 ## 公共能力先归 shared
 
@@ -181,9 +182,9 @@ appai / appwallet / xxauth / adminai
 允许：
 
 ```text
-domain 暴露业务候选项查询
+module service 暴露业务候选项查询
 shared/dict 统一组装前端字典形态
-api page-init 只声明需要哪些字典和领域 options
+transport/{platform} page-init 只声明需要哪些字典和业务 options
 ```
 
 ## TypeScript 规则
@@ -474,8 +475,8 @@ storage
 异步任务不是自己手写 Redis list。当前统一使用：
 
 ```text
-internal/platform/taskqueue  # Asynq 封装
-internal/platform/scheduler  # gocron/v2 封装
+internal/infra/taskqueue  # Asynq 封装
+internal/infra/scheduler  # gocron/v2 封装
 internal/jobs                # 项目任务注册
 cmd/admin-worker             # 独立 worker 进程
 ```
