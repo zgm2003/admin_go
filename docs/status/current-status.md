@@ -1,10 +1,16 @@
 # Admin Go/Vue Runtime Current Status
 
-状态更新时间：2026-05-27
+状态更新时间：2026-05-28
 
 本文只记录已经验证的 Go/Vue 运行时事实。不要把 planned 写成 implemented。
 
 架构方向：本项目按 new-system-first / multi-platform-first 推进。后端目标是一套核心能力服务 admin/app/openapi/merchant 等多个前端或平台入口；后续架构讨论以 `module/{capability}/transport/{platform}` + `shared` + `infra` 为目标边界。当前 `internal/module` 是过渡事实，不代表未来所有平台入口和公共能力都继续平铺在 module 下。
+
+## 2026-05-28 admin route safety seam
+
+- Added an admin route snapshot gate before continuing transport refactors.
+- Split server route registration into owned group seams so later transport-shell plans can run in parallel with less `router.go` conflict.
+- This does not mean all modules have moved to `transport/admin`; it only protects the admin route surface before the parallel wave.
 
 ## 2026-05-27 架构方向更新
 
