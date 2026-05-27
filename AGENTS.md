@@ -16,8 +16,8 @@
 - `module` 业务能力归属：`internal/module/{capability}/`
 - `transport` 能力对某平台的 HTTP 表面：`internal/module/{capability}/transport/{platform}/`
 - `shared` 跨领域公共服务：dict / enum / validate / i18n / response / apperror / pagination / setting
-- `infra` 运行时技术资源层：DB / Redis / Queue / Storage / SDK / Logging
-- `adapter` infra 内多供应商实现的角色名，不是层名
+- `infra`（infra 运行时技术资源层）：DB / Redis / Queue / Storage / SDK / Logging
+- `adapter`（adapter infra 内多供应商实现的角色名）：不是层名
 
 不再使用：
 - `internal/platform/` 作为外部资源目录名（与业务 platform 撞车，迁至 `internal/infra/`）
