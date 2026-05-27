@@ -278,29 +278,29 @@ go test ./internal/architecture ./internal/module/auth ./internal/module/auth/tr
 
 ## Task 7: Final verification gate for plan-02
 
-- [ ] 完整读取 goal 三文件并注册本轮小 todo。
-- [ ] 运行 backend focused tests：
+- [x] 完整读取 goal 三文件并注册本轮小 todo。
+- [x] 运行 backend focused tests：
 
 ```powershell
 cd E:\admin_go\admin_back_go
 go test ./internal/architecture ./internal/module/auth ./internal/module/auth/transport/admin ./internal/module/auth/transport/app ./internal/module/user ./internal/server ./internal/middleware -count=1
 ```
 
-- [ ] 运行 backend full tests：
+- [x] 运行 backend full tests：
 
 ```powershell
 cd E:\admin_go\admin_back_go
 go test ./... -count=1
 ```
 
-- [ ] 运行 frontend deleted legacy grep：
+- [x] 运行 frontend deleted legacy grep：
 
 ```powershell
 cd E:\admin_go
 rg -n "/api/Users" admin_front_ts\src admin_front_ts\tests admin_app\src admin_app\tests -g "!*node_modules*" -g "!*dist*"
 ```
 
-- [ ] 运行 root governance gates：
+- [x] 运行 root governance gates：
 
 ```powershell
 cd E:\admin_go
@@ -308,7 +308,7 @@ git diff --check
 powershell -ExecutionPolicy Bypass -File .\scripts\check-agent-governance.ps1 -Mode working
 ```
 
-- [ ] 准备 plan 要求 handoff scope statement：
+- [x] 准备 plan 要求 handoff scope statement：
 
 ```text
 Completed in plan-02: auth transport reorg (transport/{admin,app}) + /api/Users backend removal + boundary architecture guard.
@@ -316,13 +316,24 @@ Not executed in plan-02: captcha/session/usersession/userloginlog merge (plan-03
 Plan-03 must execute next to fully complete spec §12.1.
 ```
 
-- [ ] 如有最终修复性代码修改，提交 backend/root 对应 commit。
+- [x] 如有最终修复性代码修改，提交 backend/root 对应 commit。
 
 完成记录预留：
-- 动作：
+- 动作：执行 plan-02 final verification gate；确认 backend、frontend、root、admin_app 初始状态均 clean（backend ahead 7，frontend ahead 1，root ahead 8）；运行 backend focused tests、backend full tests、frontend deleted legacy grep、root governance gates；准备 plan 要求 handoff scope statement。本轮无业务代码修复性修改。
 - 验证：
-- 剩余风险：
-- 下一步：
+  - `go test ./internal/architecture ./internal/module/auth ./internal/module/auth/transport/admin ./internal/module/auth/transport/app ./internal/module/user ./internal/server ./internal/middleware -count=1`：exit 0，七个 focused packages 均 `ok`。
+  - `go test ./... -count=1`：exit 0，backend full test 全量通过；含 `cmd/admin-api` / `cmd/admin-worker` no test files，其余 package 均 `ok`。
+  - `rg -n "/api/Users" admin_front_ts\src admin_front_ts\tests admin_app\src admin_app\tests -g "!*node_modules*" -g "!*dist*"`：exit 1，无 frontend/admin_app legacy literal 命中；四个路径均存在。
+  - `git -C admin_front_ts status --short --branch`：`## master...origin/master [ahead 1]`，clean。
+  - `git -C admin_app status --short --branch`：`## master...origin/master`，clean。
+  - root `git diff --check`：exit 0。
+  - root `powershell -ExecutionPolicy Bypass -File .\scripts\check-agent-governance.ps1 -Mode working`：PASS；报告 root/admin_back_go/admin_front_ts clean。
+  - handoff scope statement：
+    - Completed in plan-02: auth transport reorg (`transport/{admin,app}`) + `/api/Users` backend removal + boundary architecture guard.
+    - Not executed in plan-02: captcha/session/usersession/userloginlog merge (plan-03), governance docs (plan-01), frontend legacy cleanup (plan-04), shared/dict, smaller module shells, AI aggregation, internal/platform -> internal/infra rename.
+    - Plan-03 must execute next to fully complete spec §12.1.
+- 剩余风险：Task 7 是 final verification gate，但还未执行 Task 8 的最终最大 review/repair/goal completion；因此本轮不调用 `update_goal(status="complete")`。root `goal-2/tasks.md` 本记录需要作为本轮 goal 记录提交/保存。
+- 下一步：Task 8 Final largest review, repair, and goal completion。
 
 ---
 
