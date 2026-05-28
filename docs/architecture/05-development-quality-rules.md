@@ -235,7 +235,7 @@ Gin middleware 顺序保持 CORS -> I18n -> AuthToken。
 response 是 HTTP { code, data, msg } 的唯一 msg 本地化边界。
 错误消息用 apperror.*Key，不能只丢中文 fallback。
 成功消息用 response.OKWithMessageKey，不能靠 OKWithMessage 长期吃 legacy fallback。
-新增模块必须维护 internal/i18n/locales/zh-CN/<module>.yaml 和 internal/i18n/locales/en-US/<module>.yaml。
+新增模块必须维护 internal/shared/i18n/locales/zh-CN/<module>.yaml 和 internal/shared/i18n/locales/en-US/<module>.yaml。
 缺翻译 key 可以返回 fallback，不能 panic；但完成态必须跑 i18n coverage。
 ```
 
@@ -243,7 +243,7 @@ response 是 HTTP { code, data, msg } 的唯一 msg 本地化边界。
 
 ```powershell
 cd E:\admin_go\admin_back_go
-go test ./internal/i18n -count=1
+go test ./internal/shared/i18n -count=1
 go test ./internal/module/<module> -count=1
 ```
 
@@ -401,10 +401,12 @@ Java 风 ServiceImpl / Manager / Factory 污染 Go
 这些是基建，不是业务模块顺手写的私货。
 
 ```text
-internal/enum     # 跨模块稳定常量和 IsXxx 判断
-internal/dict     # enum -> 前端 dict option
-internal/validate # Gin binding / go-playground validator 自定义 tag
+internal/shared/enum     # 跨模块稳定常量和 IsXxx 判断
+internal/shared/dict     # enum -> 前端 dict option
+internal/shared/validate # Gin binding / go-playground validator 自定义 tag
 ```
+
+`internal/shared` 同时拥有 `apperror`、`response`、`i18n`、`enum`、`validate`、`dict`、`setting`。旧 root shared-like packages 不再存在；新代码不得 import `internal/{apperror,response,i18n,enum,validate,dict}`。
 
 规则：
 

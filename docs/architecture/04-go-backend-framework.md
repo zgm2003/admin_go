@@ -63,12 +63,8 @@ admin_back_go/
   internal/config/            # 配置读取和默认值
   internal/server/            # Gin engine、全局 middleware、路由挂载；后续逐步变薄
   internal/middleware/        # HTTP middleware
-  internal/response/          # 统一响应和错误映射
   internal/module/            # 业务能力目录；长期按 capability + transport/{platform} 收口
-  internal/dict/              # 当前兼容字典公共包；新增/迁移优先走 shared/dict
-  internal/shared/            # 跨能力公共服务；已落地 shared/dict 与 shared/setting 的增量边界
-  internal/enum/              # 当前过渡枚举公共包；后续归 shared/enum
-  internal/validate/          # 当前过渡校验公共包；后续归 shared/validate
+  internal/shared/            # 跨能力公共服务：apperror/response/i18n/enum/validate/dict/setting
   internal/jobs/              # 队列任务类型、handler 注册、cron 投递注册
   internal/infra/             # 运行时技术资源层；承接 DB/Redis/queue/storage/AI clients
   internal/version/           # 版本信息
@@ -92,14 +88,21 @@ module service 负责业务规则、状态变更、事务边界和领域错误�
 `shared` 负责 dict / enum / validate / i18n / setting / pagination / errors 等跨能力公共服务。
 `infra` 负责 DB / Redis / Queue / Storage / SDK / Logging 等运行时技术资源，不表达 admin/app/openapi/merchant 业务平台。
 
-当前已落地的增量边界：
+当前已落地的 shared 边界：
 
 ```text
-internal/shared/dict     # common_status / common_yes_no / platform / system_setting_value_type 首批 provider；internal/dict 保持兼容
-internal/shared/setting  # auth.captcha.ttl_minutes / auth.verify_code.ttl_minutes / upload.token.ttl_minutes typed key 读取/写入
+internal/shared/apperror # 领域错误码、HTTP 状态和 i18n key/fallback 错误边界
+internal/shared/response # HTTP { code, data, msg } 响应和 msg 本地化边界
+internal/shared/i18n     # zh-CN/en-US catalog、Message lookup、legacy fallback bridge
+internal/shared/enum     # 跨能力稳定常量和 IsXxx 判断
+internal/shared/validate # Gin binding / go-playground validator 自定义 tag
+internal/shared/dict     # enum -> frontend dict option；common providers registry
+internal/shared/setting  # typed system setting keys and defaults
 ```
 
-`systemsetting` module 继续只做后台 CRUD，不再让已迁移业务模块各自解释这些 typed system_settings key。
+旧 root shared-like packages 已删除：`internal/apperror`、`internal/response`、`internal/i18n`、`internal/enum`、`internal/validate`、`internal/dict`。
+
+`systemsetting` module 继续只做后台 CRUD；`shared/setting` 仍是已迁移 typed settings key 的跨模块读取/写入边界。Plan 11 不声明 module aggregation。
 
 ## module 过渡规则
 

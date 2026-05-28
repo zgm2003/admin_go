@@ -13,6 +13,8 @@
 - **infra**：运行时技术资源层，位于 `internal/infra/`（DB / Redis / Queue / SDK / Logging）
 - **adapter**：infra 内多供应商实现的角色名（如 `infra/payment/alipay`），不是层名
 
+当前 `internal/shared` 已拥有 apperror / response / i18n / enum / validate / dict / setting；旧 root shared-like packages 已删除。`systemsetting` 仍是 admin CRUD，`shared/setting` 仍是 migrated typed settings key 的跨模块边界；Plan 11 不声明 module aggregation。
+
 ## R1. capability 命名
 
 一个业务能力 = 一个 `internal/module/{capability}/` 目录。
@@ -44,7 +46,7 @@ service 持有的状态不区分平台。
 
 ## R6. dict 边界
 
-模块不直接读 `internal/enum` 拼 option 数组。
+模块不直接读 `internal/shared/enum` 拼 option 数组。
 模块在 bootstrap 时向 `shared/dict.Service` 注册自己的 provider。
 page-init 一律通过 `dict.PageInit(ctx, names...)` 组装。
 
