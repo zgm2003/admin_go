@@ -110,7 +110,7 @@ app login 请求使用 login_type/login_account/password|code/captcha_id/captcha
 users/me 只返回 id/nickname/avatar，不返回 admin RBAC 字段。
 logout 返回 data:null。
 App bearer 请求在路径为 /api/app/v1/* 时默认 platform=app。
-Ownership：/api/app/v1/auth/* 归属 internal/module/auth；/api/app/v1/users/me 和 /api/app/v1/profile 归属 internal/module/user；/api/app/v1/upload-tokens 归属 internal/module/uploadtoken。平台 app 是 route/policy scope，不是 appauth module。
+Ownership：`/api/app/v1/auth/*` 归属 `internal/module/auth`；`/api/app/v1/users/me` 和 `/api/app/v1/profile` 当前由 `internal/module/profile/transport/app` 作为 current-user profile 编译入口注册，并复用现有 user service；`/api/app/v1/upload-tokens` 归属 `internal/module/uploadtoken`。平台 app 是 route/policy scope，不是 appauth module。
 ```
 
 请求：
@@ -500,7 +500,7 @@ DELETE /api/admin/v1/permissions               body: { ids: number[] }
 
 ## Users Management
 
-状态：implemented in Go backend, adapted in Vue frontend for list/page-init/edit/batch-edit/delete/status/export submit。导出任务列表、状态统计、删除和 `user_list` worker runtime 已迁到 Go。
+状态：implemented in Go backend, adapted in Vue frontend for list/page-init/edit/batch-edit/delete/status/export submit。admin user-management HTTP routes are owned by `internal/module/user/transport/admin`; 导出任务列表、状态统计、删除和 `user_list` worker runtime 已迁到 Go。
 
 用途：后台用户管理页的字典初始化、列表筛选、安全字段编辑、资料批量修改、状态修改和软删除。
 
@@ -657,7 +657,7 @@ interface UserExportResponse {
 
 ## Current User Quick Entry
 
-状态：implemented in Go backend, adapted in Vue frontend。
+状态：implemented in Go backend, adapted in Vue frontend。HTTP route ownership now lives in `internal/module/profile/transport/admin`; the URL stays `PUT /api/admin/v1/users/me/quick-entries` and the persistence service still reuses `internal/module/userquickentry` in this slice.
 
 用途：首页“快捷入口”保存当前登录用户选择的后台页面权限。读取仍通过 `GET /api/admin/v1/users/init` 的稳定字段 `quick_entry` 返回。
 
@@ -1028,7 +1028,7 @@ DELETE /api/admin/v1/export-tasks        body: { ids: number[] }
 
 ## Profile
 
-状态：implemented in Go backend, adapted in Vue frontend for base profile、avatar upload and account security writes。
+状态：implemented in Go backend, adapted in Vue frontend for base profile、avatar upload and account security writes。Current-user profile/security HTTP routes are owned by `internal/module/profile/transport/admin`; user-manager target profile read remains under `internal/module/user/transport/admin` so `GET /api/admin/v1/users/:id/profile` stays a user-management read surface.
 
 用途：当前后台用户查看/编辑个人资料；用户管理页跳转可只读查看指定用户资料。头像上传不是服务端转存，仍通过 shared upload client 调用 `POST /api/admin/v1/upload-tokens` 获取 COS 临时凭证。
 
