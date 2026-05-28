@@ -56,7 +56,7 @@ Redis Streams 只有在需要重放/ack 时再做
 
 ```text
 REALTIME_PUBLISHER=local
-platform/realtime.Manager 只保存本进程连接
+infra/realtime.Manager 只保存本进程连接
 ```
 
 未来：

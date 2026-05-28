@@ -174,10 +174,10 @@ platform:{current_platform}
 第一期已经落地最小连接生命周期：
 
 ```text
-platform/realtime.Conn      # gorilla.Conn thin wrapper，不暴露给业务 service
-platform/realtime.Session   # bounded send queue + read/write pump + heartbeat
-platform/realtime.Manager   # 本机 session registry，key = platform:user_id:session_id
-platform/realtime.Publisher # 发布接口，local/no-op/redis 保持同一合同
+infra/realtime.Conn      # gorilla.Conn thin wrapper，不暴露给业务 service
+infra/realtime.Session   # bounded send queue + read/write pump + heartbeat
+infra/realtime.Manager   # 本机 session registry，key = platform:user_id:session_id
+infra/realtime.Publisher # 发布接口，local/no-op/redis 保持同一合同
 module/realtime.Handler     # Gin upgrade 边界，注册 session，调用 service 处理 envelope
 module/realtime.Service     # connected/ping/pong/subscribe/error 业务 envelope，不依赖 Gin/gorilla
 ```
@@ -369,7 +369,7 @@ AI stream delta/completed/failed/cancel
 race gate：
 
 ```powershell
-go test -race ./internal/platform/realtime ./internal/module/realtime ./internal/module/ai
+go test -race ./internal/infra/realtime ./internal/module/realtime ./internal/module/ai
 ```
 
 如果 Windows 缺 gcc，必须报告 `cgo: C compiler "gcc" not found`，不能声称 race 通过。

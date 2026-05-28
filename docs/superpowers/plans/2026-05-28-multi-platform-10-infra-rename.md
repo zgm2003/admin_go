@@ -109,3 +109,29 @@ Expected: commits created and governance PASS.
 - This plan is intentionally not parallelizable.
 - It must run after transport/shared work to avoid massive merge conflicts.
 - It does not change business platform concepts such as `admin/app` or `auth_platforms`.
+
+## Execution record 2026-05-28
+
+- [x] Task 1 inventory:
+  - `internal/platform` directories before move: `accesstoken`, `ai`, `database`, `logging`, `logstore`, `mail`, `payment`, `realtime`, `redisclient`, `redislock`, `scheduler`, `secretbox`, `secretkey`, `sms`, `storage`, `taskqueue`.
+  - Legacy imports existed across `cmd/admin-api`, `cmd/admin-worker`, `internal/bootstrap`, `internal/jobs`, `internal/server`, old `internal/platform/*` packages, and module repositories/services.
+- [x] Task 2 mechanical move:
+  - Moved backend technical resources to `internal/infra`.
+  - Updated Go imports from `admin_back_go/internal/platform` to `admin_back_go/internal/infra`.
+  - Renamed technical import aliases such as `platformai` / `platformrealtime` to `infraai` / `infrarealtime`.
+- [x] Task 3 docs/comments:
+  - Updated active backend/root docs to use `internal/infra` for technical resources.
+  - Preserved business platform terms: `admin/app/openapi/merchant`, `auth_platforms`, request `platform`, and API route prefixes.
+- [x] Task 4 guard:
+  - Added `TestInfraRenameComplete`.
+  - Verified: `go test ./internal/architecture -run TestInfraRenameComplete -count=1`.
+- [x] Task 5 backend verification:
+  - Verified: `go test ./internal/architecture -count=1`.
+  - Verified: `go test ./internal/server -run TestAdminRouteSnapshot -count=1`.
+  - Verified: `go test ./... -count=1`.
+  - Verified: `go build ./...`.
+- [x] Task 6 commits/governance:
+  - Backend commit created: `a27a728` (`refactor: rename runtime platform layer to infra`).
+  - Root docs commit created and amended with this execution record: `docs: align infra runtime layer naming`.
+  - Fast-forward merged both isolated worktree branches back to the original `master` worktrees.
+  - Verified final original worktrees with `git diff --check` and `powershell -ExecutionPolicy Bypass -File .\scripts\check-agent-governance.ps1 -Mode working`.

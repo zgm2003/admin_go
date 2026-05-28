@@ -137,7 +137,7 @@ redis
 
 ```powershell
 cd E:\admin_go\admin_back_go
-go test -p=1 ./internal/bootstrap ./internal/module/system ./internal/platform/taskqueue ./internal/module/realtime ./internal/platform/realtime
+go test -p=1 ./internal/bootstrap ./internal/module/system ./internal/infra/taskqueue ./internal/module/realtime ./internal/infra/realtime
 powershell -ExecutionPolicy Bypass -File .\scripts\basic-admin-smoke.ps1 -Account <account> -Password <password>
 ```
 

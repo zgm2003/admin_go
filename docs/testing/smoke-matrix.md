@@ -57,9 +57,9 @@
 有些基建不应该硬塞进 smoke。队列/调度器/worker 的第一层验证走单元测试和进程边界检查：
 
 ```powershell
-go test ./internal/platform/taskqueue ./internal/platform/scheduler ./internal/jobs ./internal/bootstrap
-go test ./internal/module/queuemonitor ./internal/platform/taskqueue ./internal/server ./internal/bootstrap
-go test ./internal/platform/ai ./internal/platform/ai/provider ./internal/module/aiprovider ./internal/module/aiagent ./internal/module/aiknowledge ./internal/module/aitool ./internal/module/aichat ./internal/module/aiconversation ./internal/module/aimessage ./internal/module/airun ./internal/server ./internal/bootstrap
+go test ./internal/infra/taskqueue ./internal/infra/scheduler ./internal/jobs ./internal/bootstrap
+go test ./internal/module/queuemonitor ./internal/infra/taskqueue ./internal/server ./internal/bootstrap
+go test ./internal/infra/ai ./internal/infra/ai/provider ./internal/module/aiprovider ./internal/module/aiagent ./internal/module/aiknowledge ./internal/module/aitool ./internal/module/aichat ./internal/module/aiconversation ./internal/module/aimessage ./internal/module/airun ./internal/server ./internal/bootstrap
 ```
 
 当前覆盖：
@@ -72,7 +72,7 @@ jobs.RegisterSchedules 不再注册静态业务 schedule；cron-to-queue 由 int
 notification_task_scheduler 只写 cron_task_log 并 enqueue notification:dispatch-due:v1；dispatch-due handler 才 claim 到期 notification_task 并 enqueue send-task
 ai_run_timeout 由 Go registry 投递 ai:run-timeout:v1；aichat worker handler 只扫描并标记超过代码内置 AI run stale timeout 默认值的残留 running ai_runs
 AI conversation focused gates cover aiconversation/aimessage/aichat REST/service contracts plus frontend AI REST/WebSocket event contract tests; aitool gate covers tool definition/binding/internal dispatch/audit; airun gate covers token-only `ai_runs` / `ai_run_events` monitor reads, aggregates, and `ai_tool_calls` detail visibility
-realtime Redis Pub/Sub fan-out 通过 `go test ./internal/platform/realtime ./internal/module/notificationtask ./internal/bootstrap` 验证，不在 smoke 发送真实通知
+realtime Redis Pub/Sub fan-out 通过 `go test ./internal/infra/realtime ./internal/module/notificationtask ./internal/bootstrap` 验证，不在 smoke 发送真实通知
 admin-worker 可构造 queue server + scheduler；admin-api 只持有 producer，不消费队列
 ```
 

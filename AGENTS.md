@@ -20,7 +20,7 @@
 - `adapter`（adapter infra 内多供应商实现的角色名）：不是层名
 
 不再使用：
-- `internal/platform/` 作为外部资源目录名（与业务 platform 撞车，迁至 `internal/infra/`）
+- 旧 `platform` 技术资源目录名作为外部资源目录（已迁至 `internal/infra/`，避免与业务 platform 撞车）
 - `api/{platform}/` 顶层分包（弃用 DDD 风格四层）
 - "admin only" 作为能力定义（当前 admin 入口 ≠ admin-only）
 

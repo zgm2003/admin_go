@@ -168,7 +168,7 @@ gin-gonic/contrib/sessions
 
 ```text
 admin 登录态已经有 user_sessions、refresh token、踢下线、单端登录、最大会话数、platform/device/IP policy。
-JWT 只作为 internal/platform/accesstoken codec，不是认证架构本身。
+JWT 只作为 internal/infra/accesstoken codec，不是认证架构本身。
 gin-gonic/contrib/sessions 已 abandoned，不能采用。
 全局 timeout 会误伤 WebSocket、AI stream、支付回调。
 全局 rate limit 会误伤后台正常操作。

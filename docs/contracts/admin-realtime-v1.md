@@ -339,7 +339,7 @@ Rules:
 - frontend caches active chat state by `conversation_id`, not by agent or run id
 - switching conversations must not cancel a pending reply; websocket deltas keep appending to the cached conversation session
 - `ai.response.cancel.v1` is not part of this MVP
-- current Go runtime must call `internal/platform/ai.Engine`; production must fail explicitly when no enabled provider/agent exists
+- current Go runtime must call `internal/infra/ai.Engine`; production must fail explicitly when no enabled provider/agent exists
 
 ## Implemented lifecycle
 
@@ -365,12 +365,12 @@ send queue 满时判定 slow client，关闭连接
 当前后端已有项目内发布边界和 Redis Pub/Sub fan-out：
 
 ```text
-platform/realtime.Publisher
-platform/realtime.Publication
-platform/realtime.LocalPublisher
-platform/realtime.NoopPublisher
-platform/realtime.RedisPublisher
-platform/realtime.RedisSubscriber
+infra/realtime.Publisher
+infra/realtime.Publication
+infra/realtime.LocalPublisher
+infra/realtime.NoopPublisher
+infra/realtime.RedisPublisher
+infra/realtime.RedisSubscriber
 ```
 
 当前装配由 `bootstrap.newRealtimeStack` 统一选择：

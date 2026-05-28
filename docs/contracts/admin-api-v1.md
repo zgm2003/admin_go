@@ -166,7 +166,7 @@ QUEUE_ENABLED=true 但 REDIS_ADDR 为空时 queue_redis=down。
 REALTIME_ENABLED=true 但 REALTIME_PUBLISHER 是未实现值时 realtime=down。
 ```
 
-Queue Docker-first env 只暴露 `QUEUE_ENABLED`、`QUEUE_REDIS_DB`、`QUEUE_CONCURRENCY`。Queue lane 名称 `critical/default/low`、lane 权重 `6/3/1`、默认重试 `3`、默认 task timeout `30s`、worker shutdown timeout `10s` 都是 `internal/platform/taskqueue` 代码内置默认值，不是 `system_settings`，也不是公开 Docker-first env contract。
+Queue Docker-first env 只暴露 `QUEUE_ENABLED`、`QUEUE_REDIS_DB`、`QUEUE_CONCURRENCY`。Queue lane 名称 `critical/default/low`、lane 权重 `6/3/1`、默认重试 `3`、默认 task timeout `30s`、worker shutdown timeout `10s` 都是 `internal/infra/taskqueue` 代码内置默认值，不是 `system_settings`，也不是公开 Docker-first env contract。
 
 通用错误：
 
@@ -1477,7 +1477,7 @@ Hard boundaries:
 ```text
 Vue -> admin_go REST/WebSocket only; Vue never calls an AI provider directly.
 Provider API keys stay server-side, encrypted at write boundary and masked in DTOs.
-internal/module/* does not import provider SDKs/clients; provider calls go through internal/platform/ai boundaries.
+internal/module/* does not import provider SDKs/clients; provider calls go through internal/infra/ai boundaries.
 admin_go owns users, RBAC, menus, operation logs, REST contracts, WebSocket envelopes, local conversations, messages, runs, agent metadata, local knowledge bases, and knowledge retrieval audit rows.
 The first provider-config driver is exactly openai.
 No iframe console embedding, no browser SSE/EventSource provider stream.
@@ -1648,7 +1648,7 @@ Runtime rules:
 
 - Vue starts chat by creating/selecting an `ai_conversations` row and posting a text message to `/:id/messages`
 - `aimessage` persists the user message plus explicit `meta_json`, updates `last_message_at`, generates title from the first user message when title is empty, then hands off to the API-process reply dispatcher
-- `aichat` executes the reply through `internal/platform/ai.Engine` using recent conversation messages, selected agent prompt, optional image attachments, and allowed runtime parameters
+- `aichat` executes the reply through `internal/infra/ai.Engine` using recent conversation messages, selected agent prompt, optional image attachments, and allowed runtime parameters
 - `ai:conversation-reply:v1` remains a registered worker task type, but it is not the active browser chat MVP handoff path; the API process owns the immediate reply execution so local WebSocket conversations do not depend on a separately running worker
 - `POST /messages/cancel` cancels the matching in-process reply context by `conversation_id + request_id`; late WebSocket events for a locally canceled request must be ignored by the browser
 - provider stream is consumed only inside Go and converted to admin_go WebSocket envelopes; the browser never receives provider stream directly
@@ -2303,7 +2303,7 @@ Tencent SecretId / SecretKey are encrypted in mail_configs by APP_SECRET-derived
 HTTP responses never return secret_id_enc / secret_key_enc or plaintext secrets.
 mail_configs / mail_templates / mail_logs all include is_del; every read path filters is_del=2.
 mail_logs never store email body, verification plaintext, or full template payload.
-Tencent Cloud SDK imports are confined to internal/platform/mail/tencentcloudses.
+Tencent Cloud SDK imports are confined to internal/infra/mail/tencentcloudses.
 auth.Service depends only on VerifyCodeMailSender and does not import module/mail or Tencent SDK.
 Verification-code templates must include exactly code and ttl_minutes.
 app_name is not a verification-code template variable; mail_configs.from_name only controls the Tencent SES FromEmailAddress display name.
@@ -2519,7 +2519,7 @@ Tencent SecretId / SecretKey are encrypted in sms_configs by APP_SECRET-derived 
 HTTP responses never return secret_id_enc / secret_key_enc or plaintext secrets.
 sms_configs / sms_templates / sms_logs all include is_del; every read path filters is_del=2.
 sms_logs never store SMS body, verification plaintext, template params, raw request, or raw response.
-Tencent Cloud SDK imports are confined to internal/platform/sms/tencentcloudsms.
+Tencent Cloud SDK imports are confined to internal/infra/sms/tencentcloudsms.
 SendSms uses SmsSdkAppId, SignName, TemplateId, TemplateParamSet, PhoneNumberSet, Region, and Endpoint.
 Tencent SDK calls use context plus a default 10s timeout.
 Each send creates one pending log before the Tencent call and finishes the same log as success or failed.
@@ -2711,7 +2711,7 @@ DELETE /sms/logs/:id and /logs     -> system_sms_logDel, module=sms, action=dele
 ```text
 resource prefix: /api/admin/v1/payment
 backend owner: internal/module/payment
-gateway boundary: internal/platform/payment/alipay
+gateway boundary: internal/infra/payment/alipay
 provider scope: Alipay only
 active payment tables: payment_configs, payment_orders, payment_recharge_packages, payment_recharges, payment_callback_events
 shared wallet tables touched by recharge credit: user_wallets, wallet_transactions
@@ -4190,7 +4190,7 @@ delete is soft delete only and rejects current latest version.
 ### Manifest Publish Boundary
 
 ```text
-clientversion.Service -> ManifestPublisher small interface -> ManifestCOSPublisher -> internal/platform/storage/cos.ObjectWriter -> github.com/tencentyun/cos-go-sdk-v5
+clientversion.Service -> ManifestPublisher small interface -> ManifestCOSPublisher -> internal/infra/storage/cos.ObjectWriter -> github.com/tencentyun/cos-go-sdk-v5
 ```
 
 Rules：
