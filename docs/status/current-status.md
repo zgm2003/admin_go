@@ -18,12 +18,25 @@
 - `internal/server/routes_admin_ai.go` now imports the AI admin transport shells, while the existing `/api/admin/v1/ai-*` route surface is preserved by the route snapshot gate.
 - Verified with `go test ./internal/architecture -run TestAIAdminTransportShells -count=1`, `go test ./internal/server -run TestAdminRouteSnapshot -count=1`, focused AI module/server tests, and the matching frontend AI API Vitest files.
 
+## 2026-05-28 foundation admin transport shells
+
+- Foundation/admin infra-facing HTTP route ownership has moved to `internal/module/{system,systemsetting,systemlog,operationlog,crontask,queuemonitor,clientversion,exporttask,realtime}/transport/admin`; service/repository/model/jobs remain at each module root.
+- `internal/server/routes_admin_foundation.go` now imports the foundation admin transport shells; `/health`, `/ready`, `/api/admin/v1/ping`, system settings/logs, operation logs, cron tasks, queue monitor, client versions, export tasks, and realtime WebSocket URLs are unchanged.
+- Verified with `go test ./internal/architecture -run TestFoundationAdminTransportShells -count=1`, `go test ./internal/server -run TestAdminRouteSnapshot -count=1`, focused foundation module + transport tests, and `go test ./... -count=1`.
+
 ## 2026-05-28 comms/upload admin transport shells
 
 - Communication and upload admin HTTP route ownership has moved to `internal/module/{mail,sms,notification,notificationtask,uploadconfig,uploadtoken}/transport/admin`; service/repository/model/jobs remain at each module root.
 - `uploadtoken` keeps the app upload-token route under `internal/module/uploadtoken/transport/app` without changing `POST /api/app/v1/upload-tokens`.
 - `internal/server/routes_admin_comms.go` now imports the comms/upload admin transport shells, while existing `/api/admin/v1/mail`, `/sms`, `/notifications`, `/notification-tasks`, `/upload-*`, and `/upload-tokens` route surfaces are preserved by the route snapshot gate.
 - Verified with `go test ./internal/architecture -run TestCommsUploadAdminTransportShells -count=1`, `go test ./internal/server -run TestAdminRouteSnapshot -count=1`, focused comms/upload module + transport tests, and `go test ./... -count=1`.
+
+## 2026-05-28 commerce/RBAC admin transport shells
+
+- Commerce/RBAC admin HTTP route ownership has moved to `internal/module/{authplatform,permission,role,wallet,payment}/transport/admin`; service/repository/model/jobs remain at each module root.
+- Payment public Alipay callback is explicitly separate under `internal/module/payment/transport/callback`; admin payment URLs remain under the existing `/api/admin/v1/payment-*` and wallet URLs.
+- `internal/server/routes_admin_commerce_rbac.go` now imports the commerce/RBAC admin transport shells, while existing auth platform, permission, role, wallet, and payment admin route surfaces are preserved by the route snapshot gate.
+- Verified with `go test ./internal/architecture -run TestCommerceRBACAdminTransportShells -count=1`, `go test ./internal/server -run TestAdminRouteSnapshot -count=1`, focused commerce/RBAC module + transport tests, and `go test ./... -count=1`.
 
 ## 2026-05-27 架构方向更新
 
