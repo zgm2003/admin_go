@@ -29,9 +29,12 @@ module aggregation:
   DONE 12b: notificationtask -> notification/task ownership
   DONE 12c: exporttask directory -> export
   DONE 12d: authplatform directory -> auth_platform
-  READY 13: AI aggregation map + concrete 14a/14b/14c/15 plan files
+  DONE 13: AI aggregation map + concrete 14a/14b/14c/15 plan files
+  DONE 14a: aiprovider/aiagent/aitool -> internal/module/ai/{provider,agent,tool}
+  DONE 14b: aiimage -> internal/module/ai/image
+  DONE 14c: aiknowledge -> internal/module/ai/knowledge
+  TODO: Plan 15 conversation/message/chat/run -> internal/module/ai/{conversation,message,chat,run}
   TODO: wallet -> payment/wallet decision closure
-  TODO: AI flat modules -> ai capability aggregation
 ```
 
 `docs/status/current-status.md` remains the runtime truth source. This Phase 2 map must not be used to claim planned work is implemented.
@@ -59,15 +62,15 @@ DONE PARALLEL WAVE B:
   12d authplatform -> auth_platform rename
 
 SERIAL / MAP-FIRST after 12a-12d:
-  READY 13 AI aggregation map
+  DONE 13 AI aggregation map
 
-PARALLEL WAVE C, merge sequentially:
-  14a AI provider/agent/tool aggregation slice
-  14b AI image aggregation slice
-  14c AI knowledge aggregation slice
+DONE PARALLEL WAVE C, merged sequentially:
+  DONE 14a AI provider/agent/tool aggregation slice
+  DONE 14b AI image aggregation slice
+  DONE 14c AI knowledge aggregation slice
 
 SERIAL after 14a-14c:
-  15 AI conversation/message/chat/run runtime aggregation slice
+  TODO 15 AI conversation/message/chat/run runtime aggregation slice
 
 DECISION SLICE after 11, can run after small-module wave if desired:
   16 wallet/payment ownership decision and first safe slice
@@ -86,9 +89,9 @@ FINAL:
 | 12c | done, ran with 12a/12b/12d after 11 | `exporttask -> export`, export task route/service/jobs/docs/tests | notification, AI, payment |
 | 12d | done, ran with 12a/12b/12c after 11 | `authplatform -> auth_platform`, auth platform admin route/service/docs/tests | auth login behavior, shared migration |
 | 13 | no | AI dependency map, exact slice plan files | production code changes |
-| 14a | yes, with 14b/14c in separate worktrees; merge sequentially | `aiprovider`, `aiagent`, `aitool` -> `internal/module/ai/{provider,agent,tool}` | conversation/message/chat/run/image/knowledge runtime mutation beyond tool interface import |
-| 14b | yes, with 14a/14c in separate worktrees; merge sequentially | `aiimage` -> `internal/module/ai/image`, image queue/jobs/tests | provider/agent/tool internals, conversation/message/chat/run |
-| 14c | yes, with 14a/14b in separate worktrees; merge sequentially | `aiknowledge` -> `internal/module/ai/knowledge`, knowledge CRUD/runtime adapter imports | provider/agent/tool internals, conversation/message/chat/run |
+| 14a | done, ran with 14b/14c in separate worktrees; merged sequentially | `aiprovider`, `aiagent`, `aitool` -> `internal/module/ai/{provider,agent,tool}` | conversation/message/chat/run/image/knowledge runtime mutation beyond tool interface import |
+| 14b | done, ran with 14a/14c in separate worktrees; merged sequentially | `aiimage` -> `internal/module/ai/image`, image queue/jobs/tests | provider/agent/tool internals, conversation/message/chat/run |
+| 14c | done, ran with 14a/14b in separate worktrees; merged sequentially | `aiknowledge` -> `internal/module/ai/knowledge`, knowledge CRUD/runtime adapter imports | provider/agent/tool internals, conversation/message/chat/run |
 | 15 | no | `aiconversation`, `aimessage`, `aichat`, `airun` -> `internal/module/ai/{conversation,message,chat,run}` | provider/tool/image/knowledge internals unless required for imports after 14a-14c |
 | 16 | no by default | `wallet` and `payment` ownership decision, first safe move if approved by evidence | payment callback/Alipay finalizer behavior unless in scope |
 | 17 | no | final architecture guards, active docs, spec status review | new behavior |
@@ -145,7 +148,7 @@ Phase 2 is done only when all of the following are true:
 internal/shared contains apperror, response, i18n, enum, validate, dict, setting
 old root shared-like packages are removed or reduced to explicitly documented temporary wrappers with guards
 small flat modules are either aggregated or have documented exceptions with tests
-AI aggregation has either landed through safe slices or has an accepted follow-up map that blocks spec closure honestly
+AI core/image/knowledge aggregation has landed through safe slices; conversation/message/chat/run remains an explicit Plan 15 blocker for spec closure
 admin route snapshot passes
 backend full tests and build pass
 active docs say exactly what is implemented
