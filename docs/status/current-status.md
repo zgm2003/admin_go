@@ -12,6 +12,19 @@
 - Split server route registration into owned group seams so later transport-shell plans can run in parallel with less `router.go` conflict.
 - This does not mean all modules have moved to `transport/admin`; it only protects the admin route surface before the parallel wave.
 
+## 2026-05-28 AI admin transport shells
+
+- AI admin HTTP route ownership has moved to `internal/module/{aiprovider,aiagent,aitool,aiknowledge,aiconversation,aimessage,airun,aichat,aiimage}/transport/admin`; service/repository/model/jobs remain at each module root.
+- `internal/server/routes_admin_ai.go` now imports the AI admin transport shells, while the existing `/api/admin/v1/ai-*` route surface is preserved by the route snapshot gate.
+- Verified with `go test ./internal/architecture -run TestAIAdminTransportShells -count=1`, `go test ./internal/server -run TestAdminRouteSnapshot -count=1`, focused AI module/server tests, and the matching frontend AI API Vitest files.
+
+## 2026-05-28 comms/upload admin transport shells
+
+- Communication and upload admin HTTP route ownership has moved to `internal/module/{mail,sms,notification,notificationtask,uploadconfig,uploadtoken}/transport/admin`; service/repository/model/jobs remain at each module root.
+- `uploadtoken` keeps the app upload-token route under `internal/module/uploadtoken/transport/app` without changing `POST /api/app/v1/upload-tokens`.
+- `internal/server/routes_admin_comms.go` now imports the comms/upload admin transport shells, while existing `/api/admin/v1/mail`, `/sms`, `/notifications`, `/notification-tasks`, `/upload-*`, and `/upload-tokens` route surfaces are preserved by the route snapshot gate.
+- Verified with `go test ./internal/architecture -run TestCommsUploadAdminTransportShells -count=1`, `go test ./internal/server -run TestAdminRouteSnapshot -count=1`, focused comms/upload module + transport tests, and `go test ./... -count=1`.
+
 ## 2026-05-27 架构方向更新
 
 - 多平台后端架构原则 R1-R8 落地为 `docs/architecture/00-platform-and-module-rules.md`。
