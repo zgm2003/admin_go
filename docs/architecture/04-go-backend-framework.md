@@ -102,7 +102,7 @@ internal/shared/setting  # typed system setting keys and defaults
 
 旧 root shared-like packages 已删除：`internal/apperror`、`internal/response`、`internal/i18n`、`internal/enum`、`internal/validate`、`internal/dict`。
 
-`systemsetting` module 继续只做后台 CRUD；`shared/setting` 仍是已迁移 typed settings key 的跨模块读取/写入边界。Plan 11 不声明 module aggregation。
+`systemsetting` module 继续只做后台 CRUD；`shared/setting` 仍是已迁移 typed settings key 的跨模块读取/写入边界。小模块聚合第一波已落地：`profile` owns quick-entry data/service, `notification` owns notification tasks under `notification/task`, export task capability path is `internal/module/export`, and auth platform capability path is `internal/module/auth_platform`; routes/tables/queue task types/i18n IDs stay stable.
 
 ## module 过渡规则
 

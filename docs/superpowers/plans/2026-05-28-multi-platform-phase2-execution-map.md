@@ -21,16 +21,16 @@ internal/shared owns apperror, response, i18n, enum, validate, dict, setting
 old root shared-like packages internal/{apperror,response,i18n,enum,validate,dict}: removed and guarded
 ```
 
-Remaining Phase 2 work:
+Remaining Phase 2 work after the verified 12a-12d wave:
 
 ```text
 module aggregation:
-  notificationtask -> notification
-  exporttask       -> export
-  authplatform     -> auth_platform
-  userquickentry   -> profile ownership closure
-  wallet           -> payment/wallet decision closure
-  AI flat modules  -> ai capability aggregation
+  DONE 12a: userquickentry -> profile ownership closure
+  DONE 12b: notificationtask -> notification/task ownership
+  DONE 12c: exporttask directory -> export
+  DONE 12d: authplatform directory -> auth_platform
+  TODO: wallet -> payment/wallet decision closure
+  TODO: AI flat modules -> ai capability aggregation
 ```
 
 `docs/status/current-status.md` remains the runtime truth source. This Phase 2 map must not be used to claim planned work is implemented.
@@ -51,7 +51,7 @@ module aggregation:
 DONE:
   11 shared package migration
 
-PARALLEL WAVE B now unblocked:
+DONE PARALLEL WAVE B:
   12a profile/userquickentry ownership closure
   12b notification + notificationtask aggregation
   12c exporttask -> export rename
@@ -74,10 +74,10 @@ FINAL:
 | Plan | Can run in parallel | Owns | Must not touch |
 |---|---|---|---|
 | 11 | no | `internal/shared/*`, old root shared-like packages, imports, shared architecture guard | module aggregation, route URLs, DB schema |
-| 12a | with 12b/12c/12d after 11 | `profile`, `userquickentry`, profile docs/tests | AI, payment/wallet, shared migration |
-| 12b | with 12a/12c/12d after 11 | `notification`, `notificationtask`, scheduler/notification task registration docs/tests | AI, export, auth platform |
-| 12c | with 12a/12b/12d after 11 | `exporttask -> export`, export task route/service/jobs/docs/tests | notification, AI, payment |
-| 12d | with 12a/12b/12c after 11 | `authplatform -> auth_platform`, auth platform admin route/service/docs/tests | auth login behavior, shared migration |
+| 12a | done, ran with 12b/12c/12d after 11 | `profile`, `userquickentry`, profile docs/tests | AI, payment/wallet, shared migration |
+| 12b | done, ran with 12a/12c/12d after 11 | `notification`, `notificationtask`, scheduler/notification task registration docs/tests | AI, export, auth platform |
+| 12c | done, ran with 12a/12b/12d after 11 | `exporttask -> export`, export task route/service/jobs/docs/tests | notification, AI, payment |
+| 12d | done, ran with 12a/12b/12c after 11 | `authplatform -> auth_platform`, auth platform admin route/service/docs/tests | auth login behavior, shared migration |
 | 13 | no | AI dependency map, exact slice plan files | production code changes |
 | 14 | no unless 13 proves disjoint | `aiprovider`, `aiagent`, `aitool` aggregation into `ai` capability | conversation/message/run/image/knowledge runtime mutation beyond interfaces |
 | 15 | serial slices unless 13 proves disjoint | `aiconversation`, `aimessage`, `airun`, `aichat`, `aiimage`, `aiknowledge` aggregation | provider/tool first-slice internals unless explicitly required |
