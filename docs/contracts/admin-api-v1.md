@@ -110,7 +110,7 @@ app login 请求使用 login_type/login_account/password|code/captcha_id/captcha
 users/me 只返回 id/nickname/avatar，不返回 admin RBAC 字段。
 logout 返回 data:null。
 App bearer 请求在路径为 /api/app/v1/* 时默认 platform=app。
-Ownership：`/api/app/v1/auth/*` 归属 `internal/module/auth`；`/api/app/v1/users/me` 和 `/api/app/v1/profile` 当前由 `internal/module/profile/transport/app` 作为 current-user profile 编译入口注册，并复用现有 user service；`/api/app/v1/upload-tokens` 归属 `internal/module/uploadtoken`。平台 app 是 route/policy scope，不是 appauth module。
+Ownership：`/api/app/v1/auth/*` 归属 `internal/module/auth/transport/app`；`/api/app/v1/users/me` 和 `/api/app/v1/profile` 当前由 `internal/module/profile/transport/app` 作为 current-user profile 编译入口注册，并复用现有 user service；`/api/app/v1/upload-tokens` 归属 `internal/module/uploadtoken/transport/app`。平台 app 是 route/policy scope，不是 appauth module。
 ```
 
 请求：

@@ -107,17 +107,19 @@ auth        # 登录、登出、me、init
 operationlog
 ```
 
-当前 module 内部最多这些文件：
+当前 module 根目录只放业务/runtime 文件；HTTP 表面必须进 `transport/{platform}`：
 
 ```text
-route.go       # 注册路由，只绑定 handler
-handler.go     # 解析 HTTP，调用 service，返回 response
-request.go     # HTTP 入参结构和 binding tag，只服务当前模块
 service.go     # 业务规则，不能依赖 gin.Context
 repository.go  # 数据访问，不能写业务决策
 model.go       # 数据库映射，只放字段和基础 tag
 dto.go         # service/input/output/response DTO，不放 Gin binding tag
 errors.go      # 模块错误
+jobs.go        # 模块自己的 task 构造和 handler 依赖，任务多了再拆
+transport/admin/route.go    # admin HTTP 路由注册
+transport/admin/handler.go  # admin HTTP 入参解析、调用 service、返回 response
+transport/app/route.go      # app HTTP 路由注册（有 app 表面时）
+transport/app/handler.go    # app HTTP 入参解析、调用 service、返回 response
 ```
 
 ## 多平台规则
@@ -128,7 +130,8 @@ admin/app/openapi/merchant 是业务 platform，不是复制业务包的理由�
 
 不要把任何业务能力定义成长期 `admin-only`。当前只有 admin 路由，只能说明当前暴露面先是 admin；未来 app / openapi / merchant 等入口仍应从同一 capability 扩展。
 
-当前过渡期可以仍由 `internal/module/<name>` 注册既有路由，但新平台入口和触碰到的入口治理应按 `internal/module/{capability}/transport/{platform}/` 收口。
+当前过渡期仍允许 service/repository/model/jobs 留在 module 根目录；active HTTP 路由、handler、request/presenter 等入口文件必须按 `internal/module/{capability}/transport/{platform}/` 收口。
+架构测试 `TestNoModuleRootHTTPSurface` 会拒绝 module 根目录下的 `route.go`、`handler.go`、`app_handler.go`、`platform_handler.go`、`app_route_test.go`、`platform_route.go`。
 admin/app 差异进入 transport 层；业务规则进入 module service；跨能力公共能力进入 shared；外部技术资源进入 infra。
 
 admin user 和 app user 可以有不同 HTTP 表达，但底层用户核心实体、账号安全、profile 基础能力应通过同一 capability 复用，而不是复制两套业务。
