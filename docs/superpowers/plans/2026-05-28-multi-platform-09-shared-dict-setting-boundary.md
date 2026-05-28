@@ -127,3 +127,57 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-agent-governance.ps1 -M
 ```
 
 Expected: commits created and governance PASS.
+
+---
+
+## Execution record
+
+Status: completed on branch `work/shared-dict-setting-boundary`.
+
+Task 1 inventory command was run from `E:\admin_go\admin_back_go`:
+
+```powershell
+rg -n "internal/dict|dict\.|system_settings|SystemSetting|settingRepo|SettingByKey|auth\.verify_code|auth\.captcha|upload\.token" internal cmd
+```
+
+Initial inventory found no `internal/shared` directory and confirmed direct dict/setting usage in the targeted migration surfaces:
+
+```text
+internal/module/systemsetting/service.go used internal/dict for system_setting_value_type page-init.
+internal/module/auth/captcha.go read auth.captcha.ttl_minutes directly through systemsetting.SettingByKey.
+internal/module/auth/verify_code_policy.go read auth.verify_code.ttl_minutes directly through systemsetting.SettingByKey.
+internal/module/uploadtoken/policy.go read upload.token.ttl_minutes directly through systemsetting.SettingByKey.
+internal/module/mail/service.go and internal/module/sms/service.go read/write/invalidate auth.verify_code.ttl_minutes directly.
+```
+
+Implemented:
+
+```text
+internal/shared/dict compatibility service/registry boundary
+internal/shared/setting typed boundary for auth.captcha.ttl_minutes, auth.verify_code.ttl_minutes, upload.token.ttl_minutes
+targeted call-site migration only
+architecture guard TestMigratedDictSettingCallSitesUseSharedBoundaries
+i18n catalog keys for new shared/setting keyed errors
+active docs sync
+```
+
+Verification:
+
+```powershell
+cd E:\admin_go\admin_back_go
+go test ./internal/module/auth ./internal/module/mail ./internal/module/sms ./internal/module/uploadtoken ./internal/module/systemsetting ./internal/shared/dict ./internal/shared/setting -count=1
+go test ./internal/architecture -run TestMigratedDictSettingCallSitesUseSharedBoundaries -count=1
+go test ./internal/i18n -count=1
+go test ./... -count=1
+
+cd E:\admin_go
+git diff --check
+powershell -ExecutionPolicy Bypass -File .\scripts\check-agent-governance.ps1 -Mode working
+```
+
+Commits:
+
+```text
+admin_back_go: 6f7817c refactor: add shared dict setting boundaries
+root docs:    12c21f8 docs: record shared dict setting boundary
+```
