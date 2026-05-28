@@ -65,7 +65,8 @@ admin_back_go/
   internal/middleware/        # HTTP middleware
   internal/response/          # 统一响应和错误映射
   internal/module/            # 业务能力目录；长期按 capability + transport/{platform} 收口
-  internal/dict/              # 当前过渡字典公共包；后续收口为 shared/dict 服务
+  internal/dict/              # 当前兼容字典公共包；新增/迁移优先走 shared/dict
+  internal/shared/            # 跨能力公共服务；已落地 shared/dict 与 shared/setting 的增量边界
   internal/enum/              # 当前过渡枚举公共包；后续归 shared/enum
   internal/validate/          # 当前过渡校验公共包；后续归 shared/validate
   internal/jobs/              # 队列任务类型、handler 注册、cron 投递注册
@@ -90,6 +91,15 @@ internal/infra/                                     运行时技术资源层（�
 module service 负责业务规则、状态变更、事务边界和领域错误，并只依赖 `shared` / `infra`。
 `shared` 负责 dict / enum / validate / i18n / setting / pagination / errors 等跨能力公共服务。
 `infra` 负责 DB / Redis / Queue / Storage / SDK / Logging 等运行时技术资源，不表达 admin/app/openapi/merchant 业务平台。
+
+当前已落地的增量边界：
+
+```text
+internal/shared/dict     # common_status / common_yes_no / platform / system_setting_value_type 首批 provider；internal/dict 保持兼容
+internal/shared/setting  # auth.captcha.ttl_minutes / auth.verify_code.ttl_minutes / upload.token.ttl_minutes typed key 读取/写入
+```
+
+`systemsetting` module 继续只做后台 CRUD，不再让已迁移业务模块各自解释这些 typed system_settings key。
 
 ## module 过渡规则
 

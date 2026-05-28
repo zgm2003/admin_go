@@ -184,8 +184,19 @@ appai / appwallet / xxauth / adminai
 ```text
 module service 暴露业务候选项查询
 shared/dict 统一组装前端字典形态
+shared/setting 统一拥有已迁移 typed system_settings key 的默认值、范围和缓存失效写入
 transport/{platform} page-init 只声明需要哪些字典和业务 options
 ```
+
+当前已迁移 typed keys：
+
+```text
+auth.captcha.ttl_minutes
+auth.verify_code.ttl_minutes
+upload.token.ttl_minutes
+```
+
+`internal/module/systemsetting` 是后台 CRUD，不是这些已迁移 key 的跨模块读取边界。
 
 ## TypeScript 规则
 

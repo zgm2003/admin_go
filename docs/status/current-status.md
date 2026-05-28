@@ -6,6 +6,13 @@
 
 架构方向：本项目按 new-system-first / multi-platform-first 推进。后端目标是一套核心能力服务 admin/app/openapi/merchant 等多个前端或平台入口；后续架构讨论以 `module/{capability}/transport/{platform}` + `shared` + `infra` 为目标边界。当前 `internal/module` 是过渡事实，不代表未来所有平台入口和公共能力都继续平铺在 module 下。
 
+## 2026-05-28 shared dict/setting boundary
+
+- `admin_back_go/internal/shared/dict` now exists as an incremental compatibility boundary for first providers `common_status`, `common_yes_no`, `platform`, and `system_setting_value_type`; `internal/dict` remains compatible during migration.
+- `admin_back_go/internal/shared/setting` owns the migrated typed system-setting keys `auth.captcha.ttl_minutes`, `auth.verify_code.ttl_minutes`, and `upload.token.ttl_minutes`; auth captcha, auth verify-code TTL, upload-token TTL, mail/sms verify-code TTL config writes, and systemsetting page-init value-type dict now use the shared boundaries.
+- `internal/module/systemsetting` remains the admin CRUD surface for `system_settings`; it is no longer the cross-module read boundary for the migrated typed keys.
+- Verified with `go test ./internal/module/auth ./internal/module/mail ./internal/module/sms ./internal/module/uploadtoken ./internal/module/systemsetting ./internal/shared/dict ./internal/shared/setting -count=1`, `go test ./internal/architecture -run TestMigratedDictSettingCallSitesUseSharedBoundaries -count=1`, `go test ./internal/i18n -count=1`, and `go test ./... -count=1`.
+
 ## 2026-05-28 admin route safety seam
 
 - Added an admin route snapshot gate before continuing transport refactors.
