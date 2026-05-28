@@ -13,6 +13,13 @@
 - Architecture guards now reject standalone `internal/module/{userquickentry,notificationtask,exporttask,authplatform}` and require the new capability paths.
 - Verified in `admin_back_go` with focused profile/notification/export/auth_platform package tests, `go test ./internal/jobs ./internal/module/crontask ./internal/bootstrap ./internal/server -count=1`, `go test ./internal/architecture -count=1`, `go test ./internal/server -run TestAdminRouteSnapshot -count=1`, `go test ./... -count=1`, `go build ./...`, old-path scans, and `git diff --check`.
 
+## 2026-05-28 AI aggregation map
+
+- AI flat-module aggregation is mapped but not yet implemented. The target shape is `admin_back_go/internal/module/ai/{provider,agent,tool,image,knowledge,conversation,message,chat,run}`.
+- Follow-up plans are ready: Plan 14a for provider/agent/tool, Plan 14b for image, Plan 14c for knowledge, and Plan 15 for conversation/message/chat/run. Plans 14a-14c may execute in parallel worktrees but must merge back to backend `master` sequentially with full backend gates after each merge.
+- Existing runtime paths remain the active truth until those plans pass: `internal/module/{aiprovider,aiagent,aitool,aiimage,aiknowledge,aiconversation,aimessage,aichat,airun}`.
+- Non-negotiable contracts for the AI wave: keep `/api/admin/v1/ai-*` routes, `ai:conversation-reply:v1`, `ai:run-timeout:v1`, `ai:image-generate:v1`, `ai.response.start/delta/completed/failed.v1`, AI `ai_*` DB table names, permission codes, and admin response payloads unchanged.
+
 ## 2026-05-28 shared package migration
 
 - `admin_back_go/internal/shared` now owns `apperror`, `response`, `i18n`, `enum`, `validate`, `dict`, and `setting`; old root shared-like packages under `admin_back_go/internal/{apperror,response,i18n,enum,validate,dict}` are gone.
