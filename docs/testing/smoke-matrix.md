@@ -48,7 +48,7 @@
 | wallet read ledger | no | yes | `GET /api/admin/v1/wallet/summary`, `GET /api/admin/v1/wallet/transactions?current_page=1&page_size=10`, `GET /api/admin/v1/wallet/users/page-init`, `GET /api/admin/v1/wallet/users?current_page=1&page_size=10`, `GET /api/admin/v1/wallet/ledger/page-init`, `GET /api/admin/v1/wallet/ledger?current_page=1&page_size=10`; users/init menu gate asserts `/wallet/transactions`, `/wallet/users`, `/wallet/ledger` with expected `view_key` values | no default mutation | n/a | wallet read gate proves balance summary includes `total_consume_cents`, transaction/user/ledger list shapes are stable, and ledger dicts expose only `in/out` and `recharge/consume`; `POST /wallet/consumptions` is mutation-gated by `wallet_consume_add` and is not run by default smoke. |
 | operation log read/delete | no | yes | `GET /api/admin/v1/operation-logs/init`, `GET /api/admin/v1/operation-logs`, `DELETE /api/admin/v1/operation-logs/:id` | yes | delete temp operation log row; delete temp permission | full 先创建临时权限触发 `新增权限` 操作日志，再删除该日志 |
 | queue health | yes | via basic | `auth:login-log:v1` worker path or sync fallback evidence | yes | no cleanup | 当前以 login log 近 5 分钟记录证明 queue/worker 或显式同步策略可用 |
-| scheduler business dispatch | no | unit tests | `cron_task.name=notification_task_scheduler` -> `notification:dispatch-due:v1` -> `notification:send-task:v1` | no in smoke | n/a | 调度器不放进 smoke 写路径；用 `go test ./internal/module/crontask ./internal/module/notificationtask ./internal/module/payment ./internal/jobs ./internal/bootstrap` 证明 DB-backed scheduler 只写 cron_task_log 并 enqueue，handler 才 claim DB/send/pay compensation |
+| scheduler business dispatch | no | unit tests | `cron_task.name=notification_task_scheduler` -> `notification:dispatch-due:v1` -> `notification:send-task:v1` | no in smoke | n/a | 调度器不放进 smoke 写路径；用 `go test ./internal/module/crontask ./internal/module/notification/task ./internal/module/payment ./internal/jobs ./internal/bootstrap` 证明 DB-backed scheduler 只写 cron_task_log 并 enqueue，handler 才 claim DB/send/pay compensation |
 | queue monitor read-only | no | yes | `GET /api/admin/v1/queue-monitor`, `GET /api/admin/v1/queue-monitor/failed`, `HEAD /api/admin/v1/queue-monitor-ui` | no | n/a | full smoke 只探测只读 JSON 摘要、失败任务分页 shape 和 asynqmon UI 可访问性，不做 retry/delete/clear |
 | realtime WebSocket connect/heartbeat | yes | via basic | `GET /api/admin/v1/realtime/ws`, `realtime.connected.v1`, `realtime.ping.v1`, `realtime.pong.v1` | local session register/cleanup only | client closes socket | 证明 AuthToken 后的 WebSocket upgrade、项目 envelope、ping/pong 和 bounded session pump 没断；browser cookie auth、topic 白名单、`REALTIME_ENABLED=false` 503、Publisher local/noop、Vue URL/envelope cleanup 走单元/Vitest，不放 basic smoke；fan-out 走单元测试，不测 AI |
 
@@ -59,7 +59,7 @@
 ```powershell
 go test ./internal/infra/taskqueue ./internal/infra/scheduler ./internal/jobs ./internal/bootstrap
 go test ./internal/module/queuemonitor ./internal/infra/taskqueue ./internal/server ./internal/bootstrap
-go test ./internal/infra/ai ./internal/infra/ai/provider ./internal/module/aiprovider ./internal/module/aiagent ./internal/module/aiknowledge ./internal/module/aitool ./internal/module/aichat ./internal/module/aiconversation ./internal/module/aimessage ./internal/module/airun ./internal/server ./internal/bootstrap
+go test ./internal/infra/ai ./internal/infra/ai/provider ./internal/module/ai/provider ./internal/module/ai/agent ./internal/module/ai/knowledge ./internal/module/ai/tool ./internal/module/ai/chat ./internal/module/ai/conversation ./internal/module/ai/message ./internal/module/ai/run ./internal/server ./internal/bootstrap
 ```
 
 当前覆盖：
@@ -70,9 +70,9 @@ taskqueue.Mux 已注册 handler 可以处理 project task
 jobs.Register 同时注册 system:no-op:v1、auth:login-log:v1、notification:dispatch-due:v1、notification:send-task:v1
 jobs.RegisterSchedules 不再注册静态业务 schedule；cron-to-queue 由 internal/module/crontask.SchedulerService.RegisterEnabled 负责
 notification_task_scheduler 只写 cron_task_log 并 enqueue notification:dispatch-due:v1；dispatch-due handler 才 claim 到期 notification_task 并 enqueue send-task
-ai_run_timeout 由 Go registry 投递 ai:run-timeout:v1；aichat worker handler 只扫描并标记超过代码内置 AI run stale timeout 默认值的残留 running ai_runs
-AI conversation focused gates cover aiconversation/aimessage/aichat REST/service contracts plus frontend AI REST/WebSocket event contract tests; aitool gate covers tool definition/binding/internal dispatch/audit; airun gate covers token-only `ai_runs` / `ai_run_events` monitor reads, aggregates, and `ai_tool_calls` detail visibility
-realtime Redis Pub/Sub fan-out 通过 `go test ./internal/infra/realtime ./internal/module/notificationtask ./internal/bootstrap` 验证，不在 smoke 发送真实通知
+ai_run_timeout 由 Go registry 投递 ai:run-timeout:v1；ai/chat worker handler 只扫描并标记超过代码内置 AI run stale timeout 默认值的残留 running ai_runs
+AI conversation focused gates cover ai/conversation, ai/message, and ai/chat REST/service contracts plus frontend AI REST/WebSocket event contract tests; ai/tool gate covers tool definition/binding/internal dispatch/audit; ai/run gate covers token-only `ai_runs` / `ai_run_events` monitor reads, aggregates, and `ai_tool_calls` detail visibility
+realtime Redis Pub/Sub fan-out 通过 `go test ./internal/infra/realtime ./internal/module/notification/task ./internal/bootstrap` 验证，不在 smoke 发送真实通知
 admin-worker 可构造 queue server + scheduler；admin-api 只持有 producer，不消费队列
 ```
 
