@@ -76,7 +76,7 @@ DECISION SLICE after 11, can run after small-module wave if desired:
   DONE 16 wallet/payment ownership decision and first safe slice (`docs/superpowers/plans/2026-05-29-multi-platform-16-wallet-payment-aggregation.md`)
 
 FINAL:
-  17 Phase 2 guard, docs, and spec closure review
+  READY 17 Phase 2 guard, docs, smoke, and spec closure review (`docs/superpowers/plans/2026-05-29-multi-platform-17-phase2-closure-review.md`)
 ```
 
 ## Parallel ownership
@@ -94,7 +94,7 @@ FINAL:
 | 14c | done, ran with 14a/14b in separate worktrees; merged sequentially | `aiknowledge` -> `internal/module/ai/knowledge`, knowledge CRUD/runtime adapter imports | provider/agent/tool internals, conversation/message/chat/run |
 | 15 | done, ran serially after 14a-14c | `aiconversation`, `aimessage`, `aichat`, `airun` -> `internal/module/ai/{conversation,message,chat,run}` | provider/tool/image/knowledge internals unless required for imports after 14a-14c |
 | 16 | done, ran serially after Plan 15 | `wallet` -> `internal/module/payment/wallet`, with payment ownership decision recorded | payment callback/Alipay finalizer behavior unless in scope |
-| 17 | no | final architecture guards, active docs, spec status review | new behavior |
+| 17 | ready, no parallelism | final architecture guard, active docs, smoke evidence, spec status review (`docs/superpowers/plans/2026-05-29-multi-platform-17-phase2-closure-review.md`) | new behavior |
 
 ## Required gates
 
@@ -148,7 +148,7 @@ Phase 2 is done only when all of the following are true:
 internal/shared contains apperror, response, i18n, enum, validate, dict, setting
 old root shared-like packages are removed or reduced to explicitly documented temporary wrappers with guards
 small flat modules are either aggregated or have documented exceptions with tests
-AI aggregation has landed through safe slices: 14a-14c plus Plan 15 are complete; Plan 16 wallet/payment decision is complete; remaining Phase 2 blocker is final guard/docs/spec closure (Plan 17)
+AI aggregation has landed through safe slices: 14a-14c plus Plan 15 are complete; Plan 16 wallet/payment decision is complete; remaining Phase 2 blocker is final guard/docs/smoke/spec closure (Plan 17), now planned in `docs/superpowers/plans/2026-05-29-multi-platform-17-phase2-closure-review.md`
 admin route snapshot passes
 backend full tests and build pass
 active docs say exactly what is implemented
