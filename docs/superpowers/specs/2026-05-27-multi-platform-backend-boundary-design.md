@@ -1,7 +1,7 @@
 # 多平台后端架构边界设计
 
 日期：2026-05-27
-状态：codex 二次校订（含 infra/adapter 命名协议），等待用户最终确认
+状态：代码与文档收口完成，等待最终 admin smoke 复验（运行时事实以 `docs/status/current-status.md` 和 backend architecture guards 为准）
 负责人：Claude（基于 codex 初稿迭代；codex 二次注入"capability 不绑定平台" + "infra 是层、adapter 是角色"修订；用户委托决断）
 
 ---

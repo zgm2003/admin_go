@@ -6,6 +6,13 @@
 
 架构方向：本项目按 new-system-first / multi-platform-first 推进。后端目标是一套核心能力服务 admin/app/openapi/merchant 等多个前端或平台入口；后续架构讨论以 `module/{capability}/transport/{platform}` + `shared` + `infra` 为目标边界。当前 `internal/module` 是过渡事实，不代表未来所有平台入口和公共能力都继续平铺在 module 下。
 
+## 2026-05-29 multi-platform backend boundary Phase 2 closure
+
+- Phase 2 of `docs/superpowers/specs/2026-05-27-multi-platform-backend-boundary-design.md` has passed code/docs/frontend gates after Plans 11-17, but final admin smoke is still pending because the local runtime was unavailable in the closure session; do not mark the spec fully closed until basic and full smoke pass.
+- Current backend boundary truth is `internal/module/{capability}/transport/{platform}` + `internal/shared` + `internal/infra`; active exceptions are product-scope decisions, not architecture drift.
+- Admin behavior preservation remains the acceptance standard: existing admin URLs, DB table names, permission codes, i18n keys, route metadata, operation log rules, queue task types, payment callback/finalizer behavior, and frontend typed API contracts were preserved.
+- Future app/openapi/merchant/miniapp work starts from this boundary and must add `transport/{platform}` slices under existing capabilities instead of creating platform-prefixed modules.
+
 ## 2026-05-28 small module aggregation wave
 
 - Small flat modules now follow capability ownership without admin API drift: `userquickentry` service/model/repository moved into `admin_back_go/internal/module/profile`, `notificationtask` moved under `admin_back_go/internal/module/notification/task` plus `notification/transport/admin/task_*`, `exporttask` directory was renamed to `admin_back_go/internal/module/export`, and `authplatform` directory was renamed to `admin_back_go/internal/module/auth_platform`.
