@@ -29,17 +29,19 @@
 8. docs/architecture/03-technology-decision.md
 9. docs/architecture/04-go-backend-framework.md
 10. docs/architecture/05-development-quality-rules.md
-11. docs/architecture/07-documentation-governance.md
-12. docs/architecture/08-codex-hooks.md
-13. docs/contracts/admin-api-v1.md
-14. docs/contracts/admin-realtime-v1.md
-15. docs/testing/test-strategy.md
-16. docs/testing/pre-push-gates.md
-17. docs/testing/smoke-matrix.md
-18. docs/deployment/local.md
-19. docs/deployment/production.md
-20. docs/deployment/distributed-readiness.md
-21. docs/deployment/frontend-github-actions-scp.md
+11. docs/architecture/06-admin-middleware-selection.md
+12. docs/architecture/06-realtime-and-distributed-boundary.md
+13. docs/architecture/07-documentation-governance.md
+14. docs/architecture/08-codex-hooks.md
+15. docs/contracts/admin-api-v1.md
+16. docs/contracts/admin-realtime-v1.md
+17. docs/testing/test-strategy.md
+18. docs/testing/pre-push-gates.md
+19. docs/testing/smoke-matrix.md
+20. docs/deployment/local.md
+21. docs/deployment/production.md
+22. docs/deployment/distributed-readiness.md
+23. docs/deployment/frontend-github-actions-scp.md
 ```
 
 按任务再读：

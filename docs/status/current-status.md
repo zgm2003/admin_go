@@ -27,7 +27,7 @@ docs/status/archive/2026-05-runtime-change-log.md     # 历史证据：2026-05 v
 ## Current verification gaps
 
 - 2026-05-29 channel-specific verify-code TTL 切片：basic admin smoke 已通过；full smoke 到达 mail/sms read probes 且 HTTP 200，随后停在既有 upload-token probe 的 `上传密钥不可用`，所以不能记录 full smoke 通过。
-- 2026-05-27 multi-platform Phase 2 已通过 code/docs/frontend gates after Plans 11-17；但 final admin smoke 仍 pending，不能把 spec 标记为完全 closed。
+- 2026-05-27 multi-platform Phase 2 已通过 code/docs/frontend gates after Plans 11-17；final admin smoke 仍 pending，不能把 spec 标记为 fully closed。
 - Docker-first readiness 和 smoke 是两条验证链：Docker runtime 用 `127.0.0.1:8080 /health /ready`；smoke 脚本默认临时端口是 basic `127.0.0.1:18080`、full `127.0.0.1:18081`。
 
 ## Latest verified change-log pointers
@@ -35,7 +35,7 @@ docs/status/archive/2026-05-runtime-change-log.md     # 历史证据：2026-05 v
 详细变更记录看 `docs/status/archive/2026-05-runtime-change-log.md`。近期关键批次：
 
 ```text
-2026-05-29 multi-platform backend boundary Phase 2 closure
+2026-05-29 multi-platform backend boundary Phase 2 gates passed; final smoke pending
 2026-05-29 transport admin alias cleanup
 2026-05-29 wallet payment aggregation
 2026-05-28 infra runtime layer rename

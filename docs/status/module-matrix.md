@@ -135,10 +135,10 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
 - Frontend:
   - adapted: `admin_app` UniApp Vue3 shell only uses `/api/app/v1`, parses token + current-user profile, guards the
     two tabbar pages with app login state instead of backend RBAC, admin_app 目录结构已对齐 PC admin 的
-    views/hooks/store/i18n/enums/platform/lib 分层；H5 默认直连 `http://192.168.5.20:8080/api/app/v1`，局域网真机调试要求
-    Docker-first 后端绑定 `0.0.0.0` 且 `CORS_ALLOW_ORIGINS` 包含 `http://192.168.5.20:5173`，如果 Windows Docker Desktop 占住宿主
-    `8080`，本机 fallback 使用 `127.0.0.1:18081` + 宿主转发继续对手机暴露 `192.168.5.20:8080`；不在 Vite 上反代 `/api/app/v1`，登录页采用 PC
-    mobile-inspired surface，slide captcha 内层验证器复用 `go-captcha-vue` 官方 `Slide` 组件和样式
+    views/hooks/store/i18n/enums/platform/lib 分层；H5/LAN dev 必须直连可访问的 Go backend `/api/app/v1`，
+    不在 Vite 上反代 `/api/app/v1`；局域网真机调试要求后端监听地址、防火墙和 `CORS_ALLOW_ORIGINS`
+    覆盖实际 H5 origin，具体 IP/端口只属于本地部署 runbook 示例；登录页采用 PC mobile-inspired surface，
+    slide captcha 内层验证器复用 `go-captcha-vue` 官方 `Slide` 组件和样式
 - Tests:
   - `internal/module/auth`, `internal/module/profile`, `internal/module/user`, `internal/module/uploadtoken`,
     `internal/middleware`, `internal/server`, `internal/shared/response`, `internal/shared/i18n`

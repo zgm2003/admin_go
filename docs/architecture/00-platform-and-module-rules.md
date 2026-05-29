@@ -13,7 +13,7 @@
 - **infra**：运行时技术资源层，位于 `internal/infra/`（DB / Redis / Queue / SDK / Logging）
 - **adapter**：infra 内多供应商实现的角色名（如 `infra/payment/alipay`），不是层名
 
-当前 Phase 2 架构级重构已完成最终收口：`internal/shared` 拥有 apperror / response / i18n / enum / validate / dict / setting；旧 root shared-like packages 已删除；`internal/infra` 是运行时技术资源层，旧 `internal/platform` 不得回归；HTTP 表面位于 `internal/module/{capability}/transport/{platform}`；`userquickentry` 归入 `profile`，`notificationtask` 归入 `notification/task`，`exporttask` 目录改为 `export`，`authplatform` 目录改为 `auth_platform`；AI flat modules 已迁入 `internal/module/ai/{provider,agent,tool,image,knowledge,conversation,message,chat,run}`；wallet 已迁入 `internal/module/payment/wallet`。旧目录和旧 import 路径由 backend architecture guards 保护，不得回归。
+当前 Phase 2 架构级重构的 code/docs/frontend gates 已通过，final admin smoke 仍 pending：`internal/shared` 拥有 apperror / response / i18n / enum / validate / dict / setting；旧 root shared-like packages 已删除；`internal/infra` 是运行时技术资源层，旧 `internal/platform` 不得回归；HTTP 表面位于 `internal/module/{capability}/transport/{platform}`；`userquickentry` 归入 `profile`，`notificationtask` 归入 `notification/task`，`exporttask` 目录改为 `export`，`authplatform` 目录改为 `auth_platform`；AI flat modules 已迁入 `internal/module/ai/{provider,agent,tool,image,knowledge,conversation,message,chat,run}`；wallet 已迁入 `internal/module/payment/wallet`。旧目录和旧 import 路径由 backend architecture guards 保护，不得回归。
 
 ## R1. capability 命名
 

@@ -70,10 +70,10 @@ location / {
 }
 ```
 
-WebSocket 你说保持不变，所以继续用：
+WebSocket 使用当前 Go Realtime contract：
 
 ```text
-wss://www.zgm2003.cn/wss
+wss://www.zgm2003.cn/api/admin/v1/realtime/ws
 ```
 
-宝塔 Nginx 里 `/wss` 仍然要反代到 Go 后端的 WebSocket 地址。
+宝塔 Nginx 必须保留 `Upgrade` / `Connection` header，并把 `/api/admin/v1/realtime/ws` 反代到 Go 后端。不要再新增旧 `/wss` 或 `/api/admin/WebSocket/bind` 入口。

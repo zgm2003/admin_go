@@ -531,7 +531,7 @@ Set-Content -Path .\docs\superpowers\reviews\2026-05-29-multi-platform-phase2-cl
 In `E:\admin_go\docs\status\current-status.md`, keep the Phase 2 section as a key-fact summary and verification-gap record. The current default wording is smoke-pending:
 
 ```markdown
-## 2026-05-29 multi-platform backend boundary Phase 2 closure
+## 2026-05-29 multi-platform backend boundary Phase 2 gates passed; final smoke pending
 
 - Phase 2 of `docs/superpowers/specs/2026-05-27-multi-platform-backend-boundary-design.md` has passed code/docs/frontend gates after Plans 11-17, but final admin smoke is still pending; do not mark the spec fully closed until basic and full smoke pass.
 - Current backend boundary truth is `internal/module/{capability}/transport/{platform}` + `internal/shared` + `internal/infra`; active exceptions are product-scope decisions, not architecture drift.
@@ -552,7 +552,7 @@ Use `E:\admin_go\docs\status\module-matrix.md` for any per-module section change
 In `E:\admin_go\docs\architecture\00-platform-and-module-rules.md`, replace the current paragraph that starts with `当前 internal/shared 已拥有` with this text:
 
 ```markdown
-当前 Phase 2 架构级重构已完成最终收口：`internal/shared` 拥有 apperror / response / i18n / enum / validate / dict / setting；旧 root shared-like packages 已删除；`internal/infra` 是运行时技术资源层，旧 `internal/platform` 不得回归；HTTP 表面位于 `internal/module/{capability}/transport/{platform}`；`userquickentry` 归入 `profile`，`notificationtask` 归入 `notification/task`，`exporttask` 目录改为 `export`，`authplatform` 目录改为 `auth_platform`；AI flat modules 已迁入 `internal/module/ai/{provider,agent,tool,image,knowledge,conversation,message,chat,run}`；wallet 已迁入 `internal/module/payment/wallet`。旧目录和旧 import 路径由 backend architecture guards 保护，不得回归。
+当前 Phase 2 架构级重构的 code/docs/frontend gates 已通过，final admin smoke 仍 pending：`internal/shared` 拥有 apperror / response / i18n / enum / validate / dict / setting；旧 root shared-like packages 已删除；`internal/infra` 是运行时技术资源层，旧 `internal/platform` 不得回归；HTTP 表面位于 `internal/module/{capability}/transport/{platform}`；`userquickentry` 归入 `profile`，`notificationtask` 归入 `notification/task`，`exporttask` 目录改为 `export`，`authplatform` 目录改为 `auth_platform`；AI flat modules 已迁入 `internal/module/ai/{provider,agent,tool,image,knowledge,conversation,message,chat,run}`；wallet 已迁入 `internal/module/payment/wallet`。旧目录和旧 import 路径由 backend architecture guards 保护，不得回归。
 ```
 
 - [ ] **Step 4: Update original spec status**
