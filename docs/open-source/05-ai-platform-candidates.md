@@ -1,20 +1,20 @@
 # AI Platform Open Source Candidates
 
-Status: researched on 2026-05-08 for the AI core rebuild. This file records sources and adoption boundaries; it is not an implementation claim.
+Status: researched on 2026-05-08 for the AI core rebuild; runtime boundary refreshed on 2026-05-29. This file records sources and adoption boundaries; it is not an implementation claim. Current implemented AI runtime facts live in `docs/status/module-matrix.md` and `admin_back_go/docs/architecture.md`.
 
 ## Problem
 
-The current AI module already has Go-owned config/agent/knowledge/chat/run slices, but the runtime is not a real AI platform yet. The decisive runtime fact is that `aichat` still uses a deterministic fallback provider (`收到：{content}`) unless a real engine is wired. The rebuild should not keep polishing the existing table shape; current `ai_*` tables may be dropped or replaced after backup because the user explicitly accepts a full rebuild.
+Historical starting point: the early AI slice had Go-owned config/agent/knowledge/chat/run plans but was not yet a real AI platform. Current runtime has moved on: `internal/module/ai/{provider,agent,tool,image,knowledge,conversation,message,chat,run}` is active, provider calls go through `internal/infra/ai`, and production chat must fail explicitly when no enabled provider/agent exists. Do not use this research note to override current runtime facts.
 
-The product surface is deliberately boring and complete:
+The intended product surface is deliberately boring and complete:
 
 ```text
 供应商配置 -> engine/provider connections
-智能体配置 -> local AI agents bound to Dify apps/workflows
+智能体配置 -> local AI agents bound to provider models and future workflow engines
 AI 对话     -> admin_go chat page + local conversation/message/run mirror
-知识库       -> local knowledge maps + Dify dataset/document sync
+知识库       -> local RAG first; future sidecar dataset/document sync only after a new spec
 运行监控     -> local runs/events/usage mirror
-AI 工具管理  -> local tool maps + safe Dify/workflow references
+AI 工具管理  -> local tool maps + safe workflow references
 ```
 
 Any candidate that cannot cover this surface without leaking third-party secrets into Vue is not acceptable for phase one.
@@ -23,8 +23,8 @@ Any candidate that cannot cover this surface without leaking third-party secrets
 
 | Candidate | What it gives us | Fit | Decision |
 | --- | --- | --- | --- |
-| Dify sidecar | Agentic workflow, RAG pipelines, integrations/tools, model access, observability, app APIs | Best fastest path to a complete AI product without writing everything ourselves | Adopt as first production AI engine, behind a Go `AIEngine` boundary |
-| CloudWeGo Eino | Go-native ChatModel/Tool/Retriever/Embedding abstractions, ADK, graph/workflow composition, streaming/callbacks | Best Go-native fallback and future embedded engine | Keep as second engine path; do not block Dify adoption on it |
+| Dify sidecar | Agentic workflow, RAG pipelines, integrations/tools, model access, observability, app APIs | Good future sidecar if local Go AI features stop being enough | Not active runtime; introduce only with a new spec/plan behind `internal/infra/ai` |
+| CloudWeGo Eino | Go-native ChatModel/Tool/Retriever/Embedding abstractions, ADK, graph/workflow composition, streaming/callbacks | Best Go-native future embedded engine | Keep as future engine path; do not block current OpenAI-compatible runtime on it |
 | RAGFlow | Strong document/RAG engine, deep document understanding, dataset-oriented APIs | Good future knowledge-base sidecar for heavy PDFs/OCR/table docs | Not phase one; introduce only when Dify knowledge/doc ability is insufficient |
 | OpenAI official Go SDK | Direct Responses API, streaming, tool calling from Go | Useful for direct OpenAI-compatible/native provider implementation | Keep as small direct-provider option, not as the whole platform |
 | LangChainGo | General Go LLM framework | Less targeted than Eino for this repo's Go-native path | Do not select as default |
@@ -59,8 +59,8 @@ Adoption boundary:
 ```text
 Dify is an AI engine, not the admin backend.
 admin_go keeps users, RBAC, menus, operation logs, route contracts, smoke gates, and product pages.
-Dify owns model/workflow/RAG/tool internals in the first production slice.
-admin_go stores engine connection, app mappings, local conversation/run/event mirrors, and user-facing permissions.
+Dify is a future sidecar candidate only; it owns model/workflow/RAG/tool internals only after a new spec/plan explicitly adopts it.
+admin_go would still store engine connection, app mappings, local conversation/run/event mirrors, and user-facing permissions.
 ```
 
 Do not directly expose the Dify console as the product UI. If Dify console is used during early setup, it is an operator/admin escape hatch, not the final admin_go UX.
@@ -77,8 +77,8 @@ Adoption boundary:
 
 ```text
 Eino is the Go-native embedded engine path.
-It is not phase-one required if Dify sidecar is adopted first.
-The Go `AIEngine` interface must be small enough that DifyEngine and EinoEngine can both implement it later.
+It is not phase-one required while the OpenAI-compatible provider boundary is enough.
+The Go `AIEngine` interface must be small enough that OpenAI-compatible, DifyEngine, and EinoEngine can all implement it later.
 ```
 
 ### RAGFlow
@@ -108,25 +108,25 @@ Adoption boundary:
 
 ```text
 Use it only for a direct OpenAI/native engine implementation or focused tests.
-Do not use raw OpenAI SDK calls inside `module/aichat`; keep calls behind `internal/platform/ai`.
+Do not use raw OpenAI SDK calls inside `module/ai/chat`; keep calls behind `internal/infra/ai`.
 ```
 
 ## Final Decision
 
-Default product direction:
+Current product direction:
 
 ```text
-admin_go + Dify sidecar + local Go AIEngine adapter.
+admin_go + local Go AI modules + OpenAI-compatible provider boundary in internal/infra/ai.
 ```
 
 Fallback/future direction:
 
 ```text
-Add EinoEngine later without changing admin_go REST or Vue pages.
+Add Dify/Eino/RAGFlow later only behind internal/infra/ai and without changing admin_go REST or Vue pages.
 ```
 
 Hard rule:
 
 ```text
-No AI business module may call Dify/OpenAI/Eino SDKs directly. Runtime calls go through `internal/platform/ai` interfaces, and business state is mirrored in local MySQL tables owned by admin_go.
+No AI business module may call Dify/OpenAI/Eino SDKs directly. Runtime calls go through `internal/infra/ai` interfaces, and business state is mirrored in local MySQL tables owned by admin_go.
 ```

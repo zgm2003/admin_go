@@ -422,7 +422,7 @@ try {
         '^admin_back_go/.*model.*\.go$'
     )
     $realtimePatterns = @(
-        '^admin_back_go/internal/platform/realtime/',
+        '^admin_back_go/internal/infra/realtime/',
         '^admin_back_go/internal/module/realtime/',
         '^admin_front_ts/src/(.*/)?realtime(/|$)',
         '^admin_front_ts/src/hooks/useWebSocket\.ts$',
@@ -430,8 +430,8 @@ try {
     )
     $queuePatterns = @(
         '^admin_back_go/internal/jobs/',
-        '^admin_back_go/internal/platform/taskqueue/',
-        '^admin_back_go/internal/platform/scheduler/',
+        '^admin_back_go/internal/infra/taskqueue/',
+        '^admin_back_go/internal/infra/scheduler/',
         '^admin_back_go/internal/module/crontask/',
         '^docs/.*queue.*',
         '^docs/.*scheduler.*',
