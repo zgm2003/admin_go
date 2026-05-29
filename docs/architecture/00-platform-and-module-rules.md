@@ -13,7 +13,7 @@
 - **infra**：运行时技术资源层，位于 `internal/infra/`（DB / Redis / Queue / SDK / Logging）
 - **adapter**：infra 内多供应商实现的角色名（如 `infra/payment/alipay`），不是层名
 
-当前 `internal/shared` 已拥有 apperror / response / i18n / enum / validate / dict / setting；旧 root shared-like packages 已删除。`systemsetting` 仍是 admin CRUD，`shared/setting` 仍是 migrated typed settings key 的跨模块边界。小模块聚合已完成第一波：`userquickentry` 归入 `profile`、`notificationtask` 归入 `notification/task`、`exporttask` 目录改为 `export`、`authplatform` 目录改为 `auth_platform`；旧目录不得回归。AI 模块聚合已完成 14a-14c 与 Plan 15：`aiprovider` / `aiagent` / `aitool` / `aiimage` / `aiknowledge` / `aiconversation` / `aimessage` / `aichat` / `airun` 已迁入 `internal/module/ai/{provider,agent,tool,image,knowledge,conversation,message,chat,run}`；旧 flat AI module 目录不得回归。
+当前 `internal/shared` 已拥有 apperror / response / i18n / enum / validate / dict / setting；旧 root shared-like packages 已删除。`systemsetting` 仍是 admin CRUD，`shared/setting` 仍是 migrated typed settings key 的跨模块边界。小模块聚合已完成第一波：`userquickentry` 归入 `profile`、`notificationtask` 归入 `notification/task`、`exporttask` 目录改为 `export`、`authplatform` 目录改为 `auth_platform`；旧目录不得回归。AI 模块聚合已完成 14a-14c 与 Plan 15：`aiprovider` / `aiagent` / `aitool` / `aiimage` / `aiknowledge` / `aiconversation` / `aimessage` / `aichat` / `airun` 已迁入 `internal/module/ai/{provider,agent,tool,image,knowledge,conversation,message,chat,run}`；旧 flat AI module 目录不得回归。 wallet has moved under internal/module/payment/wallet; the old internal/module/wallet directory must not return.
 
 ## R1. capability 命名
 
