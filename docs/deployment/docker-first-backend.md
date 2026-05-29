@@ -2,12 +2,14 @@
 
 状态：后端生产部署 canonical runbook。前端仍按现有静态站点方式部署；本文只负责 `admin_back_go` 的 Docker-first 后端部署。
 
-当前生产入口分工：
+入口分工：
 
 ```text
-zgm2003.cn       前端静态站点，由 GitHub CI / 宝塔静态目录发布
-www.zgm2003.cn   后端 API / WebSocket 入口，宝塔 Nginx 反代到本机或内网 admin-api 容器
+FRONTEND_DOMAIN  前端静态站点，由 GitHub CI / 宝塔静态目录发布
+API_DOMAIN       后端 API / WebSocket 入口，宝塔 Nginx 反代到本机或内网 admin-api 容器
 ```
+
+当前生产示例：`FRONTEND_DOMAIN=zgm2003.cn`，`API_DOMAIN=www.zgm2003.cn`。通用 runbook 不把生产域名/IP 写死；新环境按自己的域名和机器填写。
 
 宝塔 Docker 项目分工：
 
@@ -49,12 +51,12 @@ exports/
 ```text
 1. 真问题：需要把第一台机器跑成可验证的后端入口，不是设计 Kubernetes。
 2. 更简单做法：一个镜像，两个容器，外置 MySQL/Redis，宝塔反代。
-3. 不破坏什么：前端继续访问 https://www.zgm2003.cn/api/admin/v1 和 wss://www.zgm2003.cn/api/admin/v1/realtime/ws。
+3. 不破坏什么：前端继续访问 https://<api-domain>/api/admin/v1 和 wss://<api-domain>/api/admin/v1/realtime/ws。
 ```
 
 ## 1. 服务器目录
 
-在第一台机器 `118.126.104.244` 上：
+在第一台后端入口机器 `<edge_public_ip>` 或 `<first_backend_host>` 上：
 
 ```bash
 mkdir -p /www/project
@@ -67,15 +69,17 @@ mkdir -p /www/docker/admin-go-backend/exports
 
 ```bash
 cd /www/project
-git clone -b master https://github.com/zgm2003/admin_back_go.git admin_back_go
+git clone -b <branch> <backend_repo_url> admin_back_go
 ```
+
+当前生产可以使用上游仓库 `https://github.com/zgm2003/admin_back_go.git`；fork 或私有部署必须换成自己的 `<backend_repo_url>`。
 
 如果已经 clone：
 
 ```bash
 cd /www/project/admin_back_go
-git fetch origin master
-git reset --hard origin/master
+git fetch origin <branch>
+git reset --hard origin/<branch>
 ```
 
 ## 2. 写生产 env
@@ -103,7 +107,7 @@ REDIS_PASSWORD=
 APP_SECRET=CHANGE_ME_AT_LEAST_64_RANDOM_CHARS
 ```
 
-第一台机器固定：
+第一台后端入口机器 env 建议：
 
 ```env
 APP_ENV=production
@@ -111,7 +115,7 @@ HTTP_ADDR=:8080
 PAYMENT_CERT_BASE_DIR=/app
 REALTIME_ENABLED=true
 REALTIME_PUBLISHER=redis
-CORS_ALLOW_ORIGINS=https://zgm2003.cn
+CORS_ALLOW_ORIGINS=https://<frontend-domain>
 ```
 
 验证码：
@@ -141,7 +145,7 @@ Docker-first env 的日志组只保留 `LOG_DIR=/app/runtime/logs`。文件日�
 放置规则很简单：
 
 ```text
-HTTPS SSL 证书：放宝塔 Nginx，也就是机器 A 的 www.zgm2003.cn 站点配置里。
+HTTPS SSL 证书：放宝塔 Nginx，也就是机器 A 的 `<api-domain>` 站点配置里。
 支付业务证书：放运行 Go 后端的机器上，也就是机器 A 和机器 B 都要放。
 数据库机器 C：不跑后端就不需要支付证书。
 ```
@@ -190,7 +194,7 @@ PAYMENT_CERT_BASE_DIR=/app
 
 `LOG_DIR` 只决定容器内日志目录；具体文件名、tail 上限和轮转策略由 Go 代码固定，部署时不要再配置日志策略类 env 键。
 
-所以后台“系统日志”接口读取的是**当前处理这个请求的后端节点本地日志**。如果 `www.zgm2003.cn` 后面同时负载均衡到 A / B，那么你在页面里看到的系统日志可能一会儿是 A 的，一会儿是 B 的。
+所以后台“系统日志”接口读取的是**当前处理这个请求的后端节点本地日志**。如果 `<api-domain>` 后面同时负载均衡到 A / B，那么你在页面里看到的系统日志可能一会儿是 A 的，一会儿是 B 的。
 
 第一阶段简单做法：
 
@@ -259,12 +263,12 @@ curl -fsS http://127.0.0.1:8080/ready
 
 如果 `/health` 通但 `/ready` 不通，不要改 Nginx，先看 env、MySQL、Redis。
 
-## 5. 宝塔配置 www.zgm2003.cn
+## 5. 宝塔配置 API_DOMAIN
 
 宝塔新建站点：
 
 ```text
-域名：www.zgm2003.cn
+域名：<api-domain>
 类型：纯静态即可
 SSL：开启
 ```
@@ -319,28 +323,28 @@ nginx -t && nginx -s reload
 后端入口：
 
 ```bash
-curl -i https://www.zgm2003.cn/health
-curl -i https://www.zgm2003.cn/ready
-curl -i https://www.zgm2003.cn/api/admin/v1/auth/login-config
+curl -i https://<api-domain>/health
+curl -i https://<api-domain>/ready
+curl -i https://<api-domain>/api/admin/v1/auth/login-config
 ```
 
 前端到后端路径：
 
 ```text
-浏览器 https://zgm2003.cn
+浏览器 https://<frontend-domain>
   -> 前端静态资源
-  -> API https://www.zgm2003.cn/api/admin/v1/...
-  -> WebSocket wss://www.zgm2003.cn/api/admin/v1/realtime/ws
+  -> API https://<api-domain>/api/admin/v1/...
+  -> WebSocket wss://<api-domain>/api/admin/v1/realtime/ws
 ```
 
-如果 `https://www.zgm2003.cn/api/...` 返回前端 `index.html`，说明 www 站点还被配成了前端静态站，反代没接管。
+如果 `https://<api-domain>/api/...` 返回前端 `index.html`，说明 API_DOMAIN 站点还被配成了前端静态站，反代没接管。
 
 ## 7. 第二台后端加入时怎么改
 
 第一阶段先这样：
 
 ```text
-www.zgm2003.cn -> 118.126.104.244 Nginx -> 127.0.0.1:8080 admin-api
+<api-domain> -> <edge_public_ip> Nginx -> 127.0.0.1:8080 admin-api
 ```
 
 第二台后端 B 跑起来后，B 的 Docker 端口不能只绑定 `127.0.0.1`，否则机器 A 的 Nginx 访问不到 B。B 启动时要显式绑定内网地址或 `0.0.0.0`，并用安全组/防火墙只允许机器 A 访问 B 的 8080：
