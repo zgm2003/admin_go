@@ -14,6 +14,7 @@
 
 - `E:\admin_go\AGENTS.md`
 - `E:\admin_go\docs\status\current-status.md`
+- `E:\admin_go\docs\status\module-matrix.md`
 - `E:\admin_go\docs\architecture\04-go-backend-framework.md`
 - `E:\admin_go\docs\superpowers\specs\2026-05-29-transport-admin-alias-cleanup-design.md`
 - `E:\admin_go\docs\superpowers\specs\2026-05-27-multi-platform-backend-boundary-design.md`

@@ -184,7 +184,7 @@ appai / appwallet / xxauth / adminai
 ```text
 module service 暴露业务候选项查询
 shared/dict 统一组装前端字典形态
-shared/setting 统一拥有已迁移 typed system_settings key 的默认值、范围和缓存失效写入
+shared/setting 统一拥有仍属于 system_settings 的 typed key 默认值、范围和缓存失效写入
 transport/{platform} page-init 只声明需要哪些字典和业务 options
 ```
 
@@ -192,11 +192,12 @@ transport/{platform} page-init 只声明需要哪些字典和业务 options
 
 ```text
 auth.captcha.ttl_minutes
-auth.verify_code.ttl_minutes
 upload.token.ttl_minutes
 ```
 
 `internal/module/systemsetting` 是后台 CRUD，不是这些已迁移 key 的跨模块读取边界。
+
+验证码发送 TTL 不再属于 system_settings：邮件渠道使用 `mail_configs.verify_code_ttl_minutes`，短信渠道使用 `sms_configs.verify_code_ttl_minutes`。
 
 ## TypeScript 规则
 
@@ -301,7 +302,9 @@ CRUD 页面默认使用 Search + AppTable + AppDialog + useCrudTable。
 允许例外：
 
 ```text
-demo/component 展示页可以直接展示底层组件，但必须在页面名和测试里说明它是展示页。
+permission 矩阵、component/demo 展示页、非 CRUD 的定制矩阵/表格 widget 可以直接使用底层 Element 组件，但必须局部化、写清用途，并有 targeted test 覆盖。
+普通 CRUD 页面仍然必须使用 Search + AppTable + AppDialog + useCrudTable。
+普通只读列表仍然必须使用 Search + AppTable + useTable。
 高度定制的只读操作页可以用 useTable，不用 useCrudTable，但 Search/AppTable/AppDialog 仍然默认必须用。
 第三方组件必须被项目 wrapper 包住后再扩散，不在业务页直接铺开。
 ```

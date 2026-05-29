@@ -1,6 +1,6 @@
 # Local Development Runtime
 
-状态：implemented baseline, smoke verified。本文只写当前运行事实，不把 planned 写成 implemented。
+状态：implemented Docker-first baseline；当前 Docker-first readiness 只以 `/health` 和 `/ready` 为准，smoke 当前状态见 `docs/testing/smoke-matrix.md`。本文只写当前运行事实，不把 planned 写成 implemented。
 
 ## 进程边界
 
@@ -37,7 +37,7 @@ API 端口:   127.0.0.1:8080 -> container 8080
 首次准备：
 
 ```powershell
-cd E:dmin_godmin_back_go\deploy\docker-first
+cd E:\admin_go\admin_back_go\deploy\docker-first
 New-Item -ItemType Directory -Force -Path runtime\logs, exports
 ```
 
@@ -45,7 +45,7 @@ New-Item -ItemType Directory -Force -Path runtime\logs, exports
 
 ```env
 MYSQL_DSN=你的 MySQL DSN
-REDIS_ADDR=host.docker.internal:6379
+REDIS_ADDR=host.docker.internal:6380
 APP_SECRET=本地长随机字符串，至少 32 位
 CORS_ALLOW_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,http://192.168.5.20:5173
 ```
@@ -53,12 +53,12 @@ CORS_ALLOW_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,http://192.168.5.
 启动后端：
 
 ```powershell
-cd E:dmin_godmin_back_go\deploy\docker-first
+cd E:\admin_go\admin_back_go\deploy\docker-first
 docker compose up -d --build
 docker compose ps
 ```
 
-验证：
+验证 Docker-first 当前运行时只看宿主 `127.0.0.1:8080` 的 `/health` 和 `/ready`：
 
 ```powershell
 curl.exe http://127.0.0.1:8080/health
@@ -140,6 +140,8 @@ cd E:\admin_go\admin_back_go
 go test -p=1 ./internal/bootstrap ./internal/module/system ./internal/infra/taskqueue ./internal/module/realtime ./internal/infra/realtime
 powershell -ExecutionPolicy Bypass -File .\scripts\basic-admin-smoke.ps1 -Account <account> -Password <password>
 ```
+
+注意：smoke 脚本默认启动临时后端/worker 进程，basic 默认 `127.0.0.1:18080`，full 默认 `127.0.0.1:18081`；它们不是上面 Docker-first 的 `127.0.0.1:8080` readiness 验证。
 
 完整：
 

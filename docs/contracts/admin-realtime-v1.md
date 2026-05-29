@@ -1,6 +1,6 @@
 # Admin Realtime v1 Contract
 
-状态：partially implemented。当前已实现最小 admin WebSocket：认证 upgrade、本机 connection manager、bounded send queue、read/write pump、heartbeat ping/pong、`realtime.connected.v1`、`realtime.ping.v1` / `realtime.pong.v1`、`realtime.subscribe.v1` topic 白名单骨架、local/no-op/redis Publisher 边界、typed config 开关、断开清理。Vue 前端已从旧 WebSocket 切到 Go WebSocket baseline：URL 指向 `/api/admin/v1/realtime/ws`，移除 `/api/admin/WebSocket/bind`，按 versioned envelope 收发。Redis Pub/Sub fan-out、`notification.created.v1` 通知任务推送、以及 AI 对话 MVP 的 conversation-scoped `ai.response.*.v1` envelope 已实现；真实 LLM provider E2E 仍是可选、凭证门控能力。
+状态：admin WebSocket、notification fan-out、AI conversation events 已实现；app WebSocket、ticket auth、任意业务 topic 权限仍是 planned/partial。当前已实现 admin WebSocket 认证 upgrade、本机 connection manager、bounded send queue、read/write pump、heartbeat ping/pong、`realtime.connected.v1`、`realtime.ping.v1` / `realtime.pong.v1`、`realtime.subscribe.v1` topic 白名单骨架、local/no-op/redis Publisher 边界、typed config 开关、断开清理。Vue 前端已从旧 WebSocket 切到 Go WebSocket baseline：URL 指向 `/api/admin/v1/realtime/ws`，移除 `/api/admin/WebSocket/bind`，按 versioned envelope 收发。Redis Pub/Sub fan-out、`notification.created.v1` 通知任务推送、以及 AI 对话 MVP 的 conversation-scoped `ai.response.start/delta/completed/failed.v1` envelope 已实现；真实 LLM provider E2E 仍是可选、凭证门控能力。
 
 ## Protocol
 

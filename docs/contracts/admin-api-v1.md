@@ -2307,7 +2307,7 @@ Tencent Cloud SDK imports are confined to internal/infra/mail/tencentcloudses.
 auth.Service depends only on VerifyCodeMailSender and does not import module/mail or Tencent SDK.
 Verification-code templates must include exactly code and ttl_minutes.
 app_name is not a verification-code template variable; mail_configs.from_name only controls the Tencent SES FromEmailAddress display name.
-ttl_minutes comes from system_settings.auth.verify_code.ttl_minutes and is shared by email verification and future SMS verification.
+ttl_minutes for email verification comes from mail_configs.verify_code_ttl_minutes.
 Templates do not own independent TTL, app-name, brand-name, or system-name policy.
 ```
 
@@ -2361,7 +2361,7 @@ interface MailConfigResponse {
 }
 ```
 
-`PUT /mail/config` body accepts plaintext `secret_id` / `secret_key` only as write-only inputs. First setup requires both. Later updates may leave them blank to reuse the current encrypted values. It also accepts `verify_code_ttl_minutes: number`; the value is saved to `system_settings.auth.verify_code.ttl_minutes`, not `mail_configs`.
+`PUT /mail/config` body accepts plaintext `secret_id` / `secret_key` only as write-only inputs. First setup requires both. Later updates may leave them blank to reuse the current encrypted values. It also accepts `verify_code_ttl_minutes: number`; the value is saved to `mail_configs.verify_code_ttl_minutes`.
 
 Rules:
 
@@ -2524,7 +2524,7 @@ SendSms uses SmsSdkAppId, SignName, TemplateId, TemplateParamSet, PhoneNumberSet
 Tencent SDK calls use context plus a default 10s timeout.
 Each send creates one pending log before the Tencent call and finishes the same log as success or failed.
 Verification-code templates must include exactly code and ttl_minutes.
-ttl_minutes comes from system_settings.auth.verify_code.ttl_minutes and is shared by email and SMS management.
+ttl_minutes for SMS verification and SMS test-send comes from sms_configs.verify_code_ttl_minutes.
 ```
 
 ### Page Init
@@ -2576,7 +2576,7 @@ interface SmsConfigResponse {
 }
 ```
 
-`PUT /sms/config` body accepts plaintext `secret_id` / `secret_key` only as write-only inputs. First setup requires both. Later updates may leave them blank to reuse the current encrypted values. It also accepts `verify_code_ttl_minutes: number`; the value is saved to `system_settings.auth.verify_code.ttl_minutes`, not `sms_configs`.
+`PUT /sms/config` body accepts plaintext `secret_id` / `secret_key` only as write-only inputs. First setup requires both. Later updates may leave them blank to reuse the current encrypted values. It also accepts `verify_code_ttl_minutes: number`; the value is saved to `sms_configs.verify_code_ttl_minutes`.
 
 Rules:
 

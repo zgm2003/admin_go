@@ -178,31 +178,9 @@ agents/
 
 ## 默认必读文档
 
-处理任何任务前，先读：
+完整冷启动清单只维护在 `docs/README.md`，不要在 `AGENTS.md` 和 agent 文档里复制第二份清单。
 
-```text
-AGENTS.md
-docs/architecture/00-open-source-first.md
-docs/architecture/01-step-by-step-roadmap.md
-docs/architecture/02-agent-framework.md
-docs/architecture/03-technology-decision.md
-docs/architecture/04-go-backend-framework.md
-docs/architecture/05-development-quality-rules.md
-docs/architecture/07-documentation-governance.md
-docs/architecture/08-codex-hooks.md
-docs/status/current-status.md
-docs/testing/pre-push-gates.md
-```
-
-按角色继续读：
-
-```text
-agents/architect.md
-agents/api-contract.md
-agents/backend-worker.md
-agents/frontend-adapter.md
-agents/reviewer.md
-```
+处理任何任务前，按 `docs/README.md` 的“冷启动阅读顺序”执行，并从 `agents/` 选择一个主角色。
 
 ## 路径输出格式
 

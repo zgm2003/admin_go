@@ -4,21 +4,7 @@
 
 ## 使用顺序
 
-```text
-1. Read AGENTS.md
-2. Read docs/README.md
-3. Read docs/status/current-status.md
-4. Read docs/architecture/00-open-source-first.md
-5. Read docs/architecture/01-step-by-step-roadmap.md
-6. Read docs/architecture/02-agent-framework.md
-7. Read docs/architecture/03-technology-decision.md
-8. Read docs/architecture/04-go-backend-framework.md
-9. Read docs/architecture/05-development-quality-rules.md
-10. Read docs/architecture/07-documentation-governance.md
-11. Read docs/architecture/08-codex-hooks.md
-12. Read docs/testing/pre-push-gates.md
-13. Pick exactly one role below
-```
+冷启动和角色选择入口以 `docs/README.md` 为准；本文件只解释 agent 角色边界，不复制第二份阅读顺序。
 
 ## Roles
 

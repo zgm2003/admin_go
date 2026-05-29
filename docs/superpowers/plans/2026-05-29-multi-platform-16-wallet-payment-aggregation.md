@@ -80,7 +80,8 @@ Backend worker owns:
 
 Root coordinator owns after backend merge/push:
 
-- Modify: `E:\admin_go\docs/status/current-status.md`
+- Modify: `E:\admin_go\docs/status/current-status.md` for key-fact summary
+- Modify: `E:\admin_go\docs/status/module-matrix.md` for commerce/RBAC and wallet per-module sections
 - Modify: `E:\admin_go\docs/architecture/00-platform-and-module-rules.md`
 - Modify: `E:\admin_go\docs/superpowers/plans/2026-05-28-multi-platform-phase2-execution-map.md`
 
@@ -416,7 +417,8 @@ Run this task only after the backend worker report shows all gates passed.
 
 **Files:**
 
-- Modify: `E:\admin_go\docs/status/current-status.md`
+- Modify: `E:\admin_go\docs/status/current-status.md` for key-fact summary
+- Modify: `E:\admin_go\docs/status/module-matrix.md` for commerce/RBAC and wallet per-module sections
 - Modify: `E:\admin_go\docs/architecture/00-platform-and-module-rules.md`
 - Modify: `E:\admin_go\docs/superpowers/plans/2026-05-28-multi-platform-phase2-execution-map.md`
 
@@ -452,7 +454,7 @@ git push
 
 - [x] **Step 4: Update root docs truth**
 
-In `E:\admin_go\docs/status/current-status.md`, update the commerce/RBAC and wallet rows so they say:
+In `E:\admin_go\docs/status/current-status.md`, keep only the key wallet/payment aggregation summary. In `E:\admin_go\docs/status/module-matrix.md`, update the commerce/RBAC and wallet sections so they say:
 
 ```text
 wallet now lives under admin_back_go/internal/module/payment/wallet while package identifiers and wallet.* i18n keys remain stable.
@@ -474,7 +476,7 @@ Do not claim Phase 2 is complete in root docs until Plan 17 runs.
 cd E:\admin_go
 git diff --check
 powershell -ExecutionPolicy Bypass -File .\scripts\check-agent-governance.ps1 -Mode working
-git add docs/status/current-status.md docs/architecture/00-platform-and-module-rules.md docs/superpowers/plans/2026-05-28-multi-platform-phase2-execution-map.md
+git add docs/status/current-status.md docs/status/module-matrix.md docs/architecture/00-platform-and-module-rules.md docs/superpowers/plans/2026-05-28-multi-platform-phase2-execution-map.md
 git commit -m "docs: record wallet payment aggregation"
 git push
 ```

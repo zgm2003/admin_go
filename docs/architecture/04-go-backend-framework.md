@@ -58,7 +58,7 @@ WebSocket / AI streaming
 admin_back_go/
   cmd/admin-api/              # HTTP 进程入口，只负责启动 API
   cmd/admin-worker/           # 后台进程入口，只负责队列消费和定时调度
-  docs/                       # 本仓库架构、状态和契约文档
+  docs/                       # Go 后端运行时架构说明；状态/契约/测试/部署 truth 归 root docs/
   internal/bootstrap/         # 应用装配：config/logger/server/resources
   internal/config/            # 配置读取和默认值
   internal/server/            # Gin engine、全局 middleware、路由挂载；后续逐步变薄
@@ -386,4 +386,4 @@ Phase F: 接入 RBAC write path: Permission / Role / AuthPlatform
 Phase G: 业务模块演进
 ```
 
-当前只做 Phase A。不要偷跑。
+Phase A-G 是早期搭建顺序的历史快照，不是当前进度判断源。当前阶段和已验证事实以 `docs/status/current-status.md`、`docs/README.md` 和运行时验证为准；不要用这段早期清单覆盖 current-status。

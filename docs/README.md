@@ -1,6 +1,6 @@
 # Admin Go Workspace Docs
 
-这是 `E:\admin_go` 的 **Codex 冷启动入口**，也是 Go/Vue admin 新项目的总控文档入口。
+这是 `E:\admin_go` 的 **Codex 冷启动入口**，也是 Go/Vue admin 新项目的总控文档入口。完整冷启动清单只在本文件维护，其他文档只引用本文件，避免清单漂移。
 
 目标不是写漂亮文档，而是让一个全新的 Codex 进仓库后，不依赖聊天记录，也能判断：
 
@@ -22,23 +22,24 @@
 1. AGENTS.md
 2. docs/README.md
 3. docs/status/current-status.md
-4. docs/architecture/00-open-source-first.md
-5. docs/architecture/01-step-by-step-roadmap.md
-6. docs/architecture/02-agent-framework.md
-7. docs/architecture/03-technology-decision.md
-8. docs/architecture/04-go-backend-framework.md
-9. docs/architecture/05-development-quality-rules.md
-10. docs/architecture/07-documentation-governance.md
-11. docs/architecture/08-codex-hooks.md
-12. docs/contracts/admin-api-v1.md
-13. docs/contracts/admin-realtime-v1.md
-14. docs/testing/test-strategy.md
-15. docs/testing/pre-push-gates.md
-16. docs/testing/smoke-matrix.md
-17. docs/deployment/local.md
-18. docs/deployment/production.md
-19. docs/deployment/distributed-readiness.md
-20. docs/deployment/frontend-github-actions-scp.md
+4. docs/architecture/00-platform-and-module-rules.md
+5. docs/architecture/00-open-source-first.md
+6. docs/architecture/01-step-by-step-roadmap.md
+7. docs/architecture/02-agent-framework.md
+8. docs/architecture/03-technology-decision.md
+9. docs/architecture/04-go-backend-framework.md
+10. docs/architecture/05-development-quality-rules.md
+11. docs/architecture/07-documentation-governance.md
+12. docs/architecture/08-codex-hooks.md
+13. docs/contracts/admin-api-v1.md
+14. docs/contracts/admin-realtime-v1.md
+15. docs/testing/test-strategy.md
+16. docs/testing/pre-push-gates.md
+17. docs/testing/smoke-matrix.md
+18. docs/deployment/local.md
+19. docs/deployment/production.md
+20. docs/deployment/distributed-readiness.md
+21. docs/deployment/frontend-github-actions-scp.md
 ```
 
 按任务再读：
@@ -47,8 +48,13 @@
 agents/*.md                              # agent 分工
 docs/open-source/*.md                    # 开源调研和取舍
 docs/deployment/*.md                     # 本地、生产、分布式 readiness、前端发布运行边界
-docs/superpowers/plans/*.md              # 只读与当前任务直接相关的 spec/plan；不要扫全部旧计划
+docs/superpowers/README.md               # Superpowers spec/plan/review/archive 入口和边界
+docs/superpowers/specs/*.md              # 只读与当前任务直接相关的 spec；不要扫全部旧 spec
+docs/superpowers/plans/*.md              # 只读与当前任务直接相关的 plan；不要扫全部旧计划
+docs/superpowers/reviews/*.md            # 阶段收口审查；只读与当前任务直接相关的 review
 docs/superpowers/archive/**/*.md         # 已归档历史计划，只能在用户明确要求考古时读取，不覆盖 current-status
+docs/status/module-matrix.md             # 当前 per-module 分组明细；先读 current-status，再按需读明细
+docs/status/archive/*.md                 # 状态历史证据；只在追溯迁移原因或验证命令时读
 admin_back_go/docs/architecture.md       # Go 后端运行时架构
 admin_back_go/scripts/*.ps1              # smoke/contract 脚本
 ```
@@ -80,7 +86,9 @@ Codex hooks 落地后位于 root `.codex/`，只服务 Codex 会话生命周期�
 看这里，不要猜：
 
 ```text
-docs/status/current-status.md
+docs/status/current-status.md      # 当前事实入口、关键缺口、读法
+docs/status/module-matrix.md       # 当前 per-module 明细
+docs/status/archive/*.md           # 历史变更证据，不覆盖当前入口
 ```
 
 规则：
@@ -91,6 +99,8 @@ partially implemented = 有骨架或部分链路，文档必须写清缺口
 planned = 只计划，不许说成已完成
 历史 plan/spec 里的早期阶段限制只表示当时任务背景；如果和 current-status 冲突，以 current-status + runtime docs 为准。
 ```
+
+`docs/README.md` 是唯一冷启动索引。其他文件如果出现“阅读顺序 / 必读文档 / 常用验证入口 / 当前状态入口”的完整清单，视为漂移风险，必须改成引用本文件或对应 canonical 文档。
 
 文档与运行时冲突时：
 
@@ -117,7 +127,7 @@ rollback provenance
 
 禁止把历史系统当作当前运行依赖，禁止把旧 all POST action path 带进新的 Go REST 契约。
 
-所有 Superpowers spec/plan 统一归总控 `docs/superpowers`；部署、契约、状态、测试和跨仓治理文档统一归总控 `docs`。
+所有 Superpowers spec/plan/review 统一归总控 `docs/superpowers`；部署、契约、状态、测试和跨仓治理文档统一归总控 `docs`。
 
 子仓文档只保留贴近代码的运行时说明或旧链接 stub：
 
@@ -152,44 +162,15 @@ Realtime：WebSocket-only，不新增 SSE
 不跳过验证就说完成
 ```
 
-## 常用验证命令
+## 常用验证入口
 
-后端：
-
-```powershell
-cd E:\admin_go\admin_back_go
-$env:GOMAXPROCS='2'
-go test -p=1 ./...
-go vet -p=1 ./...
-powershell -ExecutionPolicy Bypass -File .\scripts\check-contract.ps1
-git diff --check
-```
-
-后端 smoke：
-
-```powershell
-cd E:\admin_go\admin_back_go
-powershell -ExecutionPolicy Bypass -File .\scripts\basic-admin-smoke.ps1 -Account <account> -Password <password>
-powershell -ExecutionPolicy Bypass -File .\scripts\full-admin-smoke.ps1 -Account <account> -Password <password>
-```
-
-前端：
-
-```powershell
-cd E:\admin_go\admin_front_ts
-$env:NODE_OPTIONS='--max-old-space-size=2048'
-npx vue-tsc -b --pretty false
-npx eslint <touched-files>
-npx vitest run <target-test>
-git diff --check
-```
-
-说明：
+完整验证策略和 mandatory gates 只维护在 `docs/testing/test-strategy.md`；pre-push 轻量治理看 `docs/testing/pre-push-gates.md`；smoke 覆盖看 `docs/testing/smoke-matrix.md`。本文件只做入口摘要，不复制完整 gate。
 
 ```text
 Windows 上 go test ./... 默认并发可能吃内存；优先用 GOMAXPROCS=2 + -p=1。
 race detector 需要 gcc；如果报 cgo: C compiler "gcc" not found，不准声称 race 通过。
 前端 build 较重，除非发布门禁或触碰大范围构建配置，否则优先 targeted typecheck/lint/test。
+Documentation-only 默认跑 git diff --check + scripts/check-agent-governance.ps1 -Mode working。
 ```
 
 ## 结束任务时必须更新
@@ -198,6 +179,7 @@ race detector 需要 gcc；如果报 cgo: C compiler "gcc" not found，不准声
 
 ```text
 docs/status/current-status.md
+docs/status/module-matrix.md
 docs/contracts/*.md
 docs/architecture/*.md
 docs/testing/*.md

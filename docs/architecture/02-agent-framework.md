@@ -29,13 +29,14 @@ reviewer.md         # 越界、质量、验证审查
 
 ## 通用工作流
 
+冷启动阅读顺序只维护在 `docs/README.md`。本文件不复制第二份清单。
+
 ```text
-1. Read AGENTS.md
-2. Read relevant docs/architecture/*.md
-3. Pick exactly one agent role
-4. Read that role file
-5. Work only within allowed scope
-6. Produce evidence, file list, verification result
+1. Follow docs/README.md cold-start order
+2. Pick exactly one agent role
+3. Read that role file
+4. Work only within allowed scope
+5. Produce evidence, file list, verification result
 ```
 
 ## 禁止全能 agent

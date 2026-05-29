@@ -37,7 +37,7 @@ module aggregation:
   DONE 16: wallet -> payment/wallet decision closure (`docs/superpowers/plans/2026-05-29-multi-platform-16-wallet-payment-aggregation.md`)
 ```
 
-`docs/status/current-status.md` remains the runtime truth source. This Phase 2 map must not be used to claim planned work is implemented.
+`docs/status/current-status.md` is the runtime truth entry and verification-gap summary; `docs/status/module-matrix.md` is the per-module runtime truth layer. This Phase 2 map must not be used to claim planned work is implemented.
 
 ## Non-negotiable rules
 
@@ -76,7 +76,7 @@ DECISION SLICE after 11, can run after small-module wave if desired:
   DONE 16 wallet/payment ownership decision and first safe slice (`docs/superpowers/plans/2026-05-29-multi-platform-16-wallet-payment-aggregation.md`)
 
 FINAL:
-  DONE 17: final Phase 2 guard, docs, smoke, and spec closure review (`docs/superpowers/plans/2026-05-29-multi-platform-17-phase2-closure-review.md`)
+  DONE 17: final Phase 2 guard, docs, smoke-pending evidence, and spec closure review (`docs/superpowers/plans/2026-05-29-multi-platform-17-phase2-closure-review.md`)
 ```
 
 ## Parallel ownership
@@ -142,7 +142,7 @@ permission codes in route_meta.go
 
 ## Done meaning for Phase 2
 
-Phase 2 is done only when all of the following are true:
+Phase 2 code/docs boundary is done only when all of the following are true:
 
 ```text
 internal/shared contains apperror, response, i18n, enum, validate, dict, setting
@@ -155,9 +155,9 @@ final Plan 17 architecture guard passes
 admin route snapshot passes
 backend full tests and build pass
 frontend admin contract/type/build gates pass
-admin basic and full smoke pass, or the spec remains marked smoke-pending
 active docs say exactly what is implemented
 the original multi-platform spec is reviewed against runtime before being marked complete
+Full Phase 2 closure still requires admin basic and full smoke to pass; otherwise the spec remains marked smoke-pending.
 ```
 
 ## Why Plan 11 goes first

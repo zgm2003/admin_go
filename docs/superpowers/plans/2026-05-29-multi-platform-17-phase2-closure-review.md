@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:executing-plans` to implement this plan task-by-task. This is the final serial closure gate for Phase 2; do not run implementation tasks in parallel. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Prove and document that the multi-platform backend boundary refactor from `docs/superpowers/specs/2026-05-27-multi-platform-backend-boundary-design.md` is closed for Phase 2 without breaking existing admin behavior.
+**Goal:** Prove and document the current Phase 2 closure state for the multi-platform backend boundary refactor without breaking existing admin behavior, and keep the status smoke-pending unless both admin smoke scripts pass.
 
 **Architecture:** Plans 11-16 already moved shared packages, infra naming, admin transports, flat module ownership, AI aggregation, and wallet/payment ownership. Plan 17 adds one final backend architecture guard, runs the full backend/frontend/admin preservation gates, and then updates active root docs plus the original spec status. It introduces no API behavior, DB schema, permission code, route URL, frontend source, payment callback, or business runtime change.
 
@@ -81,7 +81,8 @@ Backend worker owns:
 Root coordinator owns after backend merge/push:
 
 - Create: `E:\admin_go\docs\superpowers\reviews\2026-05-29-multi-platform-phase2-closure-review.md`
-- Modify: `E:\admin_go\docs\status\current-status.md`
+- Modify: `E:\admin_go\docs\status\current-status.md` for key-fact summary and verification gap
+- Modify: `E:\admin_go\docs\status\module-matrix.md` if per-module sections drift
 - Modify: `E:\admin_go\docs\architecture\00-platform-and-module-rules.md`
 - Modify: `E:\admin_go\docs\superpowers\specs\2026-05-27-multi-platform-backend-boundary-design.md`
 - Modify: `E:\admin_go\docs\superpowers\plans\2026-05-28-multi-platform-phase2-execution-map.md`
@@ -438,17 +439,18 @@ powershell -ExecutionPolicy Bypass -File .\scripts\full-admin-smoke.ps1 -Account
 
 Expected: script exits `0` and confirms core admin read paths for user/RBAC/system/upload/payment/wallet/AI/realtime remain working. The default smoke must not create paid payment state or call real Alipay callback.
 
-## Task 6: Write final closure docs after verification passes
+## Task 6: Write final closure docs after verification attempt
 
 **Files:**
 
 - Create: `E:\admin_go\docs\superpowers\reviews\2026-05-29-multi-platform-phase2-closure-review.md`
-- Modify: `E:\admin_go\docs\status\current-status.md`
+- Modify: `E:\admin_go\docs\status\current-status.md` for key-fact summary and verification gap
+- Modify: `E:\admin_go\docs\status\module-matrix.md` if per-module sections drift
 - Modify: `E:\admin_go\docs\architecture\00-platform-and-module-rules.md`
 - Modify: `E:\admin_go\docs\superpowers\specs\2026-05-27-multi-platform-backend-boundary-design.md`
 - Modify: `E:\admin_go\docs\superpowers\plans\2026-05-28-multi-platform-phase2-execution-map.md`
 
-Run this task only after Tasks 1-5 pass or after Task 5 records a concrete smoke blocking reason and keeps the spec status below full closure.
+Run this task after Tasks 1-5 pass, or after Task 5 records a concrete smoke blocking reason. If smoke did not pass, keep Phase 2 smoke-pending and do not write full-closure wording.
 
 - [ ] **Step 1: Create the closure review artifact with actual command evidence**
 
@@ -524,24 +526,26 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-agent-governance.ps1 -M
 Set-Content -Path .\docs\superpowers\reviews\2026-05-29-multi-platform-phase2-closure-review.md -Encoding UTF8 -Value $review
 ````
 
-- [ ] **Step 2: Update current status**
+- [ ] **Step 2: Update status docs**
 
-In `E:\admin_go\docs\status\current-status.md`, add this section near the top after the opening architecture direction paragraph:
+In `E:\admin_go\docs\status\current-status.md`, keep the Phase 2 section as a key-fact summary and verification-gap record. The current default wording is smoke-pending:
 
 ```markdown
 ## 2026-05-29 multi-platform backend boundary Phase 2 closure
 
-- Phase 2 of `docs/superpowers/specs/2026-05-27-multi-platform-backend-boundary-design.md` is closed after Plans 11-17: shared package migration, infra rename, admin transport boundary, small-module aggregation, AI aggregation, wallet/payment aggregation, final architecture guard, route snapshot, backend full gate, frontend contract gate, admin smoke, and root governance all passed in the closure session.
+- Phase 2 of `docs/superpowers/specs/2026-05-27-multi-platform-backend-boundary-design.md` has passed code/docs/frontend gates after Plans 11-17, but final admin smoke is still pending; do not mark the spec fully closed until basic and full smoke pass.
 - Current backend boundary truth is `internal/module/{capability}/transport/{platform}` + `internal/shared` + `internal/infra`; active exceptions are product-scope decisions, not architecture drift.
 - Admin behavior preservation remains the acceptance standard: existing admin URLs, DB table names, permission codes, i18n keys, route metadata, operation log rules, queue task types, payment callback/finalizer behavior, and frontend typed API contracts were preserved.
 - Future app/openapi/merchant/miniapp work starts from this boundary and must add `transport/{platform}` slices under existing capabilities instead of creating platform-prefixed modules.
 ```
 
-If smoke could not run, use this first bullet instead and keep the rest unchanged:
+Only if both basic and full smoke pass in a later rerun may the first bullet be changed to full closure:
 
 ```markdown
-- Phase 2 of `docs/superpowers/specs/2026-05-27-multi-platform-backend-boundary-design.md` has passed code/docs/frontend gates after Plans 11-17, but final admin smoke is still pending because the local runtime was unavailable in the closure session; do not mark the spec fully closed until basic and full smoke pass.
+- Phase 2 of `docs/superpowers/specs/2026-05-27-multi-platform-backend-boundary-design.md` is closed after Plans 11-17, including final admin basic/full smoke and root governance.
 ```
+
+Use `E:\admin_go\docs\status\module-matrix.md` for any per-module section changes; do not re-expand module sections inside `current-status.md`.
 
 - [ ] **Step 3: Update architecture hard rules current-state paragraph**
 
@@ -553,16 +557,16 @@ In `E:\admin_go\docs\architecture\00-platform-and-module-rules.md`, replace the 
 
 - [ ] **Step 4: Update original spec status**
 
-At the top of `E:\admin_go\docs\superpowers\specs\2026-05-27-multi-platform-backend-boundary-design.md`, replace the current status line with this text after all Plan17 gates pass:
+At the top of `E:\admin_go\docs\superpowers\specs\2026-05-27-multi-platform-backend-boundary-design.md`, keep the current status smoke-pending unless both smoke commands pass:
 
 ```markdown
-状态：已完成（Phase 2 最终收口于 2026-05-29；运行时事实以 `docs/status/current-status.md` 和 backend architecture guards 为准）
+状态：代码与文档收口完成，等待最终 admin smoke 复验（运行时事实入口以 `docs/status/current-status.md` 为准，per-module 明细以 `docs/status/module-matrix.md` 为准，结构约束以 backend architecture guards 为准）
 ```
 
-If smoke did not run, use this text instead:
+Only after both basic and full smoke pass may this become:
 
 ```markdown
-状态：代码与文档收口完成，等待最终 admin smoke 复验（运行时事实以 `docs/status/current-status.md` 和 backend architecture guards 为准）
+状态：已完成（Phase 2 最终收口于 2026-05-29；运行时事实入口以 `docs/status/current-status.md` 为准，per-module 明细以 `docs/status/module-matrix.md` 为准，结构约束以 backend architecture guards 为准）
 ```
 
 - [ ] **Step 5: Update Phase 2 execution map**
@@ -570,13 +574,13 @@ If smoke did not run, use this text instead:
 In `E:\admin_go\docs\superpowers\plans\2026-05-28-multi-platform-phase2-execution-map.md`, update the remaining Plan 17 references so they say:
 
 ```text
-DONE 17: final Phase 2 guard, docs, smoke, and spec closure review (`docs/superpowers/plans/2026-05-29-multi-platform-17-phase2-closure-review.md`)
+DONE 17: final Phase 2 guard, docs, smoke-pending evidence, and spec closure review (`docs/superpowers/plans/2026-05-29-multi-platform-17-phase2-closure-review.md`)
 ```
 
 Update the final done meaning block so it says:
 
 ```text
-Phase 2 is done only when all of the following are true:
+Phase 2 code/docs boundary is done only when all of the following are true:
 internal/shared contains apperror, response, i18n, enum, validate, dict, setting
 old root shared-like packages are removed and guarded
 old technical-resource internal/platform is removed and guarded by internal/infra
@@ -587,9 +591,9 @@ final Plan 17 architecture guard passes
 admin route snapshot passes
 backend full tests and build pass
 frontend admin contract/type/build gates pass
-admin basic and full smoke pass, or the spec remains marked smoke-pending
 active docs say exactly what is implemented
 the original multi-platform spec is reviewed against runtime before being marked complete
+Full Phase 2 closure still requires admin basic and full smoke to pass; otherwise the spec remains marked smoke-pending.
 ```
 
 ## Task 7: Root governance, docs commit, and push
@@ -604,10 +608,10 @@ the original multi-platform spec is reviewed against runtime before being marked
 cd E:\admin_go
 git status --short
 git diff --stat
-git diff -- docs/status/current-status.md docs/architecture/00-platform-and-module-rules.md docs/superpowers/specs/2026-05-27-multi-platform-backend-boundary-design.md docs/superpowers/plans/2026-05-28-multi-platform-phase2-execution-map.md docs/superpowers/reviews/2026-05-29-multi-platform-phase2-closure-review.md
+git diff -- docs/status/current-status.md docs/status/module-matrix.md docs/architecture/00-platform-and-module-rules.md docs/superpowers/specs/2026-05-27-multi-platform-backend-boundary-design.md docs/superpowers/plans/2026-05-28-multi-platform-phase2-execution-map.md docs/superpowers/reviews/2026-05-29-multi-platform-phase2-closure-review.md
 ```
 
-Expected: only the five root docs paths from Task 6 are changed.
+Expected: only the Task 6 root docs paths are changed; `module-matrix.md` appears only if per-module sections drifted.
 
 - [ ] **Step 2: Run root governance**
 
@@ -627,7 +631,7 @@ PASS: no blocking governance violations found.
 
 ```powershell
 cd E:\admin_go
-git add docs/status/current-status.md docs/architecture/00-platform-and-module-rules.md docs/superpowers/specs/2026-05-27-multi-platform-backend-boundary-design.md docs/superpowers/plans/2026-05-28-multi-platform-phase2-execution-map.md docs/superpowers/reviews/2026-05-29-multi-platform-phase2-closure-review.md
+git add docs/status/current-status.md docs/status/module-matrix.md docs/architecture/00-platform-and-module-rules.md docs/superpowers/specs/2026-05-27-multi-platform-backend-boundary-design.md docs/superpowers/plans/2026-05-28-multi-platform-phase2-execution-map.md docs/superpowers/reviews/2026-05-29-multi-platform-phase2-closure-review.md
 git commit -m "docs: close multi-platform phase2 architecture refactor"
 git push
 ```

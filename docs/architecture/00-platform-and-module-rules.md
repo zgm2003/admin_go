@@ -57,9 +57,18 @@ page-init 一律通过 `dict.PageInit(ctx, names...)` 组装。
 
 ## R8. 无 legacy 框架概念
 
-项目无 legacy / compat / fallback 框架性概念。
-旧用户域 POST 路由直接删除，前端跟着改。
-architecture.md 不再保留旧兼容适配、兜底桥接等段落。
+项目无旧 PHP/action API 的 legacy / compat / fallback 框架性概念。
+旧用户域 POST 路由直接删除，前端跟着改；不得为猜测兼容添加 silent fallback 字段、兜底分支或长期双写框架。
+
+允许短期迁移桥，但必须同时满足：
+
+```text
+有明确 owner
+有退出条件或后续删除计划
+有 contract/test/smoke 覆盖证明不会破坏现有用户路径
+命名写清 migration bridge，不伪装成长期 fallback
+current-status 记录当前状态和缺口
+```
 
 ## infra vs adapter 命名协议
 

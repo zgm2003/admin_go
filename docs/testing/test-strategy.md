@@ -1,6 +1,6 @@
 # Admin Go Rewrite Test Strategy
 
-状态更新时间：2026-05-04
+状态更新时间：2026-05-29
 
 本文定义测试和验证门禁。它不是建议，是后续迁移模块的交付标准。
 
@@ -115,6 +115,8 @@ cgo: C compiler "gcc" not found
 
 ## Mandatory gates by change type
 
+验证矩阵以本文为准；`docs/README.md` 只做入口摘要，不复制完整 gate。
+
 | Change type | Mandatory commands |
 | --- | --- |
 | Go package code | `go test <touched packages>` + `go test ./...` + `go vet -p=1 ./...` |
@@ -123,7 +125,9 @@ cgo: C compiler "gcc" not found
 | Smoke script | `basic-admin-smoke.ps1` 或 `full-admin-smoke.ps1` 实跑 |
 | Vue API/types/view | `npx vue-tsc -b --pretty false` + targeted `npx eslint ...` |
 | Vue public component/router/store/request | 上面全部 + `npm run build` |
-| Documentation only | `git diff --check`，并确认没有把 planned 写成 implemented |
+| Documentation only | `git diff --check` + `powershell -ExecutionPolicy Bypass -File .\scripts\check-agent-governance.ps1 -Mode working`，并确认没有把 planned 写成 implemented |
+
+Documentation-only gate 只证明 diff 空白/治理规则和文档措辞，不证明 Go/Vue runtime、Docker readiness 或 smoke 通过。只要文档声明了 runtime 行为，就必须引用已有验证证据或重新跑对应验证。
 
 ## Release gate
 

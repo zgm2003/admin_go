@@ -1,6 +1,6 @@
 # Realtime and Distributed Boundary
 
-状态更新时间：2026-05-04
+状态更新时间：2026-05-29
 
 当前实现状态：
 
@@ -23,7 +23,9 @@ implemented:
 
 planned:
   business topic permission checks
-  AI streaming event source
+  app WebSocket platform/auth boundary
+  realtime ticket auth if cookie WebSocket becomes unstable
+  credential-gated real LLM provider E2E verification
 ```
 
 ## Decision
@@ -133,16 +135,19 @@ VITE_GO_API_BASE_URL + /api/admin/v1/auth/refresh
 AI streaming 也走同一套 envelope：
 
 ```json
+{ "type": "ai.response.start.v1", "request_id": "01HX...", "data": {} }
 { "type": "ai.response.delta.v1", "request_id": "01HX...", "data": { "text": "..." } }
 { "type": "ai.response.completed.v1", "request_id": "01HX...", "data": {} }
 { "type": "ai.response.failed.v1", "request_id": "01HX...", "data": { "code": 100, "msg": "..." } }
 ```
 
-取消也走 WebSocket 或 REST 显式命令，不能靠断线当业务取消语义：
+取消必须是显式业务命令，不能靠断线当业务取消语义。当前 Go/Vue 运行时取消走 REST：
 
-```json
-{ "type": "ai.response.cancel.v1", "request_id": "01HX...", "data": { "response_id": "..." } }
+```text
+POST /api/admin/v1/ai-conversations/:id/messages/cancel
 ```
+
+WebSocket 当前只发布 `ai.response.start/delta/completed/failed.v1`，不发布 `ai.response.cancel.v1`。
 
 ## Topic rules
 
@@ -363,7 +368,7 @@ subscribe unauthorized topic rejection
 slow-client backpressure
 auth expiry close
 multi-node fan-out simulation
-AI stream delta/completed/failed/cancel
+AI stream start/delta/completed/failed + REST cancel command
 ```
 
 race gate：

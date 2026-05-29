@@ -116,7 +116,7 @@ CORS_ALLOW_ORIGINS=https://zgm2003.cn
 
 验证码：
 
-手机号验证码固定 `123456`，不接短信，不受 env 控制；邮箱验证码走腾讯云 SES。真实用户上线如果不开放手机号登录，在 `auth_platforms.login_types` 关闭 `phone`。验证码有效期不是 env；它来自 DB 配置 `system_settings.auth.verify_code.ttl_minutes`，默认 seed 为 5 分钟，可在 `/system/mail` 的“验证码公共配置”里修改。Redis namespace `auth:verify_code:` 由代码内置，不通过 env 配置。验证码模板变量必须且只能包含 `code` / `ttl_minutes`。
+手机号验证码固定 `123456`，不接真实短信发送，不受 env 控制；邮箱验证码走腾讯云 SES。真实用户上线如果不开放手机号登录，在 `auth_platforms.login_types` 关闭 `phone`。验证码有效期不是 env：邮件渠道来自 `mail_configs.verify_code_ttl_minutes`，短信/手机号渠道来自 `sms_configs.verify_code_ttl_minutes`，默认 5 分钟，可分别在 `/system/mail` 和 `/system/sms` 修改。Redis namespace `auth:verify_code:` 由代码内置，不通过 env 配置。验证码模板变量必须且只能包含 `code` / `ttl_minutes`。
 
 上传运行时：
 

@@ -11,7 +11,7 @@ The point is simple: stop letting old plans, comments, or pretty architecture pr
 When evidence conflicts, use this exact order:
 
 ```text
-live runtime > smoke / test output > served API > process config > docs/status/current-status.md > docs/contracts > architecture docs > spec/plan docs > comments
+live runtime > smoke / test output > served API > process config > docs/status/current-status.md + docs/status/module-matrix.md > docs/contracts > architecture docs > spec/plan docs > comments
 ```
 
 Rules:
@@ -21,7 +21,7 @@ live runtime behavior wins over checked-in intent.
 smoke / test output must include the command and result, not a vague claim.
 served API means the endpoint, payload, status code, and response shape actually observed.
 process config means the effective environment, startup flags, enabled middleware, routes, queues, and workers.
-docs/status/current-status.md records verified runtime facts only.
+docs/status/current-status.md is the current status entry; docs/status/module-matrix.md records per-module verified runtime facts.
 docs/contracts records intended public API/realtime shape, but it must be corrected when served API proves drift.
 architecture docs define boundaries and decisions, but they do not prove implementation.
 spec/plan docs record design and execution history only.
@@ -46,12 +46,12 @@ Use these words strictly:
 
 | Change | Docs to check | Rule |
 | --- | --- | --- |
-| Backend API route, handler, request, response, auth, permission | `docs/contracts/admin-api-v1.md`, `docs/status/current-status.md`, relevant architecture docs, `docs/testing/smoke-matrix.md` | Update only when runtime behavior is verified. |
-| Realtime/WebSocket behavior | `docs/contracts/admin-realtime-v1.md`, `docs/status/current-status.md`, realtime architecture docs, `docs/testing/smoke-matrix.md` | Served message shape beats planned contract text. |
-| Queue, cron, worker, async side effect | `docs/status/current-status.md`, queue/scheduler architecture docs, smoke/test docs | Record idempotency, retry, and verification boundary. |
-| Frontend route, menu, permission, API adapter | `docs/status/current-status.md`, API contract if the public shape changed, frontend/runtime docs | Do not document a route as usable until the served UI/API path works. |
-| Database schema or seed baseline | `docs/status/current-status.md`, architecture docs, smoke/test docs | Schema text alone is not runtime proof. |
-| Governance or agent workflow | `AGENTS.md`, `agents/README.md`, `docs/README.md`, this document, `docs/testing/pre-push-gates.md` | Keep onboarding paths discoverable and numbered paths stable. |
+| Backend API route, handler, request, response, auth, permission | `docs/contracts/admin-api-v1.md`, `docs/status/current-status.md`, `docs/status/module-matrix.md`, relevant architecture docs, `docs/testing/smoke-matrix.md` | Update only when runtime behavior is verified. |
+| Realtime/WebSocket behavior | `docs/contracts/admin-realtime-v1.md`, `docs/status/current-status.md`, `docs/status/module-matrix.md`, realtime architecture docs, `docs/testing/smoke-matrix.md` | Served message shape beats planned contract text. |
+| Queue, cron, worker, async side effect | `docs/status/current-status.md`, `docs/status/module-matrix.md`, queue/scheduler architecture docs, smoke/test docs | Record idempotency, retry, and verification boundary. |
+| Frontend route, menu, permission, API adapter | `docs/status/current-status.md`, `docs/status/module-matrix.md`, API contract if the public shape changed, frontend/runtime docs | Do not document a route as usable until the served UI/API path works. |
+| Database schema or seed baseline | `docs/status/current-status.md`, `docs/status/module-matrix.md`, architecture docs, smoke/test docs | Schema text alone is not runtime proof. |
+| Governance or agent workflow | `docs/README.md`, this document, `docs/testing/pre-push-gates.md`; `AGENTS.md` / `agents/README.md` only keep short references and role boundaries | Cold-start/onboarding list has one owner: `docs/README.md`. Do not maintain parallel reading lists. |
 | Codex lifecycle hook behavior | `docs/architecture/08-codex-hooks.md`; `.codex/hooks.json` / `.codex/hooks/*.ps1` / `scripts/test-codex-hooks.ps1` when hook implementation changes; `docs/testing/pre-push-gates.md` | Hooks are conversation-time governance only; they must not be documented as runtime proof or smoke evidence. |
 | Spec/plan changes only | The relevant spec/plan | Spec/plan history does not override `current-status`. |
 
@@ -62,7 +62,7 @@ Use these words strictly:
 | Runtime behavior | Command, request, browser/runtime observation, log, or smoke output showing the decisive branch. | “Looks implemented” from source only. |
 | API contract | Served endpoint and payload match, or contract checker output. | Contract file changed without live or test evidence. |
 | Smoke | Exact smoke command and result. | Pre-push hook pass. |
-| Documentation-only change | `git diff --check` plus path/reference sanity. | No whitespace check. |
+| Documentation-only change | `git diff --check` plus `scripts/check-agent-governance.ps1 -Mode working` and path/reference sanity. | No whitespace check. |
 | Governance check | `git diff --check` and the governance checker when present. | Auto-fixing files silently. |
 | Codex hook behavior | `scripts/test-codex-hooks.ps1` output when hook scripts exist plus `/hooks` review/trust note when hook config changed. | Assuming Codex loaded changed hooks without review. |
 
@@ -70,15 +70,18 @@ Hook/checker do not auto-fix files. They report drift and fail only on defined b
 
 ## Archive policy
 
-`docs/superpowers/archive/**` is historical. It may explain why a decision was made, but it does not override the current truth-source order.
+`docs/superpowers/archive/**` and `docs/status/archive/**` are historical. They may explain why a decision was made or preserve old verification evidence, but they do not override the current truth-source order.
 
 Rules:
 
 ```text
 active spec/plan docs live under docs/superpowers/specs or docs/superpowers/plans.
+active review docs live under docs/superpowers/reviews.
 archived specs/plans are read only when provenance matters or the user asks for archaeology.
 spec/plan history does not override current-status.
 old paths must not be resurrected as current onboarding paths without verification.
+old cold-start, verification, or status-entry docs must become stubs or archive pointers once they stop being canonical.
+archive docs must not keep complete active reading lists, mandatory gates, or current status matrices.
 ```
 
 ## Documentation location ownership
@@ -89,12 +92,15 @@ Canonical root docs:
 
 ```text
 docs/status/current-status.md
+docs/status/module-matrix.md
+docs/status/archive/*
 docs/contracts/*
 docs/testing/*
 docs/deployment/*
 docs/architecture/*
 docs/superpowers/specs/*
 docs/superpowers/plans/*
+docs/superpowers/reviews/*
 docs/superpowers/archive/*
 ```
 

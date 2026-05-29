@@ -1,8 +1,12 @@
 # Admin Smoke Matrix
 
-状态更新时间：2026-05-21
+状态更新时间：2026-05-29
 
 本文是 smoke 覆盖地图，不是接口契约。接口契约看 `docs/contracts/admin-api-v1.md`。
+
+当前验证摘要看 `docs/status/current-status.md`。截至 2026-05-29，channel-specific verify-code TTL 切片的 basic admin smoke 已通过；full smoke 已到达 mail/sms read probes 且 HTTP 200，随后停在既有 upload-token 探测的 `上传密钥不可用`，所以不能把 full smoke 记录成通过。
+
+Smoke 脚本默认启动临时后端/worker 进程，端口分别是 `127.0.0.1:18080`（basic）和 `127.0.0.1:18081`（full），不是 Docker-first 当前运行的 `127.0.0.1:8080`。Docker runtime readiness 仍按 `docs/deployment/local.md` 使用 `/health` 和 `/ready` 单独验证。
 
 ## Smoke levels
 
@@ -38,8 +42,8 @@
 | permission + role RBAC loop | yes | via basic | permissions create/delete, role update/restore, users/init | yes | delete temp permissions; restore role | 临时 DIR/PAGE/BUTTON 必须清掉 |
 | system log read-only | no | yes, lines conditional | `GET /api/admin/v1/system-logs/init`, `GET /api/admin/v1/system-logs/files`, `GET /api/admin/v1/system-logs/files/:name/lines` | no | n/a | full smoke 探测 init/files shape；当文件列表非空时读取第一份日志 tail lines；不做删除/清空/下载日志 |
 | system settings read | no | yes | `GET /api/admin/v1/system-settings/init`, `GET /api/admin/v1/system-settings` | no | n/a | full smoke 只探测 init/list shape；旧 `devtools_queue_monitor_queues` 清理由迁移脚本/人工执行，不在 smoke 里做写库删除 |
-| mail Tencent SES read | no | yes | `GET /api/admin/v1/mail/page-init`, `GET /api/admin/v1/mail/config`, `GET /api/admin/v1/mail/templates`, `GET /api/admin/v1/mail/logs` | no | n/a | full smoke only probes dict/config/template/log shapes and verifies encrypted secrets/template payload fields do not leak; no default real email send and no Tencent API call in smoke |
-| sms Tencent Cloud read | no | yes | `GET /api/admin/v1/sms/page-init`, `GET /api/admin/v1/sms/config`, `GET /api/admin/v1/sms/templates`, `GET /api/admin/v1/sms/logs` | no | n/a | full smoke only probes dict/config/template/log shapes and verifies encrypted secrets, SMS body, template params, raw request, and raw response fields do not leak; no default real SMS send and no Tencent API call in smoke |
+| mail Tencent SES read | no | yes | `GET /api/admin/v1/mail/page-init`, `GET /api/admin/v1/mail/config`, `GET /api/admin/v1/mail/templates`, `GET /api/admin/v1/mail/logs` | no | n/a | full smoke only probes dict/config/template/log shapes, channel-specific `verify_code_ttl_minutes`, and encrypted secrets/template payload fields do not leak; no default real email send and no Tencent API call in smoke |
+| sms Tencent Cloud read | no | yes | `GET /api/admin/v1/sms/page-init`, `GET /api/admin/v1/sms/config`, `GET /api/admin/v1/sms/templates`, `GET /api/admin/v1/sms/logs` | no | n/a | full smoke only probes dict/config/template/log shapes, channel-specific `verify_code_ttl_minutes`, and encrypted secrets, SMS body, template params, raw request, and raw response fields do not leak; no default real SMS send and no Tencent API call in smoke |
 | client version management read | no | yes | `GET /api/admin/v1/client-versions/page-init`, `GET /api/admin/v1/client-versions`, `GET /api/admin/v1/client-versions/update-json` | no | n/a | full smoke only probes dict/page/list/update-json shape; does not create version rows, does not set latest, does not publish COS manifest |
 | upload config read | no | yes | `GET /api/admin/v1/upload-drivers/init`, `GET /api/admin/v1/upload-drivers`, `GET /api/admin/v1/upload-rules/init`, `GET /api/admin/v1/upload-rules`, `GET /api/admin/v1/upload-settings/init`, `GET /api/admin/v1/upload-settings` | no | n/a | full smoke 必须始终探测三类配置 init/list shape；不触发云 SDK |
 | upload config write probe | no | gated yes | `POST/DELETE upload-drivers`, `POST/DELETE upload-rules`, `POST/DELETE upload-settings` | yes, only disabled temp rows | delete setting -> rule -> driver | API 启动已强校验 APP_SECRET；永远不启用临时 setting，不修改现有 enabled setting；不安装/调用 OSS SDK |
