@@ -13,6 +13,14 @@
 - Admin behavior preservation remains the acceptance standard: existing admin URLs, DB table names, permission codes, i18n keys, route metadata, operation log rules, queue task types, payment callback/finalizer behavior, and frontend typed API contracts were preserved.
 - Future app/openapi/merchant/miniapp work starts from this boundary and must add `transport/{platform}` slices under existing capabilities instead of creating platform-prefixed modules.
 
+## 2026-05-29 transport admin alias cleanup
+
+- Transitional `aliases.go` files under `admin_back_go/internal/module/**/transport/admin` have been removed; transport packages now import root capability modules explicitly instead of re-exporting service/repository/model/DTO types or root constants.
+- `TestTransportDoesNotReExportModuleTypes` now guards that `transport/**/aliases.go` plus root-module type/const re-exports do not return, including transport files whose name is not `aliases.go`.
+- Server dependency fields that had depended on transport alias re-exports now point at root module contracts for readiness, client version, cron task, export task, notification, and notification task services; existing transport-local narrow interfaces remain untouched.
+- No admin URL, payload, permission code, i18n key, DB table, queue task type, realtime path, payment callback/finalizer, or frontend source change was introduced.
+- Verified with alias scans, `go test ./internal/architecture -count=1`, `go test ./internal/server -run TestAdminRouteSnapshot -count=1`, focused lane package tests, `go test ./... -count=1`, `go build ./...`, and root governance/diff checks.
+
 ## 2026-05-28 small module aggregation wave
 
 - Small flat modules now follow capability ownership without admin API drift: `userquickentry` service/model/repository moved into `admin_back_go/internal/module/profile`, `notificationtask` moved under `admin_back_go/internal/module/notification/task` plus `notification/transport/admin/task_*`, `exporttask` directory was renamed to `admin_back_go/internal/module/export`, and `authplatform` directory was renamed to `admin_back_go/internal/module/auth_platform`.
