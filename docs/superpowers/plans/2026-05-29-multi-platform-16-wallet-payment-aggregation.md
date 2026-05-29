@@ -111,7 +111,7 @@ Keep package identifier package wallet for the moved wallet subpackage.
 
 - Create: `internal/architecture/payment_wallet_aggregation_test.go`
 
-- [ ] **Step 1: Create the guard test**
+- [x] **Step 1: Create the guard test**
 
 Write this exact file:
 
@@ -171,7 +171,7 @@ func TestNoImportsOfOldWalletModulePath(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 ```powershell
 cd E:\admin_go_parallel\p16-wallet-payment
@@ -191,7 +191,7 @@ expected internal/module/wallet to be removed
 
 - Move: `internal/module/wallet` -> `internal/module/payment/wallet`
 
-- [ ] **Step 1: Move the directory**
+- [x] **Step 1: Move the directory**
 
 ```powershell
 cd E:\admin_go_parallel\p16-wallet-payment
@@ -199,7 +199,7 @@ New-Item -ItemType Directory -Force .\internal\module\payment | Out-Null
 git mv .\internal\module\wallet .\internal\module\payment\wallet
 ```
 
-- [ ] **Step 2: Confirm package name stayed stable**
+- [x] **Step 2: Confirm package name stayed stable**
 
 ```powershell
 cd E:\admin_go_parallel\p16-wallet-payment
@@ -220,7 +220,7 @@ Expected: moved package files still report `package wallet`; no file reports `pa
 - Modify: `internal/module/payment/wallet/transport/admin/handler.go`
 - Modify: `internal/module/payment/wallet/transport/admin/handler_test.go`
 
-- [ ] **Step 1: Replace old import paths**
+- [x] **Step 1: Replace old import paths**
 
 ```powershell
 cd E:\admin_go_parallel\p16-wallet-payment
@@ -229,7 +229,7 @@ rg -l 'admin_back_go/internal/module/wallet' internal cmd | ForEach-Object {
 }
 ```
 
-- [ ] **Step 2: Verify key imports are readable aliases**
+- [x] **Step 2: Verify key imports are readable aliases**
 
 ```powershell
 cd E:\admin_go_parallel\p16-wallet-payment
@@ -247,7 +247,7 @@ Expected: all four commands print one matching line.
 
 - Modify: `internal/architecture/multiplatform_boundary_test.go`
 
-- [ ] **Step 1: Replace `TestCommerceRBACAdminTransportShells` with this exact function**
+- [x] **Step 1: Replace `TestCommerceRBACAdminTransportShells` with this exact function**
 
 ```go
 func TestCommerceRBACAdminTransportShells(t *testing.T) {
@@ -271,7 +271,7 @@ func TestCommerceRBACAdminTransportShells(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Format architecture tests**
+- [x] **Step 2: Format architecture tests**
 
 ```powershell
 cd E:\admin_go_parallel\p16-wallet-payment
@@ -287,14 +287,14 @@ gofmt -w .\internal\architecture\payment_wallet_aggregation_test.go .\internal\a
 - Test: `internal/server`
 - Test: `internal/bootstrap`
 
-- [ ] **Step 1: Format touched Go files**
+- [x] **Step 1: Format touched Go files**
 
 ```powershell
 cd E:\admin_go_parallel\p16-wallet-payment
 gofmt -w .\internal\module\payment\wallet .\internal\bootstrap .\internal\server .\internal\architecture
 ```
 
-- [ ] **Step 2: Confirm old directory and imports are gone**
+- [x] **Step 2: Confirm old directory and imports are gone**
 
 ```powershell
 cd E:\admin_go_parallel\p16-wallet-payment
@@ -310,7 +310,7 @@ Expected:
 NO_OLD_WALLET_IMPORTS_OR_DIRS
 ```
 
-- [ ] **Step 3: Run focused backend tests**
+- [x] **Step 3: Run focused backend tests**
 
 ```powershell
 cd E:\admin_go_parallel\p16-wallet-payment
@@ -329,7 +329,7 @@ Expected: every command exits `0`; route snapshot reports `ok` and does not requ
 
 - Whole backend repo
 
-- [ ] **Step 1: Run full backend tests and build**
+- [x] **Step 1: Run full backend tests and build**
 
 ```powershell
 cd E:\admin_go_parallel\p16-wallet-payment
@@ -352,7 +352,7 @@ Expected: every command exits `0`; governance output contains `PASS: no blocking
 - Tests: `admin_front_ts/tests/shared/payment/*`
 - Tests: `admin_front_ts/tests/shared/wallet/*`
 
-- [ ] **Step 1: Run typecheck and focused Vitest contracts**
+- [x] **Step 1: Run typecheck and focused Vitest contracts**
 
 ```powershell
 cd E:\admin_go\admin_front_ts
@@ -368,7 +368,7 @@ Expected: Vitest reports all payment and wallet test files passing. Record exact
 
 - Backend changes from Tasks 1-6
 
-- [ ] **Step 1: Review diff**
+- [x] **Step 1: Review diff**
 
 ```powershell
 cd E:\admin_go_parallel\p16-wallet-payment
@@ -389,7 +389,7 @@ internal/module/wallet/** -> internal/module/payment/wallet/** renamed
 
 No `database/migrations/*.sql`, frontend source, permission definitions, route metadata, payment callback, payment finalizer, Alipay adapter, or DB schema files should appear in this diff.
 
-- [ ] **Step 2: Commit backend branch**
+- [x] **Step 2: Commit backend branch**
 
 ```powershell
 cd E:\admin_go_parallel\p16-wallet-payment
@@ -397,7 +397,7 @@ git add internal cmd docs
 git commit -m "refactor: move wallet under payment module"
 ```
 
-- [ ] **Step 3: Final backend worker report**
+- [x] **Step 3: Final backend worker report**
 
 Report exactly:
 
@@ -420,7 +420,7 @@ Run this task only after the backend worker report shows all gates passed.
 - Modify: `E:\admin_go\docs/architecture/00-platform-and-module-rules.md`
 - Modify: `E:\admin_go\docs/superpowers/plans/2026-05-28-multi-platform-phase2-execution-map.md`
 
-- [ ] **Step 1: Merge backend branch sequentially**
+- [x] **Step 1: Merge backend branch sequentially**
 
 ```powershell
 cd E:\admin_go\admin_back_go
@@ -429,7 +429,7 @@ git pull --ff-only
 git merge --no-ff work/p16-wallet-payment
 ```
 
-- [ ] **Step 2: Rerun backend post-merge gate**
+- [x] **Step 2: Rerun backend post-merge gate**
 
 ```powershell
 cd E:\admin_go\admin_back_go
@@ -443,14 +443,14 @@ git diff --check
 
 Expected: every command exits `0`.
 
-- [ ] **Step 3: Push backend master**
+- [x] **Step 3: Push backend master**
 
 ```powershell
 cd E:\admin_go\admin_back_go
 git push
 ```
 
-- [ ] **Step 4: Update root docs truth**
+- [x] **Step 4: Update root docs truth**
 
 In `E:\admin_go\docs/status/current-status.md`, update the commerce/RBAC and wallet rows so they say:
 
@@ -468,7 +468,7 @@ In `E:\admin_go\docs/superpowers/plans/2026-05-28-multi-platform-phase2-executio
 
 Do not claim Phase 2 is complete in root docs until Plan 17 runs.
 
-- [ ] **Step 5: Verify and commit root docs**
+- [x] **Step 5: Verify and commit root docs**
 
 ```powershell
 cd E:\admin_go
