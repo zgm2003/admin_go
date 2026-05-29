@@ -137,8 +137,9 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
     two tabbar pages with app login state instead of backend RBAC, admin_app 目录结构已对齐 PC admin 的
     views/hooks/store/i18n/enums/platform/lib 分层；H5/LAN dev 必须直连可访问的 Go backend `/api/app/v1`，
     不在 Vite 上反代 `/api/app/v1`；局域网真机调试要求后端监听地址、防火墙和 `CORS_ALLOW_ORIGINS`
-    覆盖实际 H5 origin，具体 IP/端口只属于本地部署 runbook 示例；登录页采用 PC mobile-inspired surface，
-    slide captcha 内层验证器复用 `go-captcha-vue` 官方 `Slide` 组件和样式
+    覆盖实际 H5 origin；当前 admin_app runtime 默认 API base 是本机
+    `http://127.0.0.1:8080/api/app/v1`，LAN/部署用 `VITE_APP_API_BASE_URL` 覆盖；登录页采用 PC
+    mobile-inspired surface，slide captcha 内层验证器复用 `go-captcha-vue` 官方 `Slide` 组件和样式
 - Tests:
   - `internal/module/auth`, `internal/module/profile`, `internal/module/user`, `internal/module/uploadtoken`,
     `internal/middleware`, `internal/server`, `internal/shared/response`, `internal/shared/i18n`
@@ -151,6 +152,8 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
 - Risk:
   - secure storage remains next slice
   - App 真机/小程序端是否继续沿用 H5 `go-captcha-vue` 需要单独发布切片验证
+  - LAN phone debugging is no longer the code default; each developer must set `VITE_APP_API_BASE_URL` plus matching
+    backend bind/CORS/firewall for the current device network
 
 ### captcha
 

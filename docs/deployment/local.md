@@ -50,6 +50,10 @@ APP_SECRET=本地长随机字符串，至少 32 位
 CORS_ALLOW_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,http://192.168.5.20:5173
 ```
 
+上面的 `192.168.5.20` 只是当前开发机的 LAN 示例；换电脑或换网段必须替换成实际 H5 origin。`admin_app`
+默认 API base 是本机 `http://127.0.0.1:8080/api/app/v1`，LAN 真机调试必须通过
+`VITE_APP_API_BASE_URL` 覆盖为当前手机可访问的 Go backend 地址。
+
 启动后端：
 
 ```powershell
