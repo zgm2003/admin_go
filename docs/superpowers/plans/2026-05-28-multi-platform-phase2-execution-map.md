@@ -33,7 +33,7 @@ module aggregation:
   DONE 14a: aiprovider/aiagent/aitool -> internal/module/ai/{provider,agent,tool}
   DONE 14b: aiimage -> internal/module/ai/image
   DONE 14c: aiknowledge -> internal/module/ai/knowledge
-  TODO: Plan 15 conversation/message/chat/run -> internal/module/ai/{conversation,message,chat,run}
+  DONE 15: aiconversation/aimessage/aichat/airun -> internal/module/ai/{conversation,message,chat,run}
   TODO: wallet -> payment/wallet decision closure
 ```
 
@@ -69,8 +69,8 @@ DONE PARALLEL WAVE C, merged sequentially:
   DONE 14b AI image aggregation slice
   DONE 14c AI knowledge aggregation slice
 
-SERIAL after 14a-14c:
-  TODO 15 AI conversation/message/chat/run runtime aggregation slice
+DONE SERIAL after 14a-14c:
+  DONE 15 AI conversation/message/chat/run runtime aggregation slice
 
 DECISION SLICE after 11, can run after small-module wave if desired:
   16 wallet/payment ownership decision and first safe slice
@@ -92,7 +92,7 @@ FINAL:
 | 14a | done, ran with 14b/14c in separate worktrees; merged sequentially | `aiprovider`, `aiagent`, `aitool` -> `internal/module/ai/{provider,agent,tool}` | conversation/message/chat/run/image/knowledge runtime mutation beyond tool interface import |
 | 14b | done, ran with 14a/14c in separate worktrees; merged sequentially | `aiimage` -> `internal/module/ai/image`, image queue/jobs/tests | provider/agent/tool internals, conversation/message/chat/run |
 | 14c | done, ran with 14a/14b in separate worktrees; merged sequentially | `aiknowledge` -> `internal/module/ai/knowledge`, knowledge CRUD/runtime adapter imports | provider/agent/tool internals, conversation/message/chat/run |
-| 15 | no | `aiconversation`, `aimessage`, `aichat`, `airun` -> `internal/module/ai/{conversation,message,chat,run}` | provider/tool/image/knowledge internals unless required for imports after 14a-14c |
+| 15 | done, ran serially after 14a-14c | `aiconversation`, `aimessage`, `aichat`, `airun` -> `internal/module/ai/{conversation,message,chat,run}` | provider/tool/image/knowledge internals unless required for imports after 14a-14c |
 | 16 | no by default | `wallet` and `payment` ownership decision, first safe move if approved by evidence | payment callback/Alipay finalizer behavior unless in scope |
 | 17 | no | final architecture guards, active docs, spec status review | new behavior |
 
@@ -148,7 +148,7 @@ Phase 2 is done only when all of the following are true:
 internal/shared contains apperror, response, i18n, enum, validate, dict, setting
 old root shared-like packages are removed or reduced to explicitly documented temporary wrappers with guards
 small flat modules are either aggregated or have documented exceptions with tests
-AI core/image/knowledge aggregation has landed through safe slices; conversation/message/chat/run remains an explicit Plan 15 blocker for spec closure
+AI aggregation has landed through safe slices: 14a-14c plus Plan 15 are complete; remaining Phase 2 blockers are wallet/payment decision and final guard/docs/spec closure
 admin route snapshot passes
 backend full tests and build pass
 active docs say exactly what is implemented

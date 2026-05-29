@@ -37,7 +37,7 @@
 
 ## 2026-05-28 AI admin transport shells
 
-- AI admin HTTP route ownership has moved to `internal/module/ai/{provider,agent,tool,image,knowledge}/transport/admin` plus `internal/module/{aiconversation,aimessage,airun,aichat}/transport/admin`; service/repository/model/jobs remain at each module root.
+- AI admin HTTP route ownership has moved to `internal/module/ai/{provider,agent,tool,image,knowledge,conversation,message,run,chat}/transport/admin`; service/repository/model/jobs remain under each AI subdomain root.
 - `internal/server/routes_admin_ai.go` now imports the AI admin transport shells, while the existing `/api/admin/v1/ai-*` route surface is preserved by the route snapshot gate.
 - Verified with `go test ./internal/architecture -run TestAIAdminTransportShells -count=1`, `go test ./internal/server -run TestAdminRouteSnapshot -count=1`, focused AI module/server tests, and the matching frontend AI API Vitest files.
 
