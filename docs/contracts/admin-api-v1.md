@@ -2999,7 +2999,7 @@ refund / WeChat / subscription / reconcile features
 
 ```text
 resource prefix: /api/admin/v1/wallet
-backend owner: internal/module/wallet
+backend owner: internal/module/payment/wallet
 active tables: user_wallets, wallet_transactions
 current-user pages: /wallet/transactions
 admin pages: /wallet/users, /wallet/ledger
