@@ -28,9 +28,9 @@ docs/status/archive/2026-05-runtime-change-log.md     # 历史证据：2026-05 v
 
 ## Current verification gaps
 
-- 2026-05-29 channel-specific verify-code TTL 切片：basic admin smoke 已通过；full smoke 的已知失败点是既有 upload-token probe 返回 `上传密钥不可用`，所以不能记录 full smoke 通过。按当前 `full-admin-smoke.ps1` 顺序，该失败点位于 mail/sms、client-version、upload config read、payment/wallet、AI read/disabled-baseline 和 upload config write probe 之后；不要把它误读成 mail/sms 之后立刻失败。2026-05-30 local live check confirmed `upload_setting.id=1` is enabled COS and has encrypted secret blobs, but they cannot be decrypted with the current Docker-first `APP_SECRET`-derived secretbox key; re-enter the upload driver secrets instead of copying old encrypted DB blobs.
-- 2026-05-30 later local recheck could not rerun Docker readiness or full smoke: Docker Desktop daemon was unavailable at `dockerDesktopLinuxEngine`, and `127.0.0.1:3307` refused MySQL connections. This does not close `UPLOAD-RUNTIME-001`; it only explains why no fresher smoke result is recorded.
-- 2026-05-27 multi-platform Phase 2 已通过 code/docs/frontend gates after Plans 11-17；final admin smoke 仍 pending，不能把 spec 标记为 fully closed。
+- 2026-05-30 after re-entering COS upload driver secrets for the current `APP_SECRET`, full admin smoke passed and `UPLOAD-RUNTIME-001` is closed as a runtime data repair, not a code change. The summary reported `upload_token_probe=passed`, `upload_token_code=0`, and `upload_token_provider=cos`.
+- 2026-05-30 Docker-first backend readiness was restored on `127.0.0.1:8080`; `/health` and `/ready` passed with database/redis/token_redis/queue_redis/realtime all `up`.
+- 2026-05-27 multi-platform Phase 2 code/docs/frontend gates and the later full admin smoke gate have now passed for the current local Go/Vue runtime.
 - Docker-first readiness 和 smoke 是两条验证链：Docker runtime 用 `127.0.0.1:8080 /health /ready`；smoke 脚本默认临时端口是 basic `127.0.0.1:18080`、full `127.0.0.1:18081`。
 - `admin_app` 机器局域网默认值已清掉；本轮未跑真机 smoke，LAN 调试仍需按本机 IP 配置 `VITE_APP_API_BASE_URL`、后端监听地址、防火墙和 `CORS_ALLOW_ORIGINS`。
 
@@ -39,6 +39,7 @@ docs/status/archive/2026-05-runtime-change-log.md     # 历史证据：2026-05 v
 详细变更记录看 `docs/status/archive/2026-05-runtime-change-log.md`。近期关键批次：
 
 ```text
+2026-05-30 COS upload secrets re-entered and full-admin-smoke passed; UPLOAD-RUNTIME-001 closed
 2026-05-30 AI chat cancel late-event guard fixed: canceled request ids survive later completions and WebSocket start/delta/completed/failed acknowledgements only mutate the matching in-flight request or matching streaming assistant message
 2026-05-30 payment finalizer state regression hardening: stale finalizer snapshots cannot downgrade credited recharges back to paid or credit recharges that were closed concurrently; recharge paid markers are CAS guarded
 2026-05-30 payment race/return hardening: CAS misses no longer credit or leak stale pay_url, wallet first-create duplicate races return the existing wallet, callback audit amount parsing rejects signed cent fragments, and recharge auto-sync/return-url sync keep retrying while Alipay still says paying
@@ -90,6 +91,5 @@ Verification command:
 ```powershell
 cd E:\admin_go\admin_back_go
 powershell -ExecutionPolicy Bypass -File .\scripts\basic-admin-smoke.ps1 -Account 15671628271 -Password 123456
-# 当前 full smoke 会复现已知 upload-token secret gap；不要记录为通过，直到上传驱动密钥重新录入。
 powershell -ExecutionPolicy Bypass -File .\scripts\full-admin-smoke.ps1 -Account 15671628271 -Password 123456
 ```

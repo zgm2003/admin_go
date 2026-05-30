@@ -11,6 +11,12 @@ docs/status/current-status.md
 docs/status/module-matrix.md
 ```
 
+## 2026-05-30 COS upload runtime smoke closure
+
+- Re-entered the enabled COS upload driver secrets for the current Docker-first `APP_SECRET`-derived secretbox key.
+- Closed `UPLOAD-RUNTIME-001` as a runtime data repair: the previous failure was undecryptable persisted secret blobs, not a code defect.
+- Verified with `powershell -ExecutionPolicy Bypass -File .\scripts\full-admin-smoke.ps1 -Account 15671628271 -Password 123456`; the JSON summary reported `upload_token_probe=passed`, `upload_token_code=0`, and `upload_token_provider=cos`.
+
 ## 2026-05-30 AI chat cancel late-event guard
 
 - Fixed `AI-FE-001`: canceled request ids are retained across later successful completions, and late WebSocket user/assistant events can only mutate the matching in-flight request or matching streaming assistant message.

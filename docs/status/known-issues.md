@@ -6,28 +6,25 @@
 
 ## Current open issues
 
+None.
+
+## Recently resolved
+
 ### UPLOAD-RUNTIME-001 upload-token full smoke blocked by undecryptable COS secrets
 
-Status: open runtime deploy/data issue; code fix not proven necessary.
+Status: resolved by runtime data repair, not code change.
 
 Evidence:
 
 ```text
-docs/status/current-status.md records the current full-admin-smoke failure point as upload-token returning `上传密钥不可用`.
-docs/testing/smoke-matrix.md records the same failure as an enabled COS upload setting whose encrypted secrets cannot be decrypted with the current Docker-first APP_SECRET-derived secretbox key.
-docs/status/module-matrix.md states enabled COS settings with undecryptable secrets are real failures, not skip cases.
+2026-05-30 live recheck after re-entering the COS upload driver secrets:
+powershell -ExecutionPolicy Bypass -File .\scripts\full-admin-smoke.ps1 -Account 15671628271 -Password 123456
+passed and reported upload_token_probe=passed, upload_token_code=0, upload_token_provider=cos.
 ```
 
-Current boundary:
+Boundary:
 
 ```text
-Do not mark full smoke as passed until upload driver secrets are re-entered for the current APP_SECRET.
+The fix was re-entering secrets for the current APP_SECRET-derived secretbox key.
 Do not copy old encrypted DB blobs across APP_SECRET changes.
-If a later live check shows the setting has been re-entered, rerun full-admin-smoke before moving this issue to resolved.
-```
-
-Latest local recheck:
-
-```text
-2026-05-30 later recheck: Docker Desktop daemon was unavailable at dockerDesktopLinuxEngine, and 127.0.0.1:3307 refused MySQL connections. Docker readiness/full smoke were therefore not rerun; this issue remains open.
 ```

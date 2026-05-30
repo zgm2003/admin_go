@@ -569,7 +569,9 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
 - Smoke:
   - full smoke token probe skips only when no enabled upload setting exists
   - enabled COS settings with undecryptable secrets are real failures (`上传密钥不可用`), not skip cases
-  - otherwise validates token shape only
+  - 2026-05-30 live full smoke passed after COS secret re-entry, with `upload_token_probe=passed`,
+    `upload_token_code=0`, and `upload_token_provider=cos`; the probe still validates token shape only and does
+    not upload a real file
 - Docs: contract + architecture + smoke matrix
 - Risk:
   - no OSS runtime
