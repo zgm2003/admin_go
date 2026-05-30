@@ -68,6 +68,17 @@ Git pre-push hook = push 前轻量治理检查
 4. Codex hooks 只做过程治理，不替代 Git pre-push、smoke 或 runtime 验证
 ```
 
+执行收敛硬规则：
+
+```text
+每轮先把问题归类为 docs drift / code bug / runtime deploy / governance，只推进一个窄切片。
+纯文档漂移：可直接修、验证、提交。
+代码 bug：先给证据、失败测试和最小修复边界；用户未确认前不把半截生产代码写进仓库。
+WIP/失败测试只能写成 verification gap，不能写成 verified change-log。
+用户给出明确线上事实（例如前端域名/后端域名）后，必须同步 env、active docs 和 guard test，并搜索残留反例。
+连续一轮没有产出 patch、验证结果或明确决策时，必须停下来汇报阻塞点；不准继续横向扫仓库刷时间。
+```
+
 ## Linus 三问
 
 每个任务开始前先问：

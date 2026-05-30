@@ -39,6 +39,38 @@ reviewer.md         # 越界、质量、验证审查
 5. Produce evidence, file list, verification result
 ```
 
+## 执行收敛规则
+
+每轮开始必须先把当前任务归成一个主类：
+
+```text
+docs drift      # 文档与运行时/配置/测试口径冲突
+code bug        # 代码或测试暴露真实缺陷
+runtime deploy  # Docker、env、域名、smoke、线上/本机运行链路
+governance      # agent、hooks、pre-push、文档真相源规则
+```
+
+规则很简单：
+
+```text
+一次只推进一个窄切片；不要把 deploy、payment、frontend、agent framework 混成一锅。
+docs drift 可以直接最小修复、验证、提交。
+code bug 必须先证明：失败测试/错误输出/唯一键/运行时路径/配置来源；用户未确认前不落生产代码。
+runtime deploy 必须记录真实域名、端口、env 文件和反代边界；不能用占位符覆盖用户给出的线上事实。
+governance 改动只落 root repo 文档或 hooks；不要把治理规则塞进子仓临时代码注释。
+```
+
+连续一轮没有产生下面任意一种产物，就必须停下来汇报，不准继续横向扫：
+
+```text
+可审查 patch
+验证输出
+明确 bug evidence + 最小修复方案
+明确等待用户选择的不可逆决策
+```
+
+多 agent 只用于互不重叠的 bounded task。主线程必须继续做非重叠工作，不能派完 agent 后空等；agent 结论必须用当前 worktree 验证后才能写进 current-status。
+
 ## 禁止全能 agent
 
 坏味道：
@@ -162,6 +194,8 @@ admin_back_go/docs/architecture.md
 把历史 action 路由风格搬进 Go 新接口
 一次改一堆业务模块
 安装未调研、未记录取舍、未验证的依赖
+把失败测试或 dirty WIP 写成 verified
+用户给出明确生产域名后继续保留相反 fallback
 ```
 
 

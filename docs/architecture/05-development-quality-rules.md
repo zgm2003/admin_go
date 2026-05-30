@@ -41,6 +41,48 @@ spec 认可后 -> implementation plan
 
 docs-only governance changes do not require backend/frontend runtime tests, but they still require `git diff --check` and governance checks.
 
+## WIP 不准伪装 verified
+
+状态文档只写当前事实，不写愿望。
+
+禁止：
+
+```text
+把 dirty worktree 里的代码写成 implemented/verified
+把失败测试写进 Latest verified change-log
+用 PASS_WITH_WARNINGS 当作干净闭环
+用“方向正确”代替测试通过
+为了让文档好看而淡化已知红灯
+```
+
+允许：
+
+```text
+把失败测试、未确认 bug、未完成补丁写进 Current verification gaps
+把已提交且验证过的 docs-only drift 写成已完成
+明确区分 baseline 已验证和 follow-up WIP
+```
+
+代码 bug 的默认处理：
+
+```text
+1. 先证明根因：错误输出、失败测试、schema/unique key、运行时路径或配置来源。
+2. 再给最小修复边界和需要跑的测试。
+3. 用户未确认前，不把半截生产代码当成“顺手修复”提交。
+4. 如果已经有 dirty WIP，先标成 WIP/gap，不准让 current-status 暗示已闭环。
+```
+
+用户明确给出的线上事实是硬输入。例如前端域名、后端域名、生产端口、Baota/Docker 边界这类信息，一旦出现，必须同步到：
+
+```text
+env/config
+active deployment docs
+targeted guard tests
+残留反例搜索结果
+```
+
+不要把历史占位符、旧 fallback、disabled workflow 或 Tauri/CSP 这种边角配置留成相反事实。
+
 ## AI 自主解题规则
 
 AI 默认自己解决问题，不把可以查证的事情抛回给用户。
