@@ -71,6 +71,7 @@ logout
 Verification command:
 
 ```powershell
+cd E:\admin_go\admin_back_go
 powershell -ExecutionPolicy Bypass -File .\scripts\basic-admin-smoke.ps1 -Account 15671628271 -Password 123456
 powershell -ExecutionPolicy Bypass -File .\scripts\full-admin-smoke.ps1 -Account 15671628271 -Password 123456
 ```
