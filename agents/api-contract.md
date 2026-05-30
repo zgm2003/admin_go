@@ -8,9 +8,14 @@
 
 ```text
 AGENTS.md
+docs/status/current-status.md
+docs/architecture/00-platform-and-module-rules.md
 docs/architecture/00-open-source-first.md
 docs/architecture/01-step-by-step-roadmap.md
 docs/architecture/02-agent-framework.md
+docs/architecture/07-documentation-governance.md
+docs/contracts/admin-api-v1.md
+docs/contracts/admin-realtime-v1.md
 agents/architect.md
 ```
 
