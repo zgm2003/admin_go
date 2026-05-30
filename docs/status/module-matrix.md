@@ -1,6 +1,6 @@
 # Admin Go/Vue Runtime Module Index
 
-状态更新时间：2026-05-29
+状态更新时间：2026-05-30
 
 本文件是 `docs/status/current-status.md` 的当前状态明细层，只记录已验证的 Go/Vue runtime module 状态。不要把 planned 写成 implemented。
 

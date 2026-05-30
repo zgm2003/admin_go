@@ -1,6 +1,6 @@
 # Admin Go/Vue Runtime Current Status
 
-状态更新时间：2026-05-29
+状态更新时间：2026-05-30
 
 本文是当前运行时事实入口，只放最新关键事实、验证缺口和跳转。详细 per-module 分组明细已经分层到 `docs/status/module-matrix.md`；历史变更记录已经归档到 `docs/status/archive/2026-05-runtime-change-log.md`。
 
