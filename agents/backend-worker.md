@@ -16,7 +16,6 @@
 docs/contracts/admin-api-v1.md
 admin_back_go/docs/architecture.md
 docs/status/known-issues.md
-agents/backend-worker.md
 ```
 
 按任务补读：

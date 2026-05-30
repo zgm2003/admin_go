@@ -6,124 +6,61 @@
 
 ## Current open issues
 
-```text
-None.
-```
+### AI-FE-001 canceled chat stream can accept late WebSocket events after a later stream completes
 
-## Resolved on 2026-05-30
+Status: evidence recorded; production code change needs user confirmation.
 
-### PAY-HARDEN-002 payment close/finalizer/parser/frontend permission follow-up
-
-Status: fixed and verified after the payment-only bug audit.
-
-Pre-fix failures:
+Evidence:
 
 ```text
-SyncOrder TRADE_CLOSED and expired ACQ.TRADE_NOT_EXIST closed payment_orders but left linked payment_recharges open.
-FinalizeOrderPaid could leave order/recharge paid but wallet uncredited after CreditRecharge failure; SyncPendingOrders scanned only paying orders.
-Alipay amount parser accepted signed cent fragments such as 10.-1.
-/payment/recharge checkout could call add without payment_recharge_add frontend permission.
-paid and credited both rendered as success, hiding paid-but-not-credited state.
+admin_front_ts/src/views/Main/ai/chat/composables/useConversationSessions.ts records canceled request ids in cancel(), but appendDelta()/complete()/fail() only reject a different request id while pendingRequestId is non-empty.
+complete() clears canceledRequestIds, so a late event from an older canceled request can arrive after a later request completed and pendingRequestId is already empty.
+The existing ai-chat-cancel-state test covers terminal-state cancel behavior, but not old canceled stream events arriving after another stream completes.
 ```
 
-Fixed paths:
+Required minimal proof/fix boundary:
 
 ```text
-admin_back_go/internal/module/payment/order_service.go
-admin_back_go/internal/module/payment/job_service.go
-admin_back_go/internal/module/payment/recharge_repository.go
-admin_back_go/internal/infra/payment/alipay/gateway.go
-admin_front_ts/src/views/Main/payment/recharge/**
+Add a failing Vitest case in admin_front_ts/tests/shared/ai/ai-chat-cancel-state.test.ts:
+begin request A, cancel A, begin/complete request B, then deliver late A delta/completed and assert B's assistant message is unchanged.
+After user confirmation, fix the request guard so terminal or late events only apply to the matching in-flight/last assistant request.
 ```
 
-Verified after implementation:
+### PAY-FE-003 recharge auto-sync marks failed rows as already synced for the whole page session
 
-```powershell
-cd E:\admin_go\admin_back_go
-go test ./internal/module/payment ./internal/infra/payment/alipay -count=1
-go test ./internal/module/payment/... ./internal/infra/payment/alipay -count=1
-go test ./internal/module/payment ./internal/module/payment/... ./internal/infra/payment/alipay ./internal/module/crontask ./internal/bootstrap ./internal/middleware ./internal/server -count=1
-go vet ./internal/module/payment/... ./internal/infra/payment/alipay
+Status: evidence recorded; production code change needs user confirmation.
 
-cd E:\admin_go\admin_front_ts
-npm test -- tests/shared/payment/payment-recharge-page.test.ts
-npm test -- tests/shared/payment/payment-config-api.test.ts tests/shared/payment/payment-config-page.test.ts tests/shared/payment/payment-order-api.test.ts tests/shared/payment/payment-order-page.test.ts tests/shared/payment/payment-recharge-api.test.ts tests/shared/payment/payment-recharge-page.test.ts tests/shared/wallet/wallet-api.test.ts tests/shared/wallet/wallet-pages.test.ts
-npm run build:check
-```
-
-### PAY-WALLET-001 wallet transaction_no collision follow-up
-
-Status: fixed and verified after user confirmed "修吧".
-
-### Evidence
-
-Fixed backend files:
+Evidence:
 
 ```text
-admin_back_go/internal/module/payment/serialno/serial_no.go
-admin_back_go/internal/module/payment/serialno/serial_no_test.go
-admin_back_go/internal/module/payment/recharge_repository.go
-admin_back_go/internal/module/payment/recharge_repository_test.go
-admin_back_go/internal/module/payment/wallet/repository.go
-admin_back_go/internal/module/payment/wallet/repository_test.go
+admin_front_ts/src/views/Main/payment/recharge/composables/usePaymentRechargePage.ts adds a paying recharge id to autoSyncedRechargeIDs before PaymentRechargeApi.sync() resolves.
+The catch branch only shows a warning and does not remove the id, so transient sync failures suppress automatic retry until page reload or manual sync.
+The current payment-recharge-page test checks the permission guard and three-item cap, but not retry-after-failure behavior.
 ```
 
-Root cause evidence:
+Required minimal proof/fix boundary:
 
 ```text
-wallet_transactions.transaction_no has unique key uk_wallet_transaction_no
-old serialno.New used seq % 1_000_000, so same prefix + second + nanosecond can wrap after one million calls
-Consume duplicate-key handling currently treats every duplicate key as a possible source idempotency race first
-CreditRecharge does not retry duplicate transaction_no
+Add a failing frontend test around autoSyncVisiblePayingRecharges: mock the first sync call to reject, call auto sync twice, and assert the second call retries the same recharge id.
+After user confirmation, remove the id from autoSyncedRechargeIDs on sync failure or mark it only after a successful sync.
 ```
 
-Original failing verification:
+### UPLOAD-RUNTIME-001 upload-token full smoke blocked by undecryptable COS secrets
 
-```powershell
-cd E:\admin_go\admin_back_go
-go test ./internal/module/payment/serialno ./internal/module/payment/wallet -count=1
-```
+Status: open runtime deploy/data issue; code fix not proven necessary.
 
-Observed result on 2026-05-30:
+Evidence:
 
 ```text
-ok   admin_back_go/internal/module/payment/serialno
-FAIL admin_back_go/internal/module/payment/wallet
-FAIL TestRepositoryConsumeRetriesDuplicateTransactionNo
+docs/status/current-status.md records the current full-admin-smoke failure point as upload-token returning `上传密钥不可用`.
+docs/testing/smoke-matrix.md records the same failure as an enabled COS upload setting whose encrypted secrets cannot be decrypted with the current Docker-first APP_SECRET-derived secretbox key.
+docs/status/module-matrix.md states enabled COS settings with undecryptable secrets are real failures, not skip cases.
 ```
 
-Pre-fix reproduction from the 2026-05-30 worktree failed at the wallet repository boundary:
+Current boundary:
 
 ```text
-repository_test.go:130: expected duplicate transaction_no to retry
-next expectation is: ExpectedExec => INSERT INTO `wallet_transactions`
-actual call: SELECT * FROM `wallet_transactions` ... FOR UPDATE
-```
-
-Pre-fix failure meaning:
-
-```text
-The no-wrap serial generator direction was covered, but wallet duplicate uk_wallet_transaction_no retry was not implemented.
-The wallet test expected retry insert after transaction_no collision; production code treated every duplicate key as a possible source race first and performed a source FOR UPDATE lookup instead.
-CreditRecharge inserted the same wallet_transactions unique-key surface but had no duplicate transaction_no retry branch.
-```
-
-### Implemented path
-
-The confirmed fix used Option B:
-
-```text
-Keep the serialno no-wrap root fix.
-Retry uk_wallet_transaction_no insert collisions with a finite 3-attempt retry.
-Preserve uk_wallet_transaction_source idempotency behavior for consume source races.
-Apply the same transaction_no retry path to recharge credit.
-```
-
-Verified after implementation:
-
-```powershell
-cd E:\admin_go\admin_back_go
-go test ./internal/module/payment/serialno ./internal/module/payment/wallet ./internal/module/payment -count=1
-go test ./internal/module/payment/... -count=1
-git diff --check
+Do not mark full smoke as passed until upload driver secrets are re-entered for the current APP_SECRET.
+Do not copy old encrypted DB blobs across APP_SECRET changes.
+If a later live check shows the setting has been re-entered, rerun full-admin-smoke before moving this issue to resolved.
 ```

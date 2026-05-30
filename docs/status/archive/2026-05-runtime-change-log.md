@@ -1,6 +1,6 @@
 # 2026-05 Runtime Change Log
 
-状态更新时间：2026-05-29
+状态更新时间：2026-05-30
 
 本文件从 `docs/status/current-status.md` 分层归档而来，保留 2026-05 已验证运行时变更记录和验证命令。它是历史证据层，不是新的当前事实入口。
 
@@ -10,6 +10,20 @@
 docs/status/current-status.md
 docs/status/module-matrix.md
 ```
+
+## 2026-05-30 payment hardening follow-up
+
+- Fixed the payment-only audit findings: manual sync now closes linked recharges for `TRADE_CLOSED` and expired `ACQ.TRADE_NOT_EXIST`; paid-but-uncredited recharges are compensated by the scheduler; the Alipay amount parser rejects malformed signed cent fragments such as `10.-1`; `/payment/recharge` creation is gated by `payment_recharge_add`; and `paid` renders as warning while only `credited` renders as success.
+- Fixed backend paths: `admin_back_go/internal/module/payment/order_service.go`, `admin_back_go/internal/module/payment/job_service.go`, `admin_back_go/internal/module/payment/recharge_repository.go`, and `admin_back_go/internal/infra/payment/alipay/gateway.go`.
+- Fixed frontend paths: `admin_front_ts/src/views/Main/payment/recharge/**` and the matching i18n/test files.
+- Verified with focused payment/alipay tests, extended payment/crontask/bootstrap/middleware/server tests, `go vet ./internal/module/payment/... ./internal/infra/payment/alipay`, frontend payment/wallet Vitest, `npm run build:check`, `git diff --check` for all three repos, and root governance check.
+
+## 2026-05-30 wallet transaction number hardening
+
+- Fixed wallet `transaction_no` collision handling after a known-issue reproduction showed `uk_wallet_transaction_no` duplicate paths were not retried correctly.
+- `serialno.New` no longer wraps the per-second sequence with `% 1_000_000`; wallet consume and recharge credit now retry duplicate `transaction_no` insert collisions with a finite retry while preserving source idempotency behavior for `uk_wallet_transaction_source` races.
+- Fixed backend paths: `admin_back_go/internal/module/payment/serialno/serial_no.go`, `admin_back_go/internal/module/payment/recharge_repository.go`, and `admin_back_go/internal/module/payment/wallet/repository.go` plus their tests.
+- Verified with `go test ./internal/module/payment/serialno ./internal/module/payment/wallet ./internal/module/payment -count=1`, `go test ./internal/module/payment/... -count=1`, and `git diff --check`.
 
 ## 2026-05-29 multi-platform backend boundary Phase 2 closure
 

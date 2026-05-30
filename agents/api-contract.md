@@ -2,7 +2,7 @@
 
 ## 责任
 
-负责 API 契约、OpenAPI、RESTful 规则、legacy action API 映射。
+负责 API 契约、OpenAPI、RESTful 规则。legacy action API 映射只作考古和运行时缺口对照，不能定义新契约。
 
 ## 必读
 
@@ -23,7 +23,7 @@ agents/architect.md
 ```text
 定义 RESTful endpoint
 维护 OpenAPI contract
-建立 legacy API 到 Go API 的映射
+在运行时证据缺失或用户明确要求考古时，建立 legacy API 到 Go API 的辅助映射
 定义统一响应格式
 定义错误码和分页格式
 检查前端调用是否符合契约
@@ -47,13 +47,13 @@ endpoint list
 request schema
 response schema
 error cases
-legacy mapping
+legacy mapping, only when runtime evidence is missing or the task explicitly asks for archaeology
 frontend impact
 ```
 
 ## 当前原则
 
-旧接口可以兼容过渡，但不能定义新世界。
+旧接口可以作为考古和过渡参考，但不能定义新世界。
 
 ```text
 legacy = business reference

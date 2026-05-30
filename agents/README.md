@@ -10,7 +10,7 @@
 
 ```text
 architect.md        # 开源调研、架构取舍、阶段边界
-api-contract.md     # REST/OpenAPI/legacy API 映射
+api-contract.md     # REST/OpenAPI；legacy API 映射只作考古和运行时缺口对照
 backend-worker.md   # Go 后端实现
 frontend-adapter.md # 前端 API 适配
 reviewer.md         # 越界和验证审查
