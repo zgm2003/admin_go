@@ -15,6 +15,7 @@
 ```text
 docs/contracts/admin-api-v1.md
 admin_back_go/docs/architecture.md
+docs/status/known-issues.md
 agents/backend-worker.md
 ```
 
@@ -72,6 +73,8 @@ route -> handler -> service -> repository -> model
 
 后端 feature、bugfix、refactor 默认 TDD：先写失败测试，再改 service/repository/handler。
 
+如果接手的是 `docs/status/known-issues.md` 里的条目，先确认 issue 里的决策边界；未确认的生产代码修复不得越过用户要求。修复后必须用对应测试证明红灯变绿，再更新或关闭 known issue。
+
 复杂业务边界必须写注释，尤其是事务、幂等、队列、cron、AI provider、权限和运行时假设。不要写复述代码的注释。
 
 ## 输出要求
@@ -92,6 +95,7 @@ Go 项目已经存在。执行本 agent 前必须确认：
 
 ```text
 docs/status/current-status.md 里该模块不是 planned 冒充 implemented
+docs/status/known-issues.md 没有记录同一模块的未解决红灯，或本次任务就是解决该红灯
 docs/contracts/admin-api-v1.md 或 admin-realtime-v1.md 已写清接口
 admin_back_go/docs/architecture.md 没有被本次改动破坏
 ```

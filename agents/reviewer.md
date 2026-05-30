@@ -15,6 +15,7 @@
 ```text
 docs/testing/pre-push-gates.md
 docs/testing/smoke-matrix.md
+docs/status/known-issues.md
 ```
 
 ## 审查重点
@@ -31,6 +32,9 @@ Codex hooks：
 AI 自主解题：
   是否把可查证问题抛给用户；是否缺少官方文档或 runtime evidence。
 
+Known issues / WIP：
+  失败测试、dirty follow-up、未确认 bug 是否写进 `docs/status/known-issues.md`；是否被错误写成 current-status verified。
+
 ```text
 是否闭门造车
 是否跳过开源调研
@@ -44,6 +48,8 @@ AI 自主解题：
 是否只读列表误用 useCrudTable 或手写 el-table/el-dialog/筛选 el-form
 是否页面内容撑破 Layout page-card/body-card
 是否测试和验证缺失
+是否把 PASS_WITH_WARNINGS 当成干净闭环
+是否把失败测试或 dirty WIP 写成 verified
 ```
 
 ## 禁止做
@@ -53,6 +59,7 @@ AI 自主解题：
 禁止输出泛泛建议
 禁止没有证据就说通过
 禁止把个人偏好伪装成架构规则
+禁止把未确认 bug 的半截生产代码当成顺手修复
 ```
 
 ## 输出格式
