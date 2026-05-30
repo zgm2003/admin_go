@@ -594,8 +594,9 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
   - recharge REST supports page-init/list/detail/create/pay/sync/close
   - callback/manual sync/cron compensation share transaction-protected idempotent crediting via
     `wallet_transactions(source_type, source_id)`
-  - wallet `transaction_no` generation is shared between recharge credit and consume debit paths so the single
-    `wallet_transactions.transaction_no` unique key is not split across package-local counters
+  - transaction-no follow-up is not closed in the current worktree: the no-wrap serial generator direction is under
+    test, but wallet duplicate `uk_wallet_transaction_no` retry still has a failing test and must not be reported as
+    verified runtime behavior until the backend WIP is resolved
   - expired Alipay `ACQ.TRADE_NOT_EXIST` rows close the local order and linked recharge instead of retrying forever
 - Frontend:
   - adapted: active product pages are `/payment/config`, `/payment/recharge`, and `/payment/orders`
@@ -641,8 +642,10 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
     `AppTable`, `useTable`, and Vue i18n
   - `/payment/recharge` wallet summary also includes cumulative consume
 - Tests:
-  - `internal/module/payment/serialno`, `internal/module/payment/wallet`, `internal/module/payment`,
+  - verified baseline packages include `internal/module/payment/wallet`, `internal/module/payment`,
     `internal/server`, `internal/bootstrap`, `internal/shared/i18n`
+  - current worktree adds `internal/module/payment/serialno` no-wrap coverage, but the wallet transaction-no retry
+    follow-up is still red
   - frontend wallet API/page Vitest + `vue-tsc`
 - Smoke:
   - full smoke read gate probes wallet summary, current-user transactions, wallet users init/list, wallet ledger

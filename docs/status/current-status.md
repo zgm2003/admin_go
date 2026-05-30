@@ -33,13 +33,13 @@ docs/status/archive/2026-05-runtime-change-log.md     # 历史证据：2026-05 v
 - Docker-first readiness 和 smoke 是两条验证链：Docker runtime 用 `127.0.0.1:8080 /health /ready`；smoke 脚本默认临时端口是 basic `127.0.0.1:18080`、full `127.0.0.1:18081`。
 - `admin_app` 机器局域网默认值已清掉；本轮未跑真机 smoke，LAN 调试仍需按本机 IP 配置 `VITE_APP_API_BASE_URL`、后端监听地址、防火墙和 `CORS_ALLOW_ORIGINS`。
 
-## Latest verified change-log pointers
+## Latest status / change-log pointers
 
 详细变更记录看 `docs/status/archive/2026-05-runtime-change-log.md`。近期关键批次：
 
 ```text
 2026-05-30 production websocket/domain and docker-first deploy docs alignment
-2026-05-30 wallet consume idempotency and transaction number hardening
+2026-05-30 wallet consume idempotency baseline; transaction-no hardening follow-up still WIP
 2026-05-29 multi-platform backend boundary Phase 2 gates passed; final smoke pending
 2026-05-29 transport admin alias cleanup
 2026-05-29 wallet payment aggregation
