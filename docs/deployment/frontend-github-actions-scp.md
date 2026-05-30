@@ -64,7 +64,7 @@ npm ci
 npm run build
 tar dist
 scp 到服务器 /tmp/admin_front_ts_dist.tar.gz
-清空 DEPLOY_PATH 里的旧静态文件
+清空 DEPLOY_PATH 里的旧静态文件，但保留 `.user.ini`、`.htaccess`、`.well-known`
 解压 dist
 chown -R www:www DEPLOY_PATH
 ```
