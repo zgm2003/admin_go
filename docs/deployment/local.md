@@ -150,6 +150,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\basic-admin-smoke.ps1 -Accoun
 完整：
 
 ```powershell
+cd E:\admin_go\admin_back_go
 go test -p=1 ./...
 go vet -p=1 ./...
 git diff --check
