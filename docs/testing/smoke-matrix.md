@@ -8,6 +8,8 @@
 
 Smoke 脚本默认启动临时后端/worker 进程，端口分别是 `127.0.0.1:18080`（basic）和 `127.0.0.1:18081`（full），不是 Docker-first 当前运行的 `127.0.0.1:8080`。Docker runtime readiness 仍按 `docs/deployment/local.md` 使用 `/health` 和 `/ready` 单独验证。
 
+当前 smoke 脚本只自动导入仓库根 `admin_back_go/.env`，不会自动读取 `admin_back_go/deploy/docker-first/admin-go.env`。由于本项目本地默认不再维护仓库根 `.env`，跑 smoke 前要在当前 shell 显式提供 `MYSQL_DSN`、`REDIS_ADDR`、`APP_SECRET` 等运行 env；这不是 Docker-first readiness 的替代。
+
 ## Smoke levels
 
 | Level | Script | Purpose | Runtime target | Writes DB | Cleanup |

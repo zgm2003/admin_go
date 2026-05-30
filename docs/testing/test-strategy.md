@@ -58,6 +58,8 @@ feature 子组件放 components/。
 
 Smoke is not pre-push. Smoke 证明真实运行链路，pre-push 只做轻量 hook gate；默认 pre-push 规则见 `docs/testing/pre-push-gates.md`。
 
+当前 smoke 脚本会自己启动临时后端进程，但只自动导入仓库根 `admin_back_go/.env` 这个兼容入口；它不会自动读取 Docker-first 的 `deploy/docker-first/admin-go.env`。本项目默认不维护仓库根 `.env`，所以跑 smoke 前要在当前 shell 显式提供 `MYSQL_DSN`、`REDIS_ADDR`、`APP_SECRET` 等运行 env。
+
 Basic smoke 保持快，只证明 admin 基础链路没断：
 
 ```powershell

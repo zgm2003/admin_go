@@ -147,6 +147,8 @@ powershell -ExecutionPolicy Bypass -File .\scripts\basic-admin-smoke.ps1 -Accoun
 
 注意：smoke 脚本默认启动临时后端/worker 进程，basic 默认 `127.0.0.1:18080`，full 默认 `127.0.0.1:18081`；它们不是上面 Docker-first 的 `127.0.0.1:8080` readiness 验证。
 
+当前脚本只会自动导入 `admin_back_go/.env` 这个兼容入口，不会自动读取 `deploy/docker-first/admin-go.env`。本项目本地默认仍不使用仓库根 `.env`；跑 smoke 前必须在当前 PowerShell 进程里显式设置 `MYSQL_DSN`、`REDIS_ADDR`、`APP_SECRET` 等运行 env，或等 smoke 脚本修正为读取 Docker-first env。
+
 完整：
 
 ```powershell
