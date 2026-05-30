@@ -37,6 +37,7 @@ docs/status/archive/2026-05-runtime-change-log.md     # 历史证据：2026-05 v
 详细变更记录看 `docs/status/archive/2026-05-runtime-change-log.md`。近期关键批次：
 
 ```text
+2026-05-30 wallet consume idempotency and transaction number hardening
 2026-05-29 multi-platform backend boundary Phase 2 gates passed; final smoke pending
 2026-05-29 transport admin alias cleanup
 2026-05-29 wallet payment aggregation

@@ -594,6 +594,8 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
   - recharge REST supports page-init/list/detail/create/pay/sync/close
   - callback/manual sync/cron compensation share transaction-protected idempotent crediting via
     `wallet_transactions(source_type, source_id)`
+  - wallet `transaction_no` generation is shared between recharge credit and consume debit paths so the single
+    `wallet_transactions.transaction_no` unique key is not split across package-local counters
   - expired Alipay `ACQ.TRADE_NOT_EXIST` rows close the local order and linked recharge instead of retrying forever
 - Frontend:
   - adapted: active product pages are `/payment/config`, `/payment/recharge`, and `/payment/orders`
@@ -632,14 +634,15 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
     i18n keys remain stable
   - `user_wallets.total_consume_cents` records cumulative spend
   - consume uses a DB transaction, row lock, positive amount, same-user `source_type=consume + source_id`
-    idempotency, cross-user source ownership rejection, balance check, and `wallet_transactions(direction=out)`
+    idempotency including duplicate-key race recovery, cross-user source ownership rejection, balance check, and
+    `wallet_transactions(direction=out)`
 - Frontend:
   - adapted: `/wallet/transactions`, `/wallet/users`, and `/wallet/ledger` use typed `src/api/wallet`, `Search`,
     `AppTable`, `useTable`, and Vue i18n
   - `/payment/recharge` wallet summary also includes cumulative consume
 - Tests:
-  - `internal/module/payment/wallet`, `internal/module/payment`, `internal/server`, `internal/bootstrap`,
-    `internal/shared/i18n`
+  - `internal/module/payment/serialno`, `internal/module/payment/wallet`, `internal/module/payment`,
+    `internal/server`, `internal/bootstrap`, `internal/shared/i18n`
   - frontend wallet API/page Vitest + `vue-tsc`
 - Smoke:
   - full smoke read gate probes wallet summary, current-user transactions, wallet users init/list, wallet ledger
