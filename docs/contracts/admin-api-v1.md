@@ -3062,6 +3062,8 @@ source_type: recharge | consume
 date_start, date_end
 ```
 
+`date_end=YYYY-MM-DD` 按整天包含处理：后端查询使用次日开区间，避免漏掉结束日当天非零点流水。
+
 Transaction item:
 
 ```text
