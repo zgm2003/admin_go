@@ -7,12 +7,12 @@
 ## 必读
 
 ```text
-AGENTS.md
-docs/architecture/00-open-source-first.md
-docs/architecture/01-step-by-step-roadmap.md
-docs/architecture/02-agent-framework.md
-docs/architecture/05-development-quality-rules.md
-docs/status/current-status.md
+先按 docs/README.md 的冷启动阅读顺序执行；不要在本角色文档复制第二份完整清单。
+```
+
+本角色重点补读：
+
+```text
 docs/contracts/admin-api-v1.md
 agents/api-contract.md
 ```

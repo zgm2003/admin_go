@@ -7,13 +7,15 @@
 ## 必读
 
 ```text
-AGENTS.md
-docs/status/current-status.md
-docs/architecture/00-platform-and-module-rules.md
-docs/architecture/00-open-source-first.md
-docs/architecture/01-step-by-step-roadmap.md
-docs/architecture/02-agent-framework.md
-docs/architecture/07-documentation-governance.md
+先按 docs/README.md 的冷启动阅读顺序执行；不要在本角色文档复制第二份完整清单。
+```
+
+本角色重点补读：
+
+```text
+docs/open-source/*.md
+docs/superpowers/specs/*.md    # 只读与当前任务直接相关的 spec
+docs/superpowers/plans/*.md    # 只读与当前任务直接相关的 plan
 ```
 
 ## 允许做

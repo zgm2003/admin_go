@@ -8,7 +8,7 @@
 admin-api      多副本 REST/WebSocket edge
 admin-worker   多副本异步处理
 MySQL          source of truth
-Redis          token/session/cache/captcha/queue/future fan-out
+Redis          token/session/cache/captcha/queue/realtime fan-out
 Vue frontend   static assets
 ```
 
@@ -41,6 +41,7 @@ operation log
 REDIS_DB        普通缓存、captcha、verify code、RBAC button cache
 TOKEN_REDIS_DB  token/session
 QUEUE_REDIS_DB  Asynq queue broker、asynqmon inspector
+Redis Pub/Sub   realtime fan-out when REALTIME_PUBLISHER=redis
 ```
 
 未来职责：
@@ -55,14 +56,15 @@ Redis Streams 只有在需要重放/ack 时再做
 当前：
 
 ```text
-REALTIME_PUBLISHER=local
 infra/realtime.Manager 只保存本进程连接
+REALTIME_PUBLISHER 支持 local/noop/redis
+Docker-first production default: REALTIME_PUBLISHER=redis
 ```
 
 未来：
 
 ```text
-business service -> Publisher interface -> local/noop/redis publication -> each node local Manager
+Redis Streams / ack / replay 只有在需要离线补偿或可重放消息时再做
 ```
 
 禁止：
@@ -126,7 +128,7 @@ realtime
 进程没死但 MySQL 挂了
 Redis 普通 DB 可用但 queue DB 不可用
 queue 开了但 REDIS_ADDR 没配
-realtime publisher 配了未实现的 redis
+realtime publisher 配置不可用或 Redis fan-out 依赖不可达
 ```
 
 这不是过度设计，是阻止生产环境“看起来启动了，实际关键依赖坏了”的最低成本检查。
