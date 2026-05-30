@@ -121,8 +121,8 @@ cgo: C compiler "gcc" not found
 | --- | --- |
 | Go package code | `go test <touched packages>` + `go test ./...` + `go vet -p=1 ./...` |
 | Go queue/scheduler/session/cache/realtime | 上面全部 + `go test -race <touched concurrent packages>`，若缺 gcc 必须报告阻塞 |
-| API contract | `powershell -ExecutionPolicy Bypass -File .\scripts\check-contract.ps1` |
-| Smoke script | `basic-admin-smoke.ps1` 或 `full-admin-smoke.ps1` 实跑 |
+| API contract | 从 `E:/admin_go/admin_back_go` 运行 `powershell -ExecutionPolicy Bypass -File .\scripts\check-contract.ps1` |
+| Smoke script | 从 `E:/admin_go/admin_back_go` 实跑 `basic-admin-smoke.ps1` 或 `full-admin-smoke.ps1` |
 | Vue API/types/view | `npx vue-tsc -b --pretty false` + targeted `npx eslint ...` |
 | Vue public component/router/store/request | 上面全部 + `npm run build` |
 | Documentation only | `git diff --check` + `powershell -ExecutionPolicy Bypass -File .\scripts\check-agent-governance.ps1 -Mode working`，并确认没有把 planned 写成 implemented |
