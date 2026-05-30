@@ -54,6 +54,20 @@ The catch branch only shows a warning and does not remove the id, so transient s
 The current payment-recharge-page test checks the permission guard and three-item cap, but not retry-after-failure behavior.
 ```
 
+Reproduced with a temporary Vitest probe on 2026-05-30:
+
+```powershell
+cd E:\admin_go\admin_front_ts
+npm test -- tests/shared/payment/__codex_payment_auto_sync_retry_probe.test.ts
+```
+
+Observed failure:
+
+```text
+FAIL tests/shared/payment/__codex_payment_auto_sync_retry_probe.test.ts > payment recharge auto sync retry probe > retries a visible paying recharge after a transient sync failure
+AssertionError: expected "vi.fn()" to be called 2 times, but got 1 times
+```
+
 Required minimal proof/fix boundary:
 
 ```text
