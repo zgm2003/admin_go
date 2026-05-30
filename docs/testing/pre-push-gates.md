@@ -8,8 +8,9 @@ The default pre-push gate is intentionally light:
 
 ```text
 1. run the agent governance checker in `-Mode range`
-2. inside the checker, run range, working, and cached `git diff --check`
-3. print changed files, evidence, risks, and next step
+2. collect committed range paths from the root repo plus `admin_back_go` and `admin_front_ts`
+3. inside the checker, run root/subrepo range `git diff --check`, plus root working and cached `git diff --check`
+4. print changed files, evidence, risks, and next step
 ```
 
 Pre-push must not require DB/Redis/backend/frontend to be online. Pre-push must not run full smoke by default.
@@ -72,6 +73,7 @@ For a clean range/default gate, `Verification` should explicitly say:
 
 ```text
 range diff check passed
+subrepo range diff check passed when the subrepo exists and has the resolved base
 working diff check passed
 cached diff check passed
 no blocking governance violations found
@@ -93,7 +95,7 @@ Run the governance checker against the current workspace:
 powershell -ExecutionPolicy Bypass -File .\scripts\check-agent-governance.ps1 -Mode working
 ```
 
-Run the governance checker for the committed diff from the resolved base to `HEAD`. Dirty/staged files are reported separately; cached and working whitespace is still checked:
+Run the governance checker for the committed diff from the resolved base to `HEAD`. The committed diff includes root plus `admin_back_go` and `admin_front_ts` when those subrepos exist and have the resolved base. Dirty/staged files are reported separately; cached and working whitespace is still checked:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\check-agent-governance.ps1 -Mode range
@@ -109,7 +111,7 @@ Mode meanings:
 
 ```text
 working = current workspace
-range = committed diff from resolved base to HEAD; dirty/staged files are reported separately, and cached/working whitespace is still checked
+range = committed diff from resolved base to HEAD across root plus known subrepos; dirty/staged files are reported separately, and cached/working whitespace is still checked
 Strict = blocking mode for release or module completion
 ```
 

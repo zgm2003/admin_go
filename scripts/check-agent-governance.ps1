@@ -60,6 +60,16 @@ function Git-Ref-Exists {
     return ($LASTEXITCODE -eq 0)
 }
 
+function Git-Ref-ExistsInRepo {
+    param(
+        [string]$Path,
+        [string]$Ref
+    )
+    if ([string]::IsNullOrWhiteSpace($Ref)) { return $false }
+    & git -C $Path rev-parse --verify --quiet $Ref *> $null
+    return ($LASTEXITCODE -eq 0)
+}
+
 function Get-CurrentBranch {
     $branch = (& git rev-parse --abbrev-ref HEAD 2>$null)
     if ($LASTEXITCODE -ne 0) { return $null }
@@ -154,12 +164,134 @@ function Get-RangeChangedPaths {
     return @(Filter-ChangedPaths $paths)
 }
 
+function Get-SubrepoRangeChangedPaths {
+    param(
+        [string]$Path,
+        [string]$Prefix,
+        [string]$ResolvedBase
+    )
+
+    $paths = New-Object System.Collections.ArrayList
+    if (-not (Test-Path -LiteralPath $Path)) {
+        return [pscustomobject]@{
+            Paths = @()
+            Range = $null
+            Fallback = $null
+            Warning = $null
+        }
+    }
+
+    $inside = & git -C $Path rev-parse --is-inside-work-tree 2>$null
+    if ($LASTEXITCODE -ne 0 -or ($inside | Select-Object -First 1) -ne 'true') {
+        return [pscustomobject]@{
+            Paths = @()
+            Range = $null
+            Fallback = $null
+            Warning = "$Prefix is present but is not a git worktree; subrepo range paths skipped"
+        }
+    }
+
+    if (-not (Git-Ref-ExistsInRepo -Path $Path -Ref $ResolvedBase)) {
+        return [pscustomobject]@{
+            Paths = @()
+            Range = $null
+            Fallback = $null
+            Warning = "$Prefix range base does not exist: $ResolvedBase"
+        }
+    }
+
+    $triple = @(& git -C $Path diff --name-only "$ResolvedBase...HEAD" -- . ':(exclude)**/node_modules/**' 2>$null)
+    if ($LASTEXITCODE -eq 0) {
+        foreach ($name in $triple) { Add-Unique $paths "$Prefix/$name" }
+        return [pscustomobject]@{
+            Paths = @(Filter-ChangedPaths $paths)
+            Range = "${Prefix}:$ResolvedBase...HEAD"
+            Fallback = $null
+            Warning = $null
+        }
+    }
+
+    $double = @(& git -C $Path diff --name-only "$ResolvedBase..HEAD" -- . ':(exclude)**/node_modules/**' 2>$null)
+    foreach ($name in $double) { Add-Unique $paths "$Prefix/$name" }
+    return [pscustomobject]@{
+        Paths = @(Filter-ChangedPaths $paths)
+        Range = "${Prefix}:$ResolvedBase..HEAD"
+        Fallback = "${Prefix}:$ResolvedBase...HEAD"
+        Warning = $null
+    }
+}
+
 function Invoke-GitDiffCheck {
     param([string[]]$Arguments)
     $output = @(& git @Arguments 2>&1)
     return [pscustomobject]@{
         ExitCode = $LASTEXITCODE
         Output = $output
+    }
+}
+
+function Invoke-SubrepoRangeDiffCheck {
+    param(
+        [string]$Path,
+        [string]$Prefix,
+        [string]$ResolvedBase
+    )
+
+    if (-not (Test-Path -LiteralPath $Path)) {
+        return [pscustomobject]@{
+            Prefix = $Prefix
+            Skipped = $true
+            Warning = $null
+            Label = $null
+            ExitCode = 0
+            Output = @()
+        }
+    }
+
+    $inside = & git -C $Path rev-parse --is-inside-work-tree 2>$null
+    if ($LASTEXITCODE -ne 0 -or ($inside | Select-Object -First 1) -ne 'true') {
+        return [pscustomobject]@{
+            Prefix = $Prefix
+            Skipped = $true
+            Warning = "$Prefix is present but is not a git worktree; subrepo range diff check skipped"
+            Label = $null
+            ExitCode = 0
+            Output = @()
+        }
+    }
+
+    if (-not (Git-Ref-ExistsInRepo -Path $Path -Ref $ResolvedBase)) {
+        return [pscustomobject]@{
+            Prefix = $Prefix
+            Skipped = $true
+            Warning = "$Prefix range base does not exist: $ResolvedBase"
+            Label = $null
+            ExitCode = 0
+            Output = @()
+        }
+    }
+
+    $output = @(& git -C $Path diff --check "$ResolvedBase...HEAD" -- . ':(exclude)**/node_modules/**' 2>&1)
+    $label = "subrepo range diff check: git -C $Prefix diff --check $ResolvedBase...HEAD -- . ':(exclude)**/node_modules/**'"
+    if ($LASTEXITCODE -eq 0) {
+        return [pscustomobject]@{
+            Prefix = $Prefix
+            Skipped = $false
+            Warning = $null
+            Label = $label
+            ExitCode = 0
+            Output = $output
+        }
+    }
+
+    $fallbackOutput = @(& git -C $Path diff --check "$ResolvedBase..HEAD" -- . ':(exclude)**/node_modules/**' 2>&1)
+    return [pscustomobject]@{
+        Prefix = $Prefix
+        Skipped = $false
+        Warning = "$label failed; falling back to git -C $Prefix diff --check $ResolvedBase..HEAD -- . ':(exclude)**/node_modules/**'"
+        Label = "subrepo range diff check: git -C $Prefix diff --check $ResolvedBase..HEAD -- . ':(exclude)**/node_modules/**'"
+        ExitCode = $LASTEXITCODE
+        Output = $fallbackOutput
     }
 }
 
@@ -329,7 +461,19 @@ try {
         if ($baseInfo.Error) {
             $changedPaths = @()
         } else {
-            $changedPaths = @(Get-RangeChangedPaths $resolvedBase)
+            $rootRangeChangedPaths = @(Get-RangeChangedPaths $resolvedBase)
+            $subrepoRangeResults = @(
+                Get-SubrepoRangeChangedPaths -Path 'admin_back_go' -Prefix 'admin_back_go' -ResolvedBase $resolvedBase
+                Get-SubrepoRangeChangedPaths -Path 'admin_front_ts' -Prefix 'admin_front_ts' -ResolvedBase $resolvedBase
+            )
+            $subrepoRangeChangedPaths = New-Object System.Collections.ArrayList
+            foreach ($result in $subrepoRangeResults) {
+                foreach ($path in @($result.Paths)) { Add-Unique $subrepoRangeChangedPaths $path }
+                if ($result.Warning) { [void]$warnings.Add("subrepo range: $($result.Warning)") }
+                if ($result.Range) { Add-Unique $evidence "subrepo-range=$($result.Range)" }
+                if ($result.Fallback) { Add-Unique $evidence "subrepo-range-fallback=$($result.Fallback)" }
+            }
+            $changedPaths = @(Merge-UniquePaths @($rootRangeChangedPaths, $subrepoRangeChangedPaths))
         }
         Add-Unique $evidence "mode=range base=$resolvedBase"
         Add-Unique $evidence "base-source=$($baseInfo.Source)"
@@ -361,6 +505,20 @@ try {
             foreach ($line in $rangeDiffCheck.Output) { Add-Unique $evidence "range-diff-check: $line" }
         } else {
             [void]$verification.Add("$rangeDiffLabel passed")
+        }
+
+        foreach ($subrepoDiffCheck in @(
+            Invoke-SubrepoRangeDiffCheck -Path 'admin_back_go' -Prefix 'admin_back_go' -ResolvedBase $resolvedBase
+            Invoke-SubrepoRangeDiffCheck -Path 'admin_front_ts' -Prefix 'admin_front_ts' -ResolvedBase $resolvedBase
+        )) {
+            if ($subrepoDiffCheck.Warning) { Add-Unique $evidence $subrepoDiffCheck.Warning }
+            if ($subrepoDiffCheck.Skipped) { continue }
+            if ($subrepoDiffCheck.ExitCode -ne 0) {
+                [void]$blocking.Add("$($subrepoDiffCheck.Label) failed")
+                foreach ($line in $subrepoDiffCheck.Output) { Add-Unique $evidence "subrepo-range-diff-check($($subrepoDiffCheck.Prefix)): $line" }
+            } else {
+                [void]$verification.Add("$($subrepoDiffCheck.Label) passed")
+            }
         }
     }
 
