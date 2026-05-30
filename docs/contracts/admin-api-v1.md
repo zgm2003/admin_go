@@ -2503,7 +2503,7 @@ DELETE /mail/logs/:id and /logs     -> system_mail_logDel, module=mail, action=d
 
 状态：implemented in Go backend, adapted in Vue frontend。
 
-用途：后台“系统管理 / 短信管理”维护腾讯云短信发送配置、本地验证码场景到腾讯云模板 ID 的映射、发送日志，并提供独立测试发送能力。本切片不接入 `auth/send-code`；手机号验证码仍固定 `123456`。
+用途：后台“系统管理 / 短信管理”维护腾讯云短信发送配置、本地验证码场景到腾讯云模板 ID 的映射、发送日志，并提供独立测试发送能力。本切片不把 `auth/send-code` 接到腾讯云短信发送；手机号验证码仍固定 `123456`，但 phone Redis TTL 已读取 `sms_configs.verify_code_ttl_minutes`。
 
 ### Shared Rules
 
