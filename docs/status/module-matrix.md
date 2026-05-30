@@ -568,6 +568,7 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
   - frontend `src/api/system/uploadToken.ts`, `src/lib/upload/uploadClient.ts`
 - Smoke:
   - full smoke token probe skips only when no enabled upload setting exists
+  - enabled COS settings with undecryptable secrets are real failures (`上传密钥不可用`), not skip cases
   - otherwise validates token shape only
 - Docs: contract + architecture + smoke matrix
 - Risk:
