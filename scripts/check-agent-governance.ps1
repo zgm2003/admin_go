@@ -438,7 +438,7 @@ try {
         '^docs/.*cron.*'
     )
 
-    $docPatterns = @('^docs/status/', '^docs/contracts/', '^docs/testing/', '^docs/architecture/', '^admin_back_go/docs/')
+    $docPatterns = @('^AGENTS\.md$', '^agents/', '^docs/status/', '^docs/contracts/', '^docs/testing/', '^docs/architecture/', '^admin_back_go/docs/')
     $backendDocPatterns = @('^docs/contracts/admin-api-v1\.md$', '^docs/status/current-status\.md$', '^docs/testing/smoke-matrix\.md$', '^admin_back_go/docs/architecture\.md$')
     $frontendDocPatterns = @('^docs/contracts/admin-api-v1\.md$', '^docs/status/current-status\.md$', '^docs/testing/smoke-matrix\.md$')
     $dbDocPatterns = @('^docs/status/current-status\.md$', '^docs/testing/smoke-matrix\.md$', '^docs/architecture/', '^admin_back_go/docs/architecture\.md$', '^docs/contracts/')
@@ -460,7 +460,7 @@ try {
     $runtimeTouched = ($backendTouched -or $frontendTouched -or $dbTouched -or $realtimeTouched -or $queueTouched)
     $anyDocsTouched = Has-AnyMatch $changedPaths $docPatterns
     if ($runtimeTouched -and -not $anyDocsTouched) {
-        $msg = 'runtime path touched without any docs/status/contracts/testing/architecture path in changed files'
+        $msg = 'runtime path touched without any docs/status/contracts/testing/architecture/agent-doc path in changed files'
         if ($Strict) { [void]$blocking.Add($msg) } else { [void]$warnings.Add($msg) }
     }
 
