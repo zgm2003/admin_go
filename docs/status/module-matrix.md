@@ -599,6 +599,8 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
   - payment order status transitions use CAS guards so pay/fail/close operations do not overwrite already-paid orders
   - CAS misses are treated as state changes, not success: finalizer re-reads before wallet credit and `PayOrder` never returns a stale
     gateway `pay_url` if the local order changed under it
+  - recharge paid markers are CAS guarded and wallet credit locks the current recharge row, so a stale callback/sync/cron finalizer cannot
+    downgrade `credited` back to `paid` or credit a recharge that was closed concurrently
   - manual sync and cron close paths close the linked recharge when Alipay returns closed or expired not-found; cron
     also compensates `order=paid` + uncredited recharge rows so a transient finalizer failure can still credit wallet
   - Alipay callback audit payload is marshaled as valid JSON after per-field truncation; audit insert failure does

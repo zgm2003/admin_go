@@ -11,6 +11,13 @@ docs/status/current-status.md
 docs/status/module-matrix.md
 ```
 
+## 2026-05-30 payment finalizer state regression hardening
+
+- Fixed a stale finalizer race where a duplicate callback/sync/cron path could observe an old `paying` recharge snapshot after another path already credited the wallet, then write the recharge status back from `credited` to `paid`.
+- Added CAS guarding to the recharge paid marker and added current-row guards in wallet credit so closed/failed recharges are not reopened or credited by a stale finalizer.
+- Added regression tests for stale credited snapshots, concurrently closed recharges, and the Gorm `UpdateRechargePaid` CAS predicate.
+- Verified with focused RED/GREEN tests, `go test ./internal/module/payment ./internal/module/payment/... ./internal/infra/payment/alipay ./internal/module/crontask ./internal/bootstrap ./internal/middleware ./internal/server -count=1`, and `go vet ./internal/module/payment/... ./internal/infra/payment/alipay`.
+
 ## 2026-05-30 payment race/return hardening
 
 - Fixed follow-up payment audit findings: order CAS misses are no longer treated as success by finalization or pay-url creation, so a closed/failed order cannot be credited and `PayOrder` cannot leak a stale gateway URL after the local order changed.

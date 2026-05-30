@@ -2732,6 +2732,7 @@ payment_configs has no return_url; recharge create computes return_url per payme
 Users do not submit config_code, app_id, subject, amount_yuan, expire_minutes, or handwritten return_url on the recharge page.
 paid/credited state can only be written by verified Alipay callback, manual Alipay query/sync, or the payment sync-pending cron path that reuses the same finalizer.
 wallet credit is DB-transactional and idempotent through wallet_transactions(source_type, source_id).
+The shared finalizer must be monotonic: a stale callback/sync/cron snapshot cannot move `credited` back to `paid`, and a recharge that is already `closed` or `failed` cannot be reopened or credited by a late finalizer.
 private_key_enc and plaintext app_private_key never appear in API response, operation log, smoke output, or frontend types.
 Certificate content is never returned; API only stores private relative cert paths.
 No cert public URL and no certificate download route.

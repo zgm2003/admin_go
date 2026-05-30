@@ -39,6 +39,7 @@ docs/status/archive/2026-05-runtime-change-log.md     # 历史证据：2026-05 v
 详细变更记录看 `docs/status/archive/2026-05-runtime-change-log.md`。近期关键批次：
 
 ```text
+2026-05-30 payment finalizer state regression hardening: stale finalizer snapshots cannot downgrade credited recharges back to paid or credit recharges that were closed concurrently; recharge paid markers are CAS guarded
 2026-05-30 payment race/return hardening: CAS misses no longer credit or leak stale pay_url, wallet first-create duplicate races return the existing wallet, callback audit amount parsing rejects signed cent fragments, and recharge auto-sync/return-url sync keep retrying while Alipay still says paying
 2026-05-30 payment hardening follow-up: linked recharge close, paid-uncredited compensation, Alipay amount parsing, recharge add permission UI
 2026-05-30 payment frontend/backend hardening: transient recharge sync failures stay retryable, payment-order sync is shown only for `paying`, disabled/deleted bound configs can still settle existing orders, open-order configs are locked, payment state updates use CAS, and callback audit JSON no longer blocks settlement
