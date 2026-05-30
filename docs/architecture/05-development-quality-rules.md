@@ -251,8 +251,8 @@ go test ./internal/module/<module> -count=1
 前端规则：
 
 ```text
-Vue 组件内用 useI18n().t。
-composable / store / util 里用 src/i18n 导出的 i18n.global.t。
+Vue 组件和只从 <script setup> 调用链内执行的页面/组件 composable 用 useI18n().t。
+store / util / API client / router guard / module-scope helper 用 src/i18n 导出的 i18n.global.t，不能依赖组件实例。
 新增可见文案必须同时更新 src/i18n/locales/zh-CN.ts 和 src/i18n/locales/en-US.ts。
 菜单、按钮、表格列、搜索 label、弹窗标题、确认文案、空状态、错误提示都算可见文案。
 HTTP 继续通过 lang Cookie 产生 Accept-Language，不在页面里自造语言状态。

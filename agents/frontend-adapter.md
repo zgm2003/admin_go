@@ -52,8 +52,8 @@ TDD：
 
 ```text
 i18n：
-  Vue 组件内用 useI18n().t。
-  composable / store / util 用 src/i18n 导出的 i18n.global.t。
+  Vue 组件和只从 <script setup> 调用链内执行的页面/组件 composable 用 useI18n().t。
+  store / util / API client / router guard / module-scope helper 用 src/i18n 导出的 i18n.global.t，不能依赖组件实例。
   新增菜单、按钮、列名、搜索 label、弹窗标题、确认文案、空状态、错误提示时，同步 src/i18n/locales/zh-CN.ts 和 src/i18n/locales/en-US.ts。
 
 CRUD：
