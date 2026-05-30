@@ -69,3 +69,9 @@ Do not mark full smoke as passed until upload driver secrets are re-entered for 
 Do not copy old encrypted DB blobs across APP_SECRET changes.
 If a later live check shows the setting has been re-entered, rerun full-admin-smoke before moving this issue to resolved.
 ```
+
+Latest local recheck:
+
+```text
+2026-05-30 later recheck: Docker Desktop daemon was unavailable at dockerDesktopLinuxEngine, and 127.0.0.1:3307 refused MySQL connections. Docker readiness/full smoke were therefore not rerun; this issue remains open.
+```
