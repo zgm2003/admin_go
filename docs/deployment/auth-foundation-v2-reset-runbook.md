@@ -35,7 +35,7 @@ Clear token/session cache keys from the token Redis DB. The default DB is `TOKEN
 redis-cli -n 2 --scan --pattern "token:*" | ForEach-Object { redis-cli -n 2 DEL $_ }
 ```
 
-If production changes `TOKEN_REDIS_DB` or `TOKEN_REDIS_PREFIX`, use the production values instead of `2` and `token:`.
+If production changes `TOKEN_REDIS_DB`, use that DB instead of `2`. The `token:` prefix is code-owned; only change the scan pattern if the code-owned prefix changes in a reviewed runtime change.
 
 ## Manual re-entry
 
