@@ -18,6 +18,22 @@ complete() clears canceledRequestIds, so a late event from an older canceled req
 The existing ai-chat-cancel-state test covers terminal-state cancel behavior, but not old canceled stream events arriving after another stream completes.
 ```
 
+Reproduced with a temporary Vitest probe on 2026-05-30:
+
+```powershell
+cd E:\admin_go\admin_front_ts
+npm test -- tests/shared/ai/__codex_ai_late_event_probe.test.ts
+```
+
+Observed failure:
+
+```text
+FAIL tests/shared/ai/__codex_ai_late_event_probe.test.ts > AI chat late stream event probe > ignores late events from an older canceled request after a newer request completes
+AssertionError: expected 'req-a' to be 'req-b'
+Expected: "req-b"
+Received: "req-a"
+```
+
 Required minimal proof/fix boundary:
 
 ```text
