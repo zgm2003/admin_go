@@ -11,6 +11,15 @@ API_DOMAIN       后端 REST API 入口，宝塔 Nginx 反代到本机或内网 
 
 通用 runbook 不写死生产域名/IP。新环境按自己的域名填写 `<frontend-domain>` 和 `<api-domain>`；真实值放部署配置、宝塔站点和 GitHub Actions secrets / variables。
 
+当前项目生产映射固定为：
+
+```text
+<frontend-domain> = zgm2003.cn
+<api-domain>      = www.zgm2003.cn
+```
+
+操作当前生产环境时按这个映射替换占位符；不要把 `www.zgm2003.cn` 当成前端静态站，也不要把 `zgm2003.cn` 当成后端 API 入口。
+
 宝塔 Docker 项目分工：
 
 ```text

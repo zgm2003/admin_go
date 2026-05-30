@@ -2,6 +2,15 @@
 
 状态：生产部署边界说明。具体后端生产 runbook 以 `docs/deployment/docker-first-backend.md` 为准；MySQL/Redis Docker 边界以 `docs/deployment/docker-first-state.md` 为准；前端仍保持现有静态站点部署方式。
 
+当前项目生产域名映射：
+
+```text
+FRONTEND_DOMAIN=zgm2003.cn
+API_DOMAIN=www.zgm2003.cn
+```
+
+也就是说：浏览器打开 `https://zgm2003.cn`，REST API 走 `https://www.zgm2003.cn/api/admin/v1/...`，生产 WebSocket 默认走 `wss://zgm2003.cn/api/admin/v1/realtime/ws` 并由前端站点精确反代到 Go 后端。
+
 ## 进程模型
 
 生产第一阶段部署这些进程：
@@ -101,7 +110,7 @@ QUEUE_REDIS_DB=3
 QUEUE_CONCURRENCY=10
 REALTIME_ENABLED=true
 REALTIME_PUBLISHER=redis
-CORS_ALLOW_ORIGINS=https://admin.example.com
+CORS_ALLOW_ORIGINS=https://zgm2003.cn
 ```
 
 规则：

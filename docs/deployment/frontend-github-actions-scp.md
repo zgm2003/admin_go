@@ -36,6 +36,13 @@ VITE_WEB_SOCKET_URL=wss://<frontend-domain>/api/admin/v1/realtime/ws
 VITE_PLATFORM=admin，可不配；workflow 默认 admin
 ```
 
+当前项目生产值按下面替换：
+
+```text
+VITE_GO_API_BASE_URL=https://www.zgm2003.cn
+VITE_WEB_SOCKET_URL=wss://zgm2003.cn/api/admin/v1/realtime/ws
+```
+
 不要把机器 IP、`root` 用户、站点目录、API 域名或 WebSocket 域名写死在 workflow / `.env.production`。当前生产值只放在 GitHub Actions secrets / variables 里；换机器、换域名、fork 仓库或多环境部署时，只改 Actions 配置，不改 workflow。
 
 注意：宝塔面板端口不参与 CI。CI 只用服务器 SSH 端口；端口值以 `SSH_PORT` 为准，默认 `22`。
