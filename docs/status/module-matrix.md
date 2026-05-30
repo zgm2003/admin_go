@@ -625,6 +625,7 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
   - payment config/order/recharge specs/plans + recharge completion closure spec/plan + admin API contract + smoke
     matrix
 - Risk:
+  - `PAY-FE-003` remains open: frontend recharge auto-sync records transient sync failures as already synced for the current page session; see `docs/status/known-issues.md`
   - Alipay only
   - no refund, reconcile, WeChat, subscription, or business fulfillment in this slice
   - user consume belongs to wallet, not `payment_orders`
@@ -888,6 +889,7 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
     idle/usage request behavior, OpenAI vision request shape, and message meta persistence
 - Docs: architecture + realtime/API contract + smoke matrix + AI conversation spec/plan
 - Risk:
+  - `AI-FE-001` remains open: canceled chat stream late WebSocket events can overwrite the later assistant message after another stream completes; see `docs/status/known-issues.md`
   - no arbitrary business topic permission yet
   - AI response events are conversation-scoped first-version envelopes only
   - no SSE/EventSource/streamable fallback, no `/ai-chat/runs` browser path, no Redis Stream replay, no real
