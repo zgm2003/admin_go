@@ -43,7 +43,7 @@ VITE_GO_API_BASE_URL=https://www.zgm2003.cn
 VITE_WEB_SOCKET_URL=wss://zgm2003.cn/api/admin/v1/realtime/ws
 ```
 
-不要把机器 IP、`root` 用户、站点目录、API 域名或 WebSocket 域名写死在 workflow / `.env.production`。当前生产值只放在 GitHub Actions secrets / variables 里；换机器、换域名、fork 仓库或多环境部署时，只改 Actions 配置，不改 workflow。
+不要把机器 IP、`root` 用户、站点目录写死在 workflow。生产 API 域名和 WebSocket 域名由 GitHub Actions secrets / variables 注入；仓库里的 `.env.production` 同步当前线上默认值，只供手工/本地 production build 使用。换机器、换域名、fork 仓库或多环境部署时，优先改 Actions 配置，不改 workflow。
 
 注意：宝塔面板端口不参与 CI。CI 只用服务器 SSH 端口；端口值以 `SSH_PORT` 为准，默认 `22`。
 
@@ -71,7 +71,7 @@ chown -R www:www DEPLOY_PATH
 
 workflow 会显式拒绝缺失的 `SSH_HOST`、`SSH_USER`、`SSH_PRIVATE_KEY`、`DEPLOY_PATH`，并拒绝 `DEPLOY_PATH=/`，避免配置不完整时误清目录。
 
-workflow 也会在构建前拒绝缺失的 `VITE_GO_API_BASE_URL` 和 `VITE_WEB_SOCKET_URL`。仓库里的 `.env.production` 只保留 example fallback，不能作为真实生产配置。
+workflow 也会在构建前拒绝缺失的 `VITE_GO_API_BASE_URL` 和 `VITE_WEB_SOCKET_URL`。仓库里的 `.env.production` 记录当前线上默认值，不能改回 `example.com` 占位；GitHub Actions 生产发布仍以 secrets / variables 注入值为准。
 
 ## 宝塔 Nginx 必须有 history 回退
 
