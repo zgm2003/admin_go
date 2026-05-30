@@ -597,10 +597,16 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
   - existing orders settle against their bound Alipay config even if that config is later disabled or soft-deleted; configs with
     pending/paying orders are locked against mutation, disable, and delete
   - payment order status transitions use CAS guards so pay/fail/close operations do not overwrite already-paid orders
+  - CAS misses are treated as state changes, not success: finalizer re-reads before wallet credit and `PayOrder` never returns a stale
+    gateway `pay_url` if the local order changed under it
   - manual sync and cron close paths close the linked recharge when Alipay returns closed or expired not-found; cron
     also compensates `order=paid` + uncredited recharge rows so a transient finalizer failure can still credit wallet
   - Alipay callback audit payload is marshaled as valid JSON after per-field truncation; audit insert failure does
     not block verified settlement
+  - callback audit amount parsing shares the strict digit rule for yuan/cent fragments; malformed values such as `10.-1`
+    audit as invalid and cannot settle by normalization
+  - first wallet creation handles `uk_user_wallet_user` duplicate races by returning the existing wallet instead of surfacing a
+    one-off 500
   - wallet transaction number hardening is closed: shared serial generation no longer wraps at one million same-timestamp
     calls, `Consume` retries `uk_wallet_transaction_no` collisions without breaking source idempotency, and recharge
     credit uses the same bounded retry path
@@ -610,7 +616,12 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
   - adapted: active product pages are `/payment/config`, `/payment/recharge`, and `/payment/orders`
   - `/payment/recharge` checkout creation is gated by `payment_recharge_add`; `paid` stays warning until wallet credit
     reaches `credited`
-  - `/payment/recharge` reopen auto-syncs a small batch of visible paying records; transient auto-sync and return-url sync failures remain retryable in the current page session
+  - `/payment/recharge` reopen auto-syncs a small batch of visible paying records; transient auto-sync failures and
+    successful-but-still-`paying` responses remain retryable in the current page session
+  - return-url recharge sync marks a `recharge_no` as synced only after the synced status leaves `paying`, so the user's
+    post-Alipay return path can retry while the gateway still reports waiting
+  - `/payment/config` notify URL guidance points at the canonical public callback
+    `https://www.zgm2003.cn/api/payment/callbacks/alipay`
   - `/payment/orders` is the visible Alipay/gateway collection-order ledger without raw create UX; the manual sync action is only exposed for `paying` orders
   - active files include `src/api/payment/config.ts`, `src/api/payment/recharges.ts`, `views/Main/payment/config`,
     `views/Main/payment/recharge`, and a read/operation-only `views/Main/payment/orders`
@@ -618,7 +629,7 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
 - Tests:
   - `internal/module/payment`, `internal/infra/payment`, `internal/infra/payment/alipay`, `internal/bootstrap`,
     `internal/server`
-  - payment callback/config/state-CAS regression tests; frontend payment config/order/recharge Vitest,
+  - payment callback/config/state-CAS/wallet-create-race regression tests; frontend payment config/order/recharge Vitest,
     recharge auto-sync/return-sync retry Vitest, eslint + vue-tsc
 - Smoke:
   - full smoke read gate probes payment config page-init/list, payment recharge page-init/list, payment order

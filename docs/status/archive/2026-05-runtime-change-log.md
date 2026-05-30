@@ -11,6 +11,15 @@ docs/status/current-status.md
 docs/status/module-matrix.md
 ```
 
+## 2026-05-30 payment race/return hardening
+
+- Fixed follow-up payment audit findings: order CAS misses are no longer treated as success by finalization or pay-url creation, so a closed/failed order cannot be credited and `PayOrder` cannot leak a stale gateway URL after the local order changed.
+- Fixed first-wallet creation races in both payment recharge and wallet admin repositories: `uk_user_wallet_user` duplicate insert races now re-read and return the existing wallet.
+- Tightened callback audit amount parsing so signed or non-digit yuan/cent fragments such as `10.-1` are invalid instead of being normalized into a misleading amount.
+- Fixed `/payment/recharge` automatic sync and return-url sync to keep retrying when `PaymentRechargeApi.sync()` succeeds but the returned status is still `paying`.
+- Fixed `/payment/config` notify URL guidance to use the canonical production public callback `https://www.zgm2003.cn/api/payment/callbacks/alipay`.
+- Verified with payment backend RED/GREEN tests, `go test ./internal/module/payment ./internal/module/payment/... ./internal/infra/payment/alipay ./internal/module/crontask ./internal/bootstrap ./internal/middleware ./internal/server -count=1`, `go vet ./internal/module/payment/... ./internal/infra/payment/alipay`, frontend payment/wallet Vitest, targeted ESLint, and `npm run build:check`.
+
 ## 2026-05-30 payment hardening follow-up
 
 - Fixed the payment-only audit findings: manual sync now closes linked recharges for `TRADE_CLOSED` and expired `ACQ.TRADE_NOT_EXIST`; paid-but-uncredited recharges are compensated by the scheduler; the Alipay amount parser rejects malformed signed cent fragments such as `10.-1`; `/payment/recharge` creation is gated by `payment_recharge_add`; and `paid` renders as warning while only `credited` renders as success.
