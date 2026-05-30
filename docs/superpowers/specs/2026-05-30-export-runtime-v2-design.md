@@ -8,6 +8,21 @@
 
 第一阶段不是重写一套报表平台。第一阶段只把当前 `user_list` 链路补成可验证、可扩展的通用骨架，并保留当前用户管理页按钮体验。后续支付订单、钱包流水、通知、AI run 等场景按同一骨架注册新的导出定义。
 
+## 核心定位
+
+导出必须按“项目基础能力”设计，不是用户管理页的一个按钮补丁。以后任何列表页、流水页、订单页、审计页、AI 运行页，只要需要导出，都应该复用同一套运行时：
+
+```text
+提交入口       # 业务模块拥有：权限、筛选、字段语义
+导出任务       # export runtime 拥有：状态、归属、过期、删除
+队列执行       # export runtime 拥有：异步、重试、失败落库
+文件生成       # export runtime 拥有：xlsx writer、文件名、行数
+COS 上传       # export runtime 拥有：上传配置、object_key、file_url
+通知和下载入口 # export runtime 拥有：成功/失败通知、导出任务页
+```
+
+以后新增导出场景，只允许新增“业务 provider + 提交接口 + 权限码 + 测试”，不允许复制一套导出任务表、上传逻辑、Excel writer 或下载页。复制这些基础链路就是坏味道。
+
 ## Linus 三问
 
 1. 这是真问题吗？是。当前用户导出已有 Go 实现和 COS uploader，但默认 smoke 只读 `export-tasks`，不触发真实导出、不等待 worker、不上传 COS；未来导出场景多，如果继续每个模块各写一套，就是垃圾复制。
@@ -46,6 +61,7 @@ filtered  # 导出当前筛选条件下的结果
 5. 让导出任务表能区分 `kind`、`platform` 和 COS `object_key`。
 6. 补一个 credential-gated 真实导出 smoke，证明任务能从 submit 跑到 COS 上传完成。
 7. 前端抽出最小提交复用逻辑，未来多个页面不用复制“勾选校验 + 提交 + 提示”。
+8. 固化新导出场景的接入模板，后续按模板接 payment、wallet、AI 等场景。
 
 ### 本次不包含
 
@@ -156,6 +172,45 @@ ai_runs
 ```
 
 不要加 `admin_` 前缀。platform 不是业务能力。
+
+## 新导出场景接入模板
+
+以后接一个新导出场景，固定只做这些事：
+
+```text
+1. 在业务模块定义 typed request/filter
+2. 在业务模块注册 export provider
+3. 在业务模块保留自己的 submit endpoint
+4. 在 route metadata 上绑定业务权限码
+5. provider 返回稳定 headers + string rows
+6. export runtime 创建 task、跑 worker、上传 COS、更新状态、发通知
+7. 前端页面复用 useExportSubmit 提交，不复制任务页和上传逻辑
+8. 补 provider/service/API/frontend/smoke 的最小验证
+```
+
+例子：
+
+```text
+用户列表导出:
+  endpoint: POST /api/admin/v1/users/export
+  permission: user_userManager_export
+  kind: user_list
+  provider: internal/module/user.ExportDataProvider
+
+支付订单导出:
+  endpoint: POST /api/admin/v1/payment/orders/export
+  permission: payment_order_export
+  kind: payment_orders
+  provider: internal/module/payment/order.ExportDataProvider
+
+钱包流水导出:
+  endpoint: POST /api/admin/v1/wallet/transactions/export
+  permission: wallet_transaction_export
+  kind: wallet_transactions
+  provider: internal/module/wallet.ExportDataProvider
+```
+
+这个模板的重点是：业务差异只进入 provider 和 submit request；导出生命周期不分叉。
 
 ## 提交契约
 
