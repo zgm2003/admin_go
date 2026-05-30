@@ -631,8 +631,8 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
   - wallet now lives under `admin_back_go/internal/module/payment/wallet` while package identifiers and `wallet.*`
     i18n keys remain stable
   - `user_wallets.total_consume_cents` records cumulative spend
-  - consume uses a DB transaction, row lock, positive amount, `source_type=consume + source_id` idempotency, balance
-    check, and `wallet_transactions(direction=out)`
+  - consume uses a DB transaction, row lock, positive amount, same-user `source_type=consume + source_id`
+    idempotency, cross-user source ownership rejection, balance check, and `wallet_transactions(direction=out)`
 - Frontend:
   - adapted: `/wallet/transactions`, `/wallet/users`, and `/wallet/ledger` use typed `src/api/wallet`, `Search`,
     `AppTable`, `useTable`, and Vue i18n

@@ -3012,7 +3012,7 @@ Wallet v1 只做充值入账后的余额展示、资金流水查询和即时消�
 Consume 不创建 payment_orders；用户支出看 wallet_transactions(direction=out, source_type=consume)。
 amount_cents 永远为正数，收支方向由 direction 表达。
 余额变更必须在一个 DB transaction 内写 user_wallets 和 wallet_transactions。
-source_type + source_id 全局幂等；重复 consume source 返回已有流水，不重复扣款。
+source_type + source_id 全局幂等；同一用户重复 consume source 返回已有流水，不重复扣款；其他用户复用同一 consume source 必须拒绝，不能返回别人的流水。
 余额不足不写 wallet_transactions。
 本 slice 不做 refund / withdraw / freeze / adjustment / reconcile / currency / points / membership fulfillment。
 ```
