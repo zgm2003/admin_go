@@ -42,11 +42,20 @@ FAIL admin_back_go/internal/module/payment/wallet
 FAIL TestRepositoryConsumeRetriesDuplicateTransactionNo
 ```
 
+Fresh reproduction from the current worktree on 2026-05-30 still fails at the wallet repository boundary:
+
+```text
+repository_test.go:130: expected duplicate transaction_no to retry
+next expectation is: ExpectedExec => INSERT INTO `wallet_transactions`
+actual call: SELECT * FROM `wallet_transactions` ... FOR UPDATE
+```
+
 Failure meaning:
 
 ```text
 The no-wrap serial generator direction is covered, but wallet duplicate uk_wallet_transaction_no retry is not implemented.
-The current wallet test expects retry insert after transaction_no collision; current production code performs a source FOR UPDATE lookup first and then returns the original error when no source row exists.
+The current wallet test expects retry insert after transaction_no collision; current production code treats every duplicate key as a possible source race first and performs a source FOR UPDATE lookup instead.
+CreditRecharge inserts the same wallet_transactions unique-key surface but has no duplicate transaction_no retry branch.
 ```
 
 ### Required decision before code change
