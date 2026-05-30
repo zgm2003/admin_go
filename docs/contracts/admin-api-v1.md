@@ -229,7 +229,7 @@ Response example：
 { "code": 0, "data": {}, "msg": "ok" }
 ```
 
-规则：account 必须是合法邮箱或手机号；scene 由 Go `enum.VerifyCodeScenes` + `verify_code_scene` validator 派生。手机号验证码固定 `123456`，写 Redis 后返回成功，不接短信且不受 env 控制；邮箱账号生成随机验证码，写 Redis 后必须走 `internal/module/mail.SendVerifyCode` + 腾讯云 SES，发送失败要清理 Redis code。生产如果不开放手机号登录，在 `auth_platforms.login_types` 关闭 `phone`。
+规则：account 必须是合法邮箱或手机号；scene 由 Go `enum.VerifyCodeScenes` + `verify_code_scene` validator 派生。手机号验证码固定 `123456`，写 Redis 后返回成功，不接短信且不受 env 控制；邮箱账号生成随机验证码，写 Redis 后必须走 auth 注入的 `VerifyCodeMailSender`（bootstrap 注入 `mail.Service.SendVerifyCode`）+ 腾讯云 SES，发送失败要清理 Redis code。生产如果不开放手机号登录，在 `auth_platforms.login_types` 关闭 `phone`。
 
 ### Forgot Password
 
@@ -2479,7 +2479,7 @@ POST /api/admin/v1/auth/send-code
 ```
 
 ```text
-email account -> generate value, write Redis, call mail.SendVerifyCode, cleanup Redis on send failure
+email account -> generate value, write Redis, call injected VerifyCodeMailSender, cleanup Redis on send failure
 phone account -> use fixed value 123456, write Redis, return success, no SMS sender
 missing mail config/template/sender -> explicit error, no fake success
 no env switch exists for fake verification-code delivery
