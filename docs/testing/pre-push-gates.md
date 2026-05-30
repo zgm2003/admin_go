@@ -16,6 +16,8 @@ Pre-push must not require DB/Redis/backend/frontend to be online. Pre-push must 
 
 Default gate catches whitespace drift and obvious governance/path drift. It does not prove the application works.
 
+`PASS_WITH_WARNINGS` 不是干净闭环。比如 runtime path touched without docs 在非 Strict 模式下只警告、不阻断；提交或汇报前仍必须人工判断是否需要同步 contracts/status/testing/architecture 文档，不能把 warning 当成验证通过。
+
 ## Codex hooks versus Git pre-push
 
 Codex lifecycle hooks and Git pre-push hooks are different layers:
