@@ -18,11 +18,12 @@ complete() clears canceledRequestIds, so a late event from an older canceled req
 The existing ai-chat-cancel-state test covers terminal-state cancel behavior, but not old canceled stream events arriving after another stream completes.
 ```
 
-Reproduced with a temporary Vitest probe on 2026-05-30:
+Reproduced with temporary Vitest probes on 2026-05-30:
 
 ```powershell
 cd E:\admin_go\admin_front_ts
 npm test -- tests/shared/ai/__codex_ai_late_event_probe.test.ts
+npm test -- tests/shared/ai/__codex_ai_event_guard_probe.test.ts
 ```
 
 Observed failure:
@@ -32,14 +33,21 @@ FAIL tests/shared/ai/__codex_ai_late_event_probe.test.ts > AI chat late stream e
 AssertionError: expected 'req-a' to be 'req-b'
 Expected: "req-b"
 Received: "req-a"
+
+FAIL tests/shared/ai/__codex_ai_event_guard_probe.test.ts > AI chat request guard probe > currently lets a late failed event from canceled request overwrite a later answer
+AssertionError: expected 'req-a' to be 'req-b'
+
+FAIL tests/shared/ai/__codex_ai_event_guard_probe.test.ts > AI chat request guard probe > currently lets a late start event from canceled request clear sending state of a newer request
+AssertionError: expected false to be true
 ```
 
 Required minimal proof/fix boundary:
 
 ```text
 Add a failing Vitest case in admin_front_ts/tests/shared/ai/ai-chat-cancel-state.test.ts:
-begin request A, cancel A, begin/complete request B, then deliver late A delta/completed and assert B's assistant message is unchanged.
-After user confirmation, fix the request guard so terminal or late events only apply to the matching in-flight/last assistant request.
+begin request A, cancel A, begin/complete request B, then deliver late A delta/completed/failed and assert B's assistant message is unchanged.
+Also cover begin request C after B completes, then deliver late A start/markUserMessage and assert C remains sending.
+After user confirmation, fix the request guard so start/delta/completed/failed events only apply to the matching in-flight request or the matching last assistant request; do not clear all canceled request ids merely because a later request completes.
 ```
 
 ### UPLOAD-RUNTIME-001 upload-token full smoke blocked by undecryptable COS secrets
