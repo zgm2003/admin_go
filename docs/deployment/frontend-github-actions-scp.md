@@ -71,12 +71,12 @@ location / {
 }
 ```
 
-WebSocket 使用当前 Go Realtime contract：
+WebSocket 使用当前 Go Realtime contract。浏览器不能稳定给原生 WebSocket 加 `Authorization` header；当前前端 token cookie 默认是前端域名下的 host-only cookie，所以生产推荐让 WebSocket 走前端同域，再由宝塔反代到 Go 后端：
 
 ```text
-wss://<api-domain>/api/admin/v1/realtime/ws
+wss://<frontend-domain>/api/admin/v1/realtime/ws
 ```
 
-当前生产示例是 `wss://www.zgm2003.cn/api/admin/v1/realtime/ws`；fork、多环境或换域名时只替换 `<api-domain>`。
+如果你刻意改成共享父域 cookie，才考虑 `wss://<api-domain>/api/admin/v1/realtime/ws`；不要把这个当默认方案。
 
 宝塔 Nginx 必须保留 `Upgrade` / `Connection` header，并把 `/api/admin/v1/realtime/ws` 反代到 Go 后端。不要再新增旧 `/wss` 或 `/api/admin/WebSocket/bind` 入口。

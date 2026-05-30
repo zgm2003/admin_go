@@ -5,11 +5,11 @@
 入口分工：
 
 ```text
-FRONTEND_DOMAIN  前端静态站点，由 GitHub CI / 宝塔静态目录发布
-API_DOMAIN       后端 API / WebSocket 入口，宝塔 Nginx 反代到本机或内网 admin-api 容器
+FRONTEND_DOMAIN  前端静态站点，由 GitHub CI / 宝塔静态目录发布；浏览器 WebSocket 推荐同域反代
+API_DOMAIN       后端 REST API 入口，宝塔 Nginx 反代到本机或内网 admin-api 容器
 ```
 
-当前生产示例：`FRONTEND_DOMAIN=zgm2003.cn`，`API_DOMAIN=www.zgm2003.cn`。通用 runbook 不把生产域名/IP 写死；新环境按自己的域名和机器填写。
+通用 runbook 不写死生产域名/IP。新环境按自己的域名填写 `<frontend-domain>` 和 `<api-domain>`；真实值放部署配置、宝塔站点和 GitHub Actions secrets / variables。
 
 宝塔 Docker 项目分工：
 
@@ -51,7 +51,7 @@ exports/
 ```text
 1. 真问题：需要把第一台机器跑成可验证的后端入口，不是设计 Kubernetes。
 2. 更简单做法：一个镜像，两个容器，外置 MySQL/Redis，宝塔反代。
-3. 不破坏什么：前端继续访问 https://<api-domain>/api/admin/v1 和 wss://<api-domain>/api/admin/v1/realtime/ws。
+3. 不破坏什么：前端 REST 继续访问 https://<api-domain>/api/admin/v1；浏览器 WebSocket 走 wss://<frontend-domain>/api/admin/v1/realtime/ws 并反代到 admin-api。
 ```
 
 ## 1. 服务器目录
@@ -334,10 +334,10 @@ curl -i https://<api-domain>/api/admin/v1/auth/login-config
 浏览器 https://<frontend-domain>
   -> 前端静态资源
   -> API https://<api-domain>/api/admin/v1/...
-  -> WebSocket wss://<api-domain>/api/admin/v1/realtime/ws
+  -> WebSocket wss://<frontend-domain>/api/admin/v1/realtime/ws
 ```
 
-如果 `https://<api-domain>/api/...` 返回前端 `index.html`，说明 API_DOMAIN 站点还被配成了前端静态站，反代没接管。
+如果 `https://<api-domain>/api/...` 返回前端 `index.html`，说明 API_DOMAIN 站点还被配成了前端静态站，反代没接管。浏览器 WebSocket 使用 `<frontend-domain>` 时，也必须在前端站点给 `/api/admin/v1/realtime/ws` 加精确反代到 admin-api，否则 cookie 鉴权会丢。
 
 ## 7. 第二台后端加入时怎么改
 

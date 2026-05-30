@@ -853,8 +853,9 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
     OpenAI-compatible vision content and `temperature/max_tokens/max_history` passthrough, typed REALTIME config,
     localized disabled 503 and missing-identity errors
 - Frontend:
-  - adapted baseline plus restored chat surface: Vue client uses Go WS URL/envelope, removes legacy
-    `/api/admin/WebSocket/bind`, message bus accepts `ai.response.start/delta/completed/failed.v1`, AI chat page
+  - adapted baseline plus restored chat surface: Vue client uses Go WS URL/envelope and no longer uses old
+    `/api/admin/WebSocket/bind`; current active path is `/api/admin/v1/realtime/ws`, message bus accepts
+    `ai.response.start/delta/completed/failed.v1`, AI chat page
     uses `/ai-conversations/:id/messages` + `/messages/cancel` + shared WebSocket only, switches agent-scoped
     conversations/messages without interrupting other agent sessions, moves conversation list into a drawer,
     restores image upload/paste/drag, emoji, voice input, runtime params, local stop ignoring late events, and no
