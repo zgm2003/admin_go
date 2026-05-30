@@ -1,9 +1,18 @@
 # Transport Admin Alias Cleanup Design
 
-状态：ready for implementation
+状态：implemented in backend; reviewer focused gates passed on 2026-05-30
 日期：2026-05-29
 负责人：Codex（Architect Agent）
 关联上游 spec：`docs/superpowers/specs/2026-05-27-multi-platform-backend-boundary-design.md`
+
+实现证据：`admin_back_go` 提交 `2c6d428 refactor: remove transport admin aliases` 已删除 `transport/**/aliases.go` 并新增 architecture guard。2026-05-30 reviewer 复核的 focused gates：
+
+```powershell
+cd E:\admin_go\admin_back_go
+go test ./internal/server -run TestAdminRouteSnapshot -count=1
+go test ./internal/bootstrap -run 'Test(Permission|Operation)RouteRulesUseExplicitRESTPatterns' -count=1
+go test ./internal/architecture -run TestTransportDoesNotReExportModuleTypes -count=1
+```
 
 ## 0. Linus 三问
 
