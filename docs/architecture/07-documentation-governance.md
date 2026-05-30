@@ -11,7 +11,7 @@ The point is simple: stop letting old plans, comments, or pretty architecture pr
 When evidence conflicts, use this exact order:
 
 ```text
-live runtime > smoke / test output > served API > process config > docs/status/current-status.md + docs/status/module-matrix.md > docs/contracts > architecture docs > spec/plan docs > comments
+live runtime > smoke / test output > served API > process config > docs/status/current-status.md + docs/status/module-matrix.md + docs/status/known-issues.md > docs/contracts > architecture docs > spec/plan docs > comments
 ```
 
 Rules:
@@ -21,7 +21,7 @@ live runtime behavior wins over checked-in intent.
 smoke / test output must include the command and result, not a vague claim.
 served API means the endpoint, payload, status code, and response shape actually observed.
 process config means the effective environment, startup flags, enabled middleware, routes, queues, and workers.
-docs/status/current-status.md is the current status entry; docs/status/module-matrix.md records per-module verified runtime facts.
+docs/status/current-status.md is the current status entry; docs/status/module-matrix.md records per-module verified runtime facts; docs/status/known-issues.md records current bug/WIP evidence that must not be treated as verified.
 docs/contracts records intended public API/realtime shape, but it must be corrected when served API proves drift.
 architecture docs define boundaries and decisions, but they do not prove implementation.
 spec/plan docs record design and execution history only.
@@ -37,10 +37,13 @@ Use these words strictly:
 | implemented | The runtime behavior exists and was verified. | Code path plus command/output, smoke/test, served API, or runtime inspection. |
 | partially implemented | Some runtime behavior exists, but the chain is incomplete. | What works, what is missing, and how it was checked. |
 | planned | The work is designed or scheduled, but not live. | Spec/plan reference only. Planned is not implemented. |
+| known issue / WIP | A bug, failing test, dirty follow-up, or unfinished patch is known but not closed. | Evidence, failure command/output, affected files, and the required decision before code changes. |
 | deprecated | Still present, but no longer the preferred path. | Replacement path and compatibility note. |
 | historical | Kept for provenance or archaeology. | Archive pointer; not active runtime truth. |
 
 `current-status` is for verified runtime facts only. Do not move a plan into `implemented` because a spec was approved, a file was created, or a task checkbox was ticked.
+
+`known-issues` is the parking lot for current red lights. It exists to stop chat-only bug evidence from being lost, not to bless WIP as done. When a known issue is fixed and verified, move the relevant facts back into `current-status` / `module-matrix` / contracts as needed and remove or close the issue entry.
 
 ## Docs sync matrix
 
@@ -51,6 +54,7 @@ Use these words strictly:
 | Queue, cron, worker, async side effect | `docs/status/current-status.md`, `docs/status/module-matrix.md`, queue/scheduler architecture docs, smoke/test docs | Record idempotency, retry, and verification boundary. |
 | Frontend route, menu, permission, API adapter | `docs/status/current-status.md`, `docs/status/module-matrix.md`, API contract if the public shape changed, frontend/runtime docs | Do not document a route as usable until the served UI/API path works. |
 | Database schema or seed baseline | `docs/status/current-status.md`, `docs/status/module-matrix.md`, architecture docs, smoke/test docs | Schema text alone is not runtime proof. |
+| Known bug, failing test, dirty WIP, or unfinished follow-up | `docs/status/known-issues.md`; update `docs/status/current-status.md` only with a short pointer if it affects current verification gaps | Do not write it as implemented/verified until the fix is committed and the relevant tests or runtime checks pass. |
 | Governance or agent workflow | `docs/README.md`, this document, `docs/testing/pre-push-gates.md`; `AGENTS.md` / `agents/README.md` only keep short references and role boundaries | Cold-start/onboarding list has one owner: `docs/README.md`. Do not maintain parallel reading lists. |
 | Codex lifecycle hook behavior | `docs/architecture/08-codex-hooks.md`; `.codex/hooks.json` / `.codex/hooks/*.ps1` / `scripts/test-codex-hooks.ps1` when hook implementation changes; `docs/testing/pre-push-gates.md` | Hooks are conversation-time governance only; they must not be documented as runtime proof or smoke evidence. |
 | Spec/plan changes only | The relevant spec/plan | Spec/plan history does not override `current-status`. |
@@ -93,6 +97,7 @@ Canonical root docs:
 ```text
 docs/status/current-status.md
 docs/status/module-matrix.md
+docs/status/known-issues.md
 docs/status/archive/*
 docs/contracts/*
 docs/testing/*
