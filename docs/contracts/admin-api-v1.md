@@ -657,7 +657,7 @@ interface UserExportResponse {
 
 ## Current User Quick Entry
 
-状态：implemented in Go backend, adapted in Vue frontend。HTTP route ownership now lives in `internal/module/profile/transport/admin`; the URL stays `PUT /api/admin/v1/users/me/quick-entries` and the persistence service still reuses `internal/module/userquickentry` in this slice.
+状态：implemented in Go backend, adapted in Vue frontend。HTTP route ownership lives in `internal/module/profile/transport/admin`; the URL stays `PUT /api/admin/v1/users/me/quick-entries` and quick-entry persistence now lives in `internal/module/profile`.
 
 用途：首页“快捷入口”保存当前登录用户选择的后台页面权限。读取仍通过 `GET /api/admin/v1/users/init` 的稳定字段 `quick_entry` 返回。
 
