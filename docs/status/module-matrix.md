@@ -594,8 +594,13 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
   - recharge REST supports page-init/list/detail/create/pay/sync/close
   - callback/manual sync/cron compensation share transaction-protected idempotent crediting via
     `wallet_transactions(source_type, source_id)`
+  - existing orders settle against their bound Alipay config even if that config is later disabled or soft-deleted; configs with
+    pending/paying orders are locked against mutation, disable, and delete
+  - payment order status transitions use CAS guards so pay/fail/close operations do not overwrite already-paid orders
   - manual sync and cron close paths close the linked recharge when Alipay returns closed or expired not-found; cron
     also compensates `order=paid` + uncredited recharge rows so a transient finalizer failure can still credit wallet
+  - Alipay callback audit payload is marshaled as valid JSON after per-field truncation; audit insert failure does
+    not block verified settlement
   - wallet transaction number hardening is closed: shared serial generation no longer wraps at one million same-timestamp
     calls, `Consume` retries `uk_wallet_transaction_no` collisions without breaking source idempotency, and recharge
     credit uses the same bounded retry path
@@ -605,15 +610,16 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
   - adapted: active product pages are `/payment/config`, `/payment/recharge`, and `/payment/orders`
   - `/payment/recharge` checkout creation is gated by `payment_recharge_add`; `paid` stays warning until wallet credit
     reaches `credited`
-  - `/payment/recharge` reopen auto-syncs a small batch of visible paying records
-  - `/payment/orders` is the visible Alipay/gateway collection-order ledger without raw create UX
+  - `/payment/recharge` reopen auto-syncs a small batch of visible paying records; transient auto-sync and return-url sync failures remain retryable in the current page session
+  - `/payment/orders` is the visible Alipay/gateway collection-order ledger without raw create UX; the manual sync action is only exposed for `paying` orders
   - active files include `src/api/payment/config.ts`, `src/api/payment/recharges.ts`, `views/Main/payment/config`,
     `views/Main/payment/recharge`, and a read/operation-only `views/Main/payment/orders`
   - channel/event/old wallet pages stay retired
 - Tests:
   - `internal/module/payment`, `internal/infra/payment`, `internal/infra/payment/alipay`, `internal/bootstrap`,
     `internal/server`
-  - frontend payment config/order/recharge Vitest + vue-tsc
+  - payment callback/config/state-CAS regression tests; frontend payment config/order/recharge Vitest,
+    recharge auto-sync/return-sync retry Vitest, eslint + vue-tsc
 - Smoke:
   - full smoke read gate probes payment config page-init/list, payment recharge page-init/list, payment order
     page-init/list, users/init visible `/payment/config` + `/payment/recharge` + `/payment/orders`, and cron
@@ -625,7 +631,6 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
   - payment config/order/recharge specs/plans + recharge completion closure spec/plan + admin API contract + smoke
     matrix
 - Risk:
-  - `PAY-FE-003` remains open: frontend recharge auto-sync records transient sync failures as already synced for the current page session; see `docs/status/known-issues.md`
   - Alipay only
   - no refund, reconcile, WeChat, subscription, or business fulfillment in this slice
   - user consume belongs to wallet, not `payment_orders`

@@ -42,39 +42,6 @@ begin request A, cancel A, begin/complete request B, then deliver late A delta/c
 After user confirmation, fix the request guard so terminal or late events only apply to the matching in-flight/last assistant request.
 ```
 
-### PAY-FE-003 recharge auto-sync marks failed rows as already synced for the whole page session
-
-Status: evidence recorded; production code change needs user confirmation.
-
-Evidence:
-
-```text
-admin_front_ts/src/views/Main/payment/recharge/composables/usePaymentRechargePage.ts adds a paying recharge id to autoSyncedRechargeIDs before PaymentRechargeApi.sync() resolves.
-The catch branch only shows a warning and does not remove the id, so transient sync failures suppress automatic retry until page reload or manual sync.
-The current payment-recharge-page test checks the permission guard and three-item cap, but not retry-after-failure behavior.
-```
-
-Reproduced with a temporary Vitest probe on 2026-05-30:
-
-```powershell
-cd E:\admin_go\admin_front_ts
-npm test -- tests/shared/payment/__codex_payment_auto_sync_retry_probe.test.ts
-```
-
-Observed failure:
-
-```text
-FAIL tests/shared/payment/__codex_payment_auto_sync_retry_probe.test.ts > payment recharge auto sync retry probe > retries a visible paying recharge after a transient sync failure
-AssertionError: expected "vi.fn()" to be called 2 times, but got 1 times
-```
-
-Required minimal proof/fix boundary:
-
-```text
-Add a failing frontend test around autoSyncVisiblePayingRecharges: mock the first sync call to reject, call auto sync twice, and assert the second call retries the same recharge id.
-After user confirmation, remove the id from autoSyncedRechargeIDs on sync failure or mark it only after a successful sync.
-```
-
 ### UPLOAD-RUNTIME-001 upload-token full smoke blocked by undecryptable COS secrets
 
 Status: open runtime deploy/data issue; code fix not proven necessary.

@@ -28,7 +28,7 @@ docs/status/archive/2026-05-runtime-change-log.md     # 历史证据：2026-05 v
 
 ## Current verification gaps
 
-- 2026-05-30 frontend code-bug evidence is recorded but production fixes are intentionally pending user confirmation: `AI-FE-001` proves canceled AI chat stream events can accept late WebSocket events after a later stream completes; `PAY-FE-003` proves recharge auto-sync marks transient failures as already synced for the page session. Keep both in `docs/status/known-issues.md` until fixed with formal TDD tests and verification.
+- 2026-05-30 frontend code-bug evidence is recorded but the remaining production fix is intentionally pending user confirmation: `AI-FE-001` proves canceled AI chat stream events can accept late WebSocket events after a later stream completes. Keep it in `docs/status/known-issues.md` until fixed with a formal TDD test and verification. `PAY-FE-003` has been fixed with a formal retry-after-failure Vitest case.
 - 2026-05-29 channel-specific verify-code TTL 切片：basic admin smoke 已通过；full smoke 的已知失败点是既有 upload-token probe 返回 `上传密钥不可用`，所以不能记录 full smoke 通过。按当前 `full-admin-smoke.ps1` 顺序，该失败点位于 mail/sms、client-version、upload config read、payment/wallet、AI read/disabled-baseline 和 upload config write probe 之后；不要把它误读成 mail/sms 之后立刻失败。2026-05-30 local live check confirmed `upload_setting.id=1` is enabled COS and has encrypted secret blobs, but they cannot be decrypted with the current Docker-first `APP_SECRET`-derived secretbox key; re-enter the upload driver secrets instead of copying old encrypted DB blobs.
 - 2026-05-27 multi-platform Phase 2 已通过 code/docs/frontend gates after Plans 11-17；final admin smoke 仍 pending，不能把 spec 标记为 fully closed。
 - Docker-first readiness 和 smoke 是两条验证链：Docker runtime 用 `127.0.0.1:8080 /health /ready`；smoke 脚本默认临时端口是 basic `127.0.0.1:18080`、full `127.0.0.1:18081`。
@@ -40,6 +40,7 @@ docs/status/archive/2026-05-runtime-change-log.md     # 历史证据：2026-05 v
 
 ```text
 2026-05-30 payment hardening follow-up: linked recharge close, paid-uncredited compensation, Alipay amount parsing, recharge add permission UI
+2026-05-30 payment frontend/backend hardening: transient recharge sync failures stay retryable, payment-order sync is shown only for `paying`, disabled/deleted bound configs can still settle existing orders, open-order configs are locked, payment state updates use CAS, and callback audit JSON no longer blocks settlement
 2026-05-30 production websocket/domain and docker-first deploy docs alignment
 2026-05-30 wallet transaction_no hardening fixed: serial no-wrap + transaction_no duplicate retry for consume and recharge credit
 2026-05-29 multi-platform backend boundary Phase 2 gates passed; final smoke pending

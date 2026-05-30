@@ -18,6 +18,19 @@ docs/status/module-matrix.md
 - Fixed frontend paths: `admin_front_ts/src/views/Main/payment/recharge/**` and the matching i18n/test files.
 - Verified with focused payment/alipay tests, extended payment/crontask/bootstrap/middleware/server tests, `go vet ./internal/module/payment/... ./internal/infra/payment/alipay`, frontend payment/wallet Vitest, `npm run build:check`, `git diff --check` for all three repos, and root governance check.
 
+## 2026-05-30 payment frontend/backend retry, state, and callback hardening
+
+- Fixed the frontend recharge auto-sync state machine: a visible `paying` recharge is marked as auto-synced only after `PaymentRechargeApi.sync()` succeeds, so a transient failure can retry during the same page session instead of waiting for a reload or manual sync.
+- Fixed the return-url recharge sync state machine: a `recharge_no` is marked synced only after the lookup and sync path succeeds, with a separate in-flight guard preventing concurrent duplicate sync while still allowing retry after transient failure.
+- Fixed the payment order list action guard: `payment_order_sync` is now exposed only for `paying` orders, matching the backend `SyncOrder` status precondition.
+- Fixed existing-order settlement against disabled-or-soft-deleted bound Alipay configs while locking configs with pending/paying orders against mutation, disable, and delete.
+- Added CAS status guards to payment order `paying`/`failed`/`paid`/`closed` transitions and recharge close transitions, so delayed fail/close paths cannot overwrite an already-paid order or close an already-paid recharge.
+- Fixed callback audit handling: long form values are truncated before JSON marshaling, and callback audit insert failure no longer blocks verified settlement.
+- Added `admin_front_ts/tests/shared/payment/payment-recharge-auto-sync.test.ts` to prove the first sync rejection is followed by a second auto-sync call for the same recharge id and that return-url lookup failures are retryable.
+- Extended `admin_front_ts/tests/shared/payment/payment-order-page.test.ts` to guard the payment-order sync action status check.
+- Added backend regression coverage for disabled/deleted bound configs, open-order config guards, callback audit JSON/failure behavior, and state-CAS repository/close-helper behavior.
+- Verified with `go test ./internal/module/payment -count=1`, `go test ./internal/module/payment ./internal/module/payment/... ./internal/infra/payment/alipay ./internal/module/crontask ./internal/bootstrap ./internal/middleware ./internal/server -count=1`, `go vet ./internal/module/payment/... ./internal/infra/payment/alipay`, `npm test -- tests/shared/payment/payment-recharge-auto-sync.test.ts`, `npm test -- tests/shared/payment/payment-order-page.test.ts`, `npm test -- tests/shared/payment/payment-config-api.test.ts tests/shared/payment/payment-config-page.test.ts tests/shared/payment/payment-order-api.test.ts tests/shared/payment/payment-order-page.test.ts tests/shared/payment/payment-recharge-api.test.ts tests/shared/payment/payment-recharge-page.test.ts tests/shared/payment/payment-recharge-auto-sync.test.ts tests/shared/wallet/wallet-api.test.ts tests/shared/wallet/wallet-pages.test.ts`, `npx eslint src/views/Main/payment/recharge/composables/usePaymentRechargePage.ts tests/shared/payment/payment-recharge-auto-sync.test.ts src/views/Main/payment/orders/index.vue src/views/Main/payment/orders/composables/usePaymentOrderPage.ts tests/shared/payment/payment-order-page.test.ts`, and `npm run build:check`.
+
 ## 2026-05-30 wallet transaction number hardening
 
 - Fixed wallet `transaction_no` collision handling after a known-issue reproduction showed `uk_wallet_transaction_no` duplicate paths were not retried correctly.
