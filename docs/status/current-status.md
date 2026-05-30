@@ -28,7 +28,6 @@ docs/status/archive/2026-05-runtime-change-log.md     # 历史证据：2026-05 v
 
 ## Current verification gaps
 
-- 2026-05-30 frontend code-bug evidence is recorded but the remaining production fix is intentionally pending user confirmation: `AI-FE-001` proves canceled AI chat stream events can accept late WebSocket events after a later stream completes. Keep it in `docs/status/known-issues.md` until fixed with a formal TDD test and verification. `PAY-FE-003` has been fixed with a formal retry-after-failure Vitest case.
 - 2026-05-29 channel-specific verify-code TTL 切片：basic admin smoke 已通过；full smoke 的已知失败点是既有 upload-token probe 返回 `上传密钥不可用`，所以不能记录 full smoke 通过。按当前 `full-admin-smoke.ps1` 顺序，该失败点位于 mail/sms、client-version、upload config read、payment/wallet、AI read/disabled-baseline 和 upload config write probe 之后；不要把它误读成 mail/sms 之后立刻失败。2026-05-30 local live check confirmed `upload_setting.id=1` is enabled COS and has encrypted secret blobs, but they cannot be decrypted with the current Docker-first `APP_SECRET`-derived secretbox key; re-enter the upload driver secrets instead of copying old encrypted DB blobs.
 - 2026-05-30 later local recheck could not rerun Docker readiness or full smoke: Docker Desktop daemon was unavailable at `dockerDesktopLinuxEngine`, and `127.0.0.1:3307` refused MySQL connections. This does not close `UPLOAD-RUNTIME-001`; it only explains why no fresher smoke result is recorded.
 - 2026-05-27 multi-platform Phase 2 已通过 code/docs/frontend gates after Plans 11-17；final admin smoke 仍 pending，不能把 spec 标记为 fully closed。
@@ -40,6 +39,7 @@ docs/status/archive/2026-05-runtime-change-log.md     # 历史证据：2026-05 v
 详细变更记录看 `docs/status/archive/2026-05-runtime-change-log.md`。近期关键批次：
 
 ```text
+2026-05-30 AI chat cancel late-event guard fixed: canceled request ids survive later completions and WebSocket start/delta/completed/failed acknowledgements only mutate the matching in-flight request or matching streaming assistant message
 2026-05-30 payment finalizer state regression hardening: stale finalizer snapshots cannot downgrade credited recharges back to paid or credit recharges that were closed concurrently; recharge paid markers are CAS guarded
 2026-05-30 payment race/return hardening: CAS misses no longer credit or leak stale pay_url, wallet first-create duplicate races return the existing wallet, callback audit amount parsing rejects signed cent fragments, and recharge auto-sync/return-url sync keep retrying while Alipay still says paying
 2026-05-30 payment hardening follow-up: linked recharge close, paid-uncredited compensation, Alipay amount parsing, recharge add permission UI

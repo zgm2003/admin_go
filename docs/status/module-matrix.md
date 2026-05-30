@@ -897,7 +897,7 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
     `internal/module/ai/conversation`, `internal/module/ai/message`, `internal/module/ai/agent`,
     `internal/bootstrap`, `internal/config`, `internal/server`, `internal/infra/ai/openaicompat`,
     `internal/shared/i18n`
-  - frontend AI REST/WebSocket/input/session Vitest + vue-tsc/build
+  - frontend AI REST/WebSocket/input/session Vitest + vue-tsc/build, including `AI-FE-001` canceled stream late-event regression coverage
 - Smoke:
   - basic smoke covers backend connect/ping/pong
   - full smoke covers AI conversation/read probes
@@ -907,7 +907,6 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
     idle/usage request behavior, OpenAI vision request shape, and message meta persistence
 - Docs: architecture + realtime/API contract + smoke matrix + AI conversation spec/plan
 - Risk:
-  - `AI-FE-001` remains open: canceled chat stream late WebSocket events can overwrite the later assistant message after another stream completes; see `docs/status/known-issues.md`
   - no arbitrary business topic permission yet
   - AI response events are conversation-scoped first-version envelopes only
   - no SSE/EventSource/streamable fallback, no `/ai-chat/runs` browser path, no Redis Stream replay, no real

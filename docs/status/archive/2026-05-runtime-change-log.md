@@ -11,6 +11,13 @@ docs/status/current-status.md
 docs/status/module-matrix.md
 ```
 
+## 2026-05-30 AI chat cancel late-event guard
+
+- Fixed `AI-FE-001`: canceled request ids are retained across later successful completions, and late WebSocket user/assistant events can only mutate the matching in-flight request or matching streaming assistant message.
+- Added formal Vitest coverage for old canceled request `delta/completed/failed` events after a newer request completes, and for old canceled user-message acknowledgement not clearing a newer request's sending state.
+- Fixed frontend paths: `admin_front_ts/src/views/Main/ai/chat/composables/useConversationSessions.ts` and `admin_front_ts/tests/shared/ai/ai-chat-cancel-state.test.ts`.
+- Verified with RED/GREEN `npm test -- tests/shared/ai/ai-chat-cancel-state.test.ts`.
+
 ## 2026-05-30 payment finalizer state regression hardening
 
 - Fixed a stale finalizer race where a duplicate callback/sync/cron path could observe an old `paying` recharge snapshot after another path already credited the wallet, then write the recharge status back from `credited` to `paid`.
