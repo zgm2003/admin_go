@@ -2897,7 +2897,7 @@ payment_recharges.recharge_no/user_id/package_code/package_name/amount_cents/pay
 payment_callback_events.provider/notify_id/out_trade_no/trade_no/trade_status/app_id/total_amount_cents/signature_valid/process_status/process_message/raw_payload_json/received_at/processed_at: 支付宝回调审计事实；不作为支付业务真相源。
 user_wallets.user_id/balance_cents/total_recharge_cents/total_consume_cents: 充值页余额展示；充值入账时原子增加 balance/total_recharge，消费由 wallet slice 原子扣减 balance/增加 total_consume。
 wallet_transactions.transaction_no/wallet_id/user_id/direction/amount_cents/balance_before_cents/balance_after_cents/source_type/source_id/remark: 钱包流水审计和 `(source_type, source_id)` 幂等约束；充值写 `direction=in/source_type=recharge`，消费写 `direction=out/source_type=consume`。
-order_no / recharge_no / transaction_no 是后端生成的不透明唯一字符串；前端和第三方回跳只保存/回传，不解析长度或时间后缀。
+order_no / recharge_no / transaction_no 是后端生成的不透明唯一字符串；后端必须保证 wallet transaction_no 在充值入账和消费扣款两个写入路径之间仍全局唯一；前端和第三方回跳只保存/回传，不解析长度或时间后缀。
 is_del / created_at / updated_at: 每张新增表都有并参与过滤、排序或审计展示。
 ```
 
