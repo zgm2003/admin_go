@@ -22,6 +22,10 @@ reviewer.md         # 越界和验证审查
 
 如果任务跨角色，先让 `architect` 或 `api-contract` 定边界，再交给 worker。
 
+每轮先按 `docs/architecture/02-agent-framework.md` 的执行收敛规则归类为 `docs drift` / `code bug` / `runtime deploy` / `governance`，一次只推进一个窄切片。
+
+失败测试、dirty WIP、未确认 bug 必须先进入 `docs/status/known-issues.md`；不要写成 verified status，也不要把 `PASS_WITH_WARNINGS` 当成干净闭环。
+
 ## Superpowers and hooks
 
 新行为、行为变更、bugfix、refactor 默认先按 Superpowers 流程推进。实现阶段默认 TDD。
