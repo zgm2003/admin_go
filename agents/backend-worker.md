@@ -63,9 +63,9 @@ route -> handler -> service -> repository -> model
 ```text
 错误消息用 apperror.*Key。
 成功消息用 response.OKWithMessageKey。
-新增模块维护 internal/i18n/locales/zh-CN/<module>.yaml 和 internal/i18n/locales/en-US/<module>.yaml。
+新增模块维护 internal/shared/i18n/locales/zh-CN/<module>.yaml 和 internal/shared/i18n/locales/en-US/<module>.yaml。
 语言来源继续走 Accept-Language；middleware 顺序保持 CORS -> I18n -> AuthToken。
-缺 key 可以 fallback，不能 panic；完成态必须跑 internal/i18n coverage。
+缺 key 可以 fallback，不能 panic；完成态必须跑 internal/shared/i18n coverage。
 ```
 
 ## 默认 TDD / 注释规则
