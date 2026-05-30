@@ -40,7 +40,7 @@ docs/status/archive/2026-05-runtime-change-log.md     # 历史证据：2026-05 v
 
 ```text
 2026-05-30 production websocket/domain and docker-first deploy docs alignment
-2026-05-30 wallet consume idempotency baseline; transaction-no hardening follow-up still WIP
+2026-05-30 wallet consume idempotency baseline verified; transaction-no hardening is tracked only in known-issues until fixed
 2026-05-29 multi-platform backend boundary Phase 2 gates passed; final smoke pending
 2026-05-29 transport admin alias cleanup
 2026-05-29 wallet payment aggregation

@@ -1,10 +1,10 @@
 # Admin Smoke Matrix
 
-状态更新时间：2026-05-29
+状态更新时间：2026-05-30
 
 本文是 smoke 覆盖地图，不是接口契约。接口契约看 `docs/contracts/admin-api-v1.md`。
 
-当前验证摘要看 `docs/status/current-status.md`。截至 2026-05-29，channel-specific verify-code TTL 切片的 basic admin smoke 已通过；full smoke 的已知失败点是既有 upload-token 探测返回 `上传密钥不可用`，所以不能把 full smoke 记录成通过。按当前脚本顺序，该失败点位于 mail/sms、client-version、upload config read、payment/wallet、AI read/disabled-baseline 和 upload config write probe 之后。2026-05-30 local live check confirmed this is an enabled COS upload setting whose encrypted secrets cannot be decrypted with the current Docker-first `APP_SECRET`; smoke must keep failing this case until the upload driver secrets are re-entered.
+当前验证摘要看 `docs/status/current-status.md`。截至 2026-05-30，channel-specific verify-code TTL 切片的 basic admin smoke 已通过；full smoke 的已知失败点是既有 upload-token 探测返回 `上传密钥不可用`，所以不能把 full smoke 记录成通过。按当前脚本顺序，该失败点位于 mail/sms、client-version、upload config read、payment/wallet、AI read/disabled-baseline 和 upload config write probe 之后。2026-05-30 local live check confirmed this is an enabled COS upload setting whose encrypted secrets cannot be decrypted with the current Docker-first `APP_SECRET`; smoke must keep failing this case until the upload driver secrets are re-entered。
 
 Smoke 脚本默认启动临时后端/worker 进程，端口分别是 `127.0.0.1:18080`（basic）和 `127.0.0.1:18081`（full），不是 Docker-first 当前运行的 `127.0.0.1:8080`。Docker runtime readiness 仍按 `docs/deployment/local.md` 使用 `/health` 和 `/ready` 单独验证。
 
