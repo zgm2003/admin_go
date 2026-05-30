@@ -112,8 +112,8 @@ vim /www/docker/admin-go-backend/admin-go.env
 MYSQL_DSN=admin_user:CHANGE_ME@tcp(DB_PRIVATE_IP:3306)/admin?charset=utf8mb4&parseTime=True&loc=Local
 REDIS_ADDR=REDIS_PRIVATE_IP:6379
 REDIS_PASSWORD=
-# 至少 64 位随机字符串；所有 admin-api/admin-worker 节点必须一致
-APP_SECRET=CHANGE_ME_AT_LEAST_64_RANDOM_CHARS
+# 代码最低 32 位；生产建议 64+ 位随机字符串；所有 admin-api/admin-worker 节点必须一致
+APP_SECRET=CHANGE_ME_TO_64_PLUS_RANDOM_CHARS
 ```
 
 第一台后端入口机器 env 建议：
@@ -230,7 +230,20 @@ cp /www/project/admin_back_go/deploy/docker-first/docker-compose.yml /www/docker
 cd /www/docker/admin-go-backend
 ```
 
-如果 Compose 工作目录移动了，直接按实际目录修改 `docker-compose.yml` 里的 `build.context`、`env_file`、`ports` 和挂载路径；不要再为这些字段引入 Compose `.env`。
+复制到 `/www/docker/admin-go-backend` 后，Compose 工作目录已经移动，必须先把 `docker-compose.yml` 里的路径改成生产绝对路径；不要再为这些字段引入 Compose `.env`。最低要求：
+
+```yaml
+build:
+  context: /www/project/admin_back_go
+  dockerfile: Dockerfile
+env_file:
+  - ./admin-go.env
+volumes:
+  - ./runtime:/app/runtime
+  - ./exports:/app/exports
+```
+
+`ports` 默认仍建议只绑定 `127.0.0.1:8080:8080`，公网入口交给宝塔 Nginx 反代；只有明确需要内网直连时再调整 bind 地址。
 
 确保挂载目录能被容器内 `app` 用户写入：
 
