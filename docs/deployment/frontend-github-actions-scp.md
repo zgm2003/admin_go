@@ -49,10 +49,10 @@ VITE_WEB_SOCKET_URL=wss://zgm2003.cn/api/admin/v1/realtime/ws
 
 ## Workflow
 
-文件：
+文件在 frontend runtime repo：
 
 ```text
-.github/workflows/deploy-admin-front.yml
+admin_front_ts/.github/workflows/deploy-admin-front.yml
 ```
 
 流程：
