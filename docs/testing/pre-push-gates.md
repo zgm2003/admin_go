@@ -2,13 +2,13 @@
 
 ## Default gate
 
-Default gate = git diff --check + governance check only.
+Default gate = whitespace checks + agent governance check only.
 
 The default pre-push gate is intentionally light:
 
 ```text
-1. run git diff --check
-2. run the agent governance checker when it exists
+1. run the agent governance checker in `-Mode range`
+2. inside the checker, run range, working, and cached `git diff --check`
 3. print changed files, evidence, risks, and next step
 ```
 
@@ -30,11 +30,11 @@ Codex hooks can remind or block during a turn, but they do not prove the final d
 
 ## Strict gate
 
-Strict gate = heavier checks for release or module finish.
+Strict gate = blocking docs-sync/path governance for release or module finish.
 
 Use Strict when a module is being closed, a release is being prepared, or a reviewer explicitly asks for blocking governance checks.
 
-Strict may require targeted tests, contract checks, smoke evidence, or module-specific commands, but those checks are chosen by the task scope. Strict is not the default hook behavior.
+Strict makes docs-sync/path drift blocking instead of warning-only. It still does not run DB/Redis/backend/frontend tests, contract checks, or smoke by itself; those remain task-specific commands chosen and reported outside the pre-push checker. Strict is not the default hook behavior.
 
 ## Skip rule
 
@@ -66,13 +66,16 @@ Known risks
 Next step
 ```
 
-For a clean default gate, `Verification` should explicitly say:
+For a clean range/default gate, `Verification` should explicitly say:
 
 ```text
+range diff check passed
 working diff check passed
 cached diff check passed
 no blocking governance violations found
 ```
+
+For `-Mode working`, there is no range diff check.
 
 ## Examples
 
