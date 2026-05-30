@@ -29,7 +29,6 @@ docs/status/archive/2026-05-runtime-change-log.md     # 历史证据：2026-05 v
 ## Current verification gaps
 
 - 2026-05-29 channel-specific verify-code TTL 切片：basic admin smoke 已通过；full smoke 的已知失败点是既有 upload-token probe 返回 `上传密钥不可用`，所以不能记录 full smoke 通过。按当前 `full-admin-smoke.ps1` 顺序，该失败点位于 mail/sms、client-version、upload config read、payment/wallet、AI read/disabled-baseline 和 upload config write probe 之后；不要把它误读成 mail/sms 之后立刻失败。2026-05-30 local live check confirmed `upload_setting.id=1` is enabled COS and has encrypted secret blobs, but they cannot be decrypted with the current Docker-first `APP_SECRET`-derived secretbox key; re-enter the upload driver secrets instead of copying old encrypted DB blobs.
-- 2026-05-30 wallet transaction-no follow-up 当前仍是 WIP：`internal/module/payment/serialno` 的 no-wrap 测试能暴露旧 `% 1_000_000` 回绕问题，但 `internal/module/payment/wallet` 的 duplicate `uk_wallet_transaction_no` retry 测试仍失败；不要把这条补丁当成已闭环。当前证据和下一步只记录在 `docs/status/known-issues.md`。
 - 2026-05-27 multi-platform Phase 2 已通过 code/docs/frontend gates after Plans 11-17；final admin smoke 仍 pending，不能把 spec 标记为 fully closed。
 - Docker-first readiness 和 smoke 是两条验证链：Docker runtime 用 `127.0.0.1:8080 /health /ready`；smoke 脚本默认临时端口是 basic `127.0.0.1:18080`、full `127.0.0.1:18081`。
 - `admin_app` 机器局域网默认值已清掉；本轮未跑真机 smoke，LAN 调试仍需按本机 IP 配置 `VITE_APP_API_BASE_URL`、后端监听地址、防火墙和 `CORS_ALLOW_ORIGINS`。
@@ -40,7 +39,7 @@ docs/status/archive/2026-05-runtime-change-log.md     # 历史证据：2026-05 v
 
 ```text
 2026-05-30 production websocket/domain and docker-first deploy docs alignment
-2026-05-30 wallet consume idempotency baseline verified; transaction-no hardening is tracked only in known-issues until fixed
+2026-05-30 wallet transaction_no hardening fixed: serial no-wrap + transaction_no duplicate retry for consume and recharge credit
 2026-05-29 multi-platform backend boundary Phase 2 gates passed; final smoke pending
 2026-05-29 transport admin alias cleanup
 2026-05-29 wallet payment aggregation

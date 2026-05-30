@@ -4,17 +4,28 @@
 
 本文只记录当前已知 bug、失败测试和未闭环 WIP。这里的内容不是 verified change-log；修复完成前不得把它写成 implemented。
 
-## PAY-WALLET-001 wallet transaction_no collision follow-up
+## Current open issues
 
-Status: WIP / needs explicit implementation confirmation before production code change.
+```text
+None.
+```
+
+## Resolved on 2026-05-30
+
+### PAY-WALLET-001 wallet transaction_no collision follow-up
+
+Status: fixed and verified after user confirmed "修吧".
 
 ### Evidence
 
-Current dirty backend files:
+Fixed backend files:
 
 ```text
 admin_back_go/internal/module/payment/serialno/serial_no.go
 admin_back_go/internal/module/payment/serialno/serial_no_test.go
+admin_back_go/internal/module/payment/recharge_repository.go
+admin_back_go/internal/module/payment/recharge_repository_test.go
+admin_back_go/internal/module/payment/wallet/repository.go
 admin_back_go/internal/module/payment/wallet/repository_test.go
 ```
 
@@ -27,7 +38,7 @@ Consume duplicate-key handling currently treats every duplicate key as a possibl
 CreditRecharge does not retry duplicate transaction_no
 ```
 
-Current verification:
+Original failing verification:
 
 ```powershell
 cd E:\admin_go\admin_back_go
@@ -58,16 +69,18 @@ The current wallet test expects retry insert after transaction_no collision; cur
 CreditRecharge inserts the same wallet_transactions unique-key surface but has no duplicate transaction_no retry branch.
 ```
 
-### Required decision before code change
+### Implemented path
 
-Pick one path before touching production code:
+The confirmed fix used Option B:
 
 ```text
-Option A: keep only serialno no-wrap root fix; remove or rewrite the wallet retry test as over-specified.
-Option B: implement finite retry for uk_wallet_transaction_no only, preserve uk_wallet_transaction_source idempotency behavior, and apply the same duplicate-key distinction to recharge credit.
+Keep the serialno no-wrap root fix.
+Retry uk_wallet_transaction_no insert collisions with a finite 3-attempt retry.
+Preserve uk_wallet_transaction_source idempotency behavior for consume source races.
+Apply the same transaction_no retry path to recharge credit.
 ```
 
-Minimum verification after implementation:
+Verified after implementation:
 
 ```powershell
 cd E:\admin_go\admin_back_go

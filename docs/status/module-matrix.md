@@ -644,8 +644,9 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
 - Tests:
   - verified baseline packages include `internal/module/payment/wallet`, `internal/module/payment`,
     `internal/server`, `internal/bootstrap`, `internal/shared/i18n`
-  - current worktree adds `internal/module/payment/serialno` no-wrap coverage, but the wallet transaction-no retry
-    follow-up is still red
+  - transaction number hardening is covered: shared `serialno` no longer wraps at one million calls for the same
+    timestamp, `Consume` retries `uk_wallet_transaction_no` without breaking `uk_wallet_transaction_source`
+    idempotency, and `CreditRecharge` retries the same transaction-no collision path
   - frontend wallet API/page Vitest + `vue-tsc`
 - Smoke:
   - full smoke read gate probes wallet summary, current-user transactions, wallet users init/list, wallet ledger

@@ -1,6 +1,6 @@
 # Superpowers Docs Index
 
-状态更新时间：2026-05-29
+状态更新时间：2026-05-30
 
 本目录是 `E:\admin_go` 的 Superpowers spec / plan / review 总入口。它记录设计和执行过程，不替代 runtime truth。
 
@@ -8,7 +8,7 @@
 
 ```text
 specs/      # 已批准或正在使用的设计规格；解释为什么做、边界是什么
-plans/      # 可执行计划；解释怎么按任务落地、验证、回滚
+plans/      # 候选/当前执行计划；解释怎么按任务落地、验证、回滚
 reviews/    # 阶段收口审查；记录证据、缺口和 reviewer 结论
 archive/    # 历史 spec/plan 归档；只能用于考古和 provenance
 ```
@@ -57,15 +57,19 @@ docs/superpowers/reviews/YYYY-MM-DD-<topic>-review.md
 ```text
 docs/status/current-status.md   # 当前入口、关键事实、验证缺口
 docs/status/module-matrix.md    # per-module 当前明细
+docs/status/known-issues.md     # 当前 bug / 失败测试 / dirty WIP，不当成 verified
 ```
 
 不要再把 `docs/status/current-status.md` 当成巨大 module detail 的唯一落点；模块分组明细写入 `module-matrix.md`。
+
+`plans/` / `specs/` 目录里仍有历史执行文件没有批量搬进 `archive/`，其中不少旧文件还写着 `docs/migration/current-status.md`。这只是 provenance，不是当前 truth source。不要为了“看起来干净”批量改旧计划正文；只有重新激活某个旧计划时，才把它里面的旧路径翻译成当前分层。
 
 2026-05-29 之前写下的计划可能仍写着“更新 `current-status` 某某 module row”。执行这些旧计划时按新分层解释：
 
 ```text
 key status summary / verification gap -> docs/status/current-status.md
 per-module section / module implementation detail -> docs/status/module-matrix.md
+known bug / failing test / dirty WIP -> docs/status/known-issues.md
 historical verification narrative -> docs/status/archive/*.md
 ```
 
