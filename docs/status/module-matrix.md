@@ -594,12 +594,17 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
   - recharge REST supports page-init/list/detail/create/pay/sync/close
   - callback/manual sync/cron compensation share transaction-protected idempotent crediting via
     `wallet_transactions(source_type, source_id)`
-  - transaction-no follow-up is not closed in the current worktree: the no-wrap serial generator direction is under
-    test, but wallet duplicate `uk_wallet_transaction_no` retry still has a failing test and must not be reported as
-    verified runtime behavior until the backend WIP is resolved
+  - manual sync and cron close paths close the linked recharge when Alipay returns closed or expired not-found; cron
+    also compensates `order=paid` + uncredited recharge rows so a transient finalizer failure can still credit wallet
+  - wallet transaction number hardening is closed: shared serial generation no longer wraps at one million same-timestamp
+    calls, `Consume` retries `uk_wallet_transaction_no` collisions without breaking source idempotency, and recharge
+    credit uses the same bounded retry path
+  - Alipay notify amount parsing rejects signed or non-digit cent fragments instead of normalizing malformed values
   - expired Alipay `ACQ.TRADE_NOT_EXIST` rows close the local order and linked recharge instead of retrying forever
 - Frontend:
   - adapted: active product pages are `/payment/config`, `/payment/recharge`, and `/payment/orders`
+  - `/payment/recharge` checkout creation is gated by `payment_recharge_add`; `paid` stays warning until wallet credit
+    reaches `credited`
   - `/payment/recharge` reopen auto-syncs a small batch of visible paying records
   - `/payment/orders` is the visible Alipay/gateway collection-order ledger without raw create UX
   - active files include `src/api/payment/config.ts`, `src/api/payment/recharges.ts`, `views/Main/payment/config`,

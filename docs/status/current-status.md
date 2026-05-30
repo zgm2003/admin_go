@@ -38,6 +38,7 @@ docs/status/archive/2026-05-runtime-change-log.md     # 历史证据：2026-05 v
 详细变更记录看 `docs/status/archive/2026-05-runtime-change-log.md`。近期关键批次：
 
 ```text
+2026-05-30 payment hardening follow-up: linked recharge close, paid-uncredited compensation, Alipay amount parsing, recharge add permission UI
 2026-05-30 production websocket/domain and docker-first deploy docs alignment
 2026-05-30 wallet transaction_no hardening fixed: serial no-wrap + transaction_no duplicate retry for consume and recharge credit
 2026-05-29 multi-platform backend boundary Phase 2 gates passed; final smoke pending
