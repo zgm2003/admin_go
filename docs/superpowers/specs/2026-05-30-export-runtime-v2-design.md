@@ -1,8 +1,8 @@
-# Export Runtime V2 Design
+# 导出运行时 V2 设计
 
-状态：draft for user review on 2026-05-30
+状态：2026-05-30 用户评审稿
 
-## Goal
+## 目标
 
 把现有“用户列表导出”收敛成一个可复用的 Go 导出运行时：业务模块只负责提交导出请求和构造业务数据，`internal/module/export` 负责导出任务、队列执行、`.xlsx` 生成、COS 上传、状态记录和通知。
 
@@ -14,17 +14,17 @@
 2. 有更简单的方法吗？有。复用已有 `export_tasks`、`export:run:v1`、`XLSXWriter`、`COSUploader`，只补一个小的 export definition registry 和提交契约，不做模板 DSL、不做万能 SQL、不做同步下载。
 3. 会破坏什么吗？不能破坏 `POST /api/admin/v1/users/export`、`user_userManager_export`、`/system/exportTask?status=2|3`、已有导出任务下载、当前用户隔离、COS-only 上传契约和现有 `.xlsx` 格式。
 
-## Current evidence
+## 当前证据
 
 当前仓库已经有这些事实：
 
 - `POST /api/admin/v1/users/export` 已经是 Go REST 契约，权限固定是 `user_userManager_export`。
-- `GET /api/admin/v1/export-tasks/status-count`、`GET /api/admin/v1/export-tasks`、`DELETE /api/admin/v1/export-tasks` 已经是当前用户 scoped。
+- `GET /api/admin/v1/export-tasks/status-count`、`GET /api/admin/v1/export-tasks`、`DELETE /api/admin/v1/export-tasks` 已经按当前用户隔离。
 - `internal/module/export` 已有 task model、service、repository、xlsx writer、COS uploader、notification notifier、queue handler。
 - worker 已经把 `ExportTaskService` 接进 `jobs.Register`，并配置 `user.NewExportDataProvider`、`XLSXWriter`、`COSUploader`。
-- smoke matrix 只做导出任务 read probe，不触发真实导出和 COS 上传。这是当前最明显的验证缺口。
+- smoke matrix 只做导出任务读取探针，不触发真实导出和 COS 上传。这是当前最明显的验证缺口。
 
-## Product decision
+## 产品取舍
 
 未来导出范围采用“显式范围”：
 
@@ -35,9 +35,9 @@ filtered  # 导出当前筛选条件下的结果
 
 当前用户管理页第一阶段继续保持现有行为：必须勾选用户后导出，提交体仍兼容 `{ ids: number[] }`。这是 userspace，不动它。新导出场景默认使用显式 `scope`，不允许靠空字段猜行为。
 
-## Scope
+## 范围
 
-### In scope
+### 本次包含
 
 1. 把 `internal/module/export` 定义成通用导出运行时。
 2. 增加 export definition registry：按 `kind` 找到对应业务数据 provider。
@@ -47,7 +47,7 @@ filtered  # 导出当前筛选条件下的结果
 6. 补一个 credential-gated 真实导出 smoke，证明任务能从 submit 跑到 COS 上传完成。
 7. 前端抽出最小提交复用逻辑，未来多个页面不用复制“勾选校验 + 提交 + 提示”。
 
-### Out of scope
+### 本次不包含
 
 1. 不做万能报表平台。
 2. 不允许前端传 SQL、表名、列名或任意字段表达式。
@@ -57,70 +57,70 @@ filtered  # 导出当前筛选条件下的结果
 6. 不做取消、重试、进度条和 COS 对象删除。
 7. 不做 CSV/PDF；第一版只支持 `.xlsx`。
 
-## Architecture
+## 架构设计
 
-### Responsibility split
+### 职责拆分
 
 ```text
 business transport/admin
-  -> bind and validate business export request
-  -> enforce business permission through route metadata
-  -> call business service SubmitExport
+  -> 绑定并校验业务导出请求
+  -> 通过 route metadata 执行业务权限
+  -> 调用业务 service SubmitExport
 
 business service
-  -> normalize selected ids or filters
-  -> create export_tasks pending row through export.Service
-  -> enqueue export:run:v1
+  -> 归一化勾选 ids 或筛选条件
+  -> 通过 export.Service 创建 export_tasks pending 行
+  -> 投递 export:run:v1
 
 export runtime
-  -> own export_tasks lifecycle
-  -> own export definition registry
-  -> own xlsx writer
-  -> own COS upload
-  -> own success/failed status update
-  -> own notification dispatch request
+  -> 管理 export_tasks 生命周期
+  -> 管理导出定义 registry
+  -> 管理 xlsx writer
+  -> 管理 COS 上传
+  -> 管理成功/失败状态更新
+  -> 管理通知投递请求
 
 business export provider
-  -> own business query
-  -> own row formatting
-  -> return stable headers and string cells
+  -> 管理业务查询
+  -> 管理行格式化
+  -> 返回稳定表头和字符串单元格
 ```
 
-Rule: handler never generates Excel. Service never uploads files directly during HTTP request. Worker owns expensive work.
+规则：handler 永远不生成 Excel。service 在 HTTP 请求里也不直接上传文件。昂贵工作统一交给 worker。
 
-### Package shape
+### 包结构
 
-Keep the existing package name and directory:
+保留现有包名和目录：
 
 ```text
 admin_back_go/internal/module/export/
-  definition.go          # Definition, Registry, Provider boundary
-  dto.go                 # task/list/submit/run DTOs
-  jobs.go                # export:run:v1 payload and handler registration
+  definition.go          # Definition、Registry、Provider 边界
+  dto.go                 # task/list/submit/run DTO
+  jobs.go                # export:run:v1 payload 和 handler 注册
   model.go               # export_tasks model
-  repository.go          # task persistence
-  service.go             # task lifecycle and Run orchestration
+  repository.go          # task 持久化
+  service.go             # task 生命周期和 Run 编排
   writer.go              # xlsx writer
-  uploader.go            # COS upload boundary
+  uploader.go            # COS 上传边界
   upload_config_repository.go
   notifier.go
   transport/admin/
 ```
 
-Business modules keep their own submit endpoints. Example:
+业务模块保留自己的提交入口。例子：
 
 ```text
 internal/module/user/
   export_provider.go     # user_list provider
-  service.go             # SubmitExport stays user-owned
+  service.go             # SubmitExport 保持 user-owned
   transport/admin        # POST /api/admin/v1/users/export
 ```
 
-Do not create `adminexport`, `appexport`, `paymentexport` packages. Platform differences are route/request/presenter policy, not duplicated business modules.
+不要创建 `adminexport`、`appexport`、`paymentexport` 这类包。平台差异是 route/request/presenter policy，不是复制业务模块的理由。
 
-## Export definition contract
+## 导出定义契约
 
-The runtime registry maps a stable `kind` to a provider:
+运行时 registry 用稳定 `kind` 找 provider：
 
 ```go
 type Definition struct {
@@ -144,9 +144,9 @@ type BuildInput struct {
 }
 ```
 
-`Params` is raw only at the export runtime boundary. Each provider decodes it into its own typed request and rejects invalid data. The export runtime must not understand every module's filters.
+`Params` 只在 export runtime 边界保持 raw。每个 provider 必须解码成自己的强类型请求并拒绝非法数据。export runtime 不应该理解每个业务模块的筛选字段。
 
-Kind naming:
+`kind` 命名示例：
 
 ```text
 user_list
@@ -155,11 +155,11 @@ wallet_transactions
 ai_runs
 ```
 
-No `admin_` prefix. Platform is not the business capability.
+不要加 `admin_` 前缀。platform 不是业务能力。
 
-## Submit contract
+## 提交契约
 
-New export submit endpoints use this shape:
+新导出提交接口使用这个形状：
 
 ```ts
 type ExportScope = 'selected' | 'filtered'
@@ -171,27 +171,27 @@ interface ExportSubmitRequest {
 }
 ```
 
-Rules:
+规则：
 
-- `scope=selected` requires non-empty positive integer `ids`.
-- `scope=filtered` requires a typed business filter object.
-- Each business module sets its own max row cap.
-- The route's existing permission code owns authorization.
-- The service creates a pending task before enqueue.
-- If enqueue fails after task creation, mark the task failed immediately.
+- `scope=selected` 必须有非空正整数 `ids`。
+- `scope=filtered` 必须有业务模块自己的强类型 filter。
+- 每个业务模块自己设置最大导出行数。
+- 授权由业务路由自己的 permission code 负责。
+- service 先创建 pending task，再投递队列。
+- task 创建后如果队列投递失败，必须立刻把任务标记 failed。
 
-Existing user export remains valid:
+现有用户导出继续有效：
 
 ```ts
 POST /api/admin/v1/users/export
 { ids: number[] }
 ```
 
-If this endpoint is touched in V2, `{ ids }` is normalized to `scope=selected` inside the user transport/service boundary only. Do not make the export runtime guess missing `scope` for every future module.
+如果 V2 触碰这个接口，`{ ids }` 只在 user transport/service 边界归一化为 `scope=selected`。不要让 export runtime 对所有未来模块猜测缺失的 `scope`。
 
-## Queue payload
+## 队列 payload
 
-Current payload carries ids only. V2 payload becomes:
+当前 payload 只带 ids。V2 payload 改为：
 
 ```go
 type RunPayload struct {
@@ -205,16 +205,16 @@ type RunPayload struct {
 }
 ```
 
-Compatibility rule:
+兼容规则：
 
-- Existing `user_list` jobs with no `scope` are interpreted as `selected` only for `user_list` compatibility.
-- New jobs must include `scope`.
+- 旧的 `user_list` job 如果没有 `scope`，只为 `user_list` 兼容解释成 `selected`。
+- 新 job 必须带 `scope`。
 
-The payload must never contain rendered rows. Redis is not a spreadsheet storage backend.
+payload 绝不能塞渲染后的 rows。Redis 不是 spreadsheet storage。
 
-## Database design
+## 数据库设计
 
-Existing `export_tasks` stays the task table. Add only fields that remove real ambiguity:
+继续使用现有 `export_tasks` 表。只加真正能消除歧义的字段：
 
 ```sql
 ALTER TABLE export_tasks
@@ -223,79 +223,79 @@ ALTER TABLE export_tasks
   ADD COLUMN object_key varchar(500) NULL COMMENT 'COS object key';
 ```
 
-Why these fields are useful:
+这些字段有用：
 
-- `kind`: multiple export scenes need source identity for filtering, audits and worker diagnostics.
-- `platform`: admin/app/openapi/merchant task visibility must not be guessed from user_id.
-- `object_key`: `file_url` is presentation; COS cleanup and object lifecycle need the real key.
+- `kind`：多个导出场景需要知道来源，方便筛选、审计、worker 诊断。
+- `platform`：admin/app/openapi/merchant 的任务可见性不能靠 `user_id` 猜。
+- `object_key`：`file_url` 是展示 URL；COS 清理和对象生命周期需要真实 key。
 
-Fields intentionally not added in V2:
+V2 故意不加这些字段：
 
-- `format`: only `.xlsx` exists.
-- `progress`: no streaming progress in this slice.
-- `total_rows`: row count is enough after completion; pre-count is provider-specific and can be expensive.
-- `params_json`: queue payload owns execution parameters; task list does not need to expose filters.
-- `storage_driver`: runtime is COS-only.
+- `format`：现在只有 `.xlsx`。
+- `progress`：本切片不做流式进度。
+- `total_rows`：完成后 `row_count` 足够；预统计是 provider-specific，可能很贵。
+- `params_json`：执行参数归队列 payload；任务列表不需要暴露筛选条件。
+- `storage_driver`：运行时就是 COS-only。
 
-Existing rows are backfilled to `kind='user_list'` and `platform='admin'`.
+已有 rows 回填为 `kind='user_list'`、`platform='admin'`。
 
-## COS upload contract
+## COS 上传契约
 
-V2 keeps server-side COS upload:
+V2 保持服务端上传 COS：
 
 ```text
-source: enabled upload_setting + COS upload_driver
-secret: decrypt through current APP_SECRET-derived secretbox
-content-type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+来源：enabled upload_setting + COS upload_driver
+密钥：通过当前 APP_SECRET 派生的 secretbox 解密
+content-type：application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
 key: exports/<kind>/YYYYMMDD/<safe_title>_YYYYMMDD_HHMMSS_<task_id>.xlsx
-url: bucket_domain when configured, otherwise default COS public URL
+url：优先 bucket_domain，否则默认 COS public URL
 ```
 
-If upload config is missing, non-COS, secret decrypt fails, or COS Put fails, the worker marks the task failed. No fake success. No fallback.
+如果 upload config 缺失、不是 COS、secret 解密失败或 COS Put 失败，worker 必须把任务标记 failed。没有假成功。没有 fallback。
 
-Existing `exports/YYYYMMDD/...` URLs remain valid because old rows store full `file_url`; V2 only changes new object keys.
+旧的 `exports/YYYYMMDD/...` URL 继续有效，因为老 rows 存的是完整 `file_url`；V2 只改变新 object key。
 
-## Frontend design
+## 前端设计
 
-### User list
+### 用户列表
 
-Keep the current button location and permission:
+保持当前按钮位置和权限：
 
 ```text
 permission: user_userManager_export
-button: 导出
-behavior phase 1: selected ids only
+按钮：导出
+第一阶段行为：只导出勾选 ids
 ```
 
-The current user list must not silently export all rows when nothing is selected. Empty selection still shows `请选择至少一项`.
+当前用户列表不能在没勾选时偷偷导出全部。空选择仍然提示 `请选择至少一项`。
 
-### Reusable submit helper
+### 可复用提交 helper
 
-Add a small frontend helper when implementation starts:
+实现阶段新增一个很小的前端 helper：
 
 ```text
 src/hooks/useExportSubmit.ts
 ```
 
-It owns only the repeated client behavior:
+它只负责重复的客户端行为：
 
-- selected id check
-- call submit API
-- show i18n success message
-- optional action link to `/system/exportTask?status=1`
+- selected id 检查
+- 调 submit API
+- 显示 i18n 成功提示
+- 可选跳转 `/system/exportTask?status=1`
 
-It must not own business filters, table state or permission checks. Those stay in each page.
+它不能拥有业务 filters、table state 或权限判断。这些必须留在各自页面。
 
-### Export task page
+### 导出任务页
 
-Extend list filters only after backend fields exist:
+后端字段存在后，再扩展列表筛选：
 
 - `kind`
 - `status`
 - `title`
 - `file_name`
 
-Response may include:
+响应可以增加：
 
 ```ts
 interface ExportTaskItem {
@@ -315,82 +315,82 @@ interface ExportTaskItem {
 }
 ```
 
-No visible Chinese can be hardcoded in touched Vue files; add zh-CN/en-US i18n keys.
+触碰 Vue 文件时，不准硬编码可见中文；必须补 zh-CN/en-US i18n key。
 
-## Permissions and operation log
+## 权限和操作日志
 
-Submit permissions stay business-owned:
+提交权限归业务模块自己：
 
 ```text
 POST /api/admin/v1/users/export -> user_userManager_export
-future payment order export     -> payment_order_export
-future wallet ledger export     -> wallet_ledger_export
+未来支付订单导出             -> payment_order_export
+未来钱包流水导出             -> wallet_ledger_export
 ```
 
-Export task list/status-count remain authenticated current-user views.
+导出任务 list/status-count 继续是登录用户自己的视图。
 
-Delete operation stays scoped to current user. If a delete button permission exists, use that route permission; do not reuse an unrelated edit permission.
+删除操作继续按当前用户隔离。如果有专用删除按钮权限，就用专用权限；不要拿 edit 这类无关权限凑数。
 
-Operation log:
+操作日志：
 
-- Business submit endpoint logs the business action, e.g. `module=user action=export title=用户导出`.
-- Export task delete logs `module=export_task action=delete/delete_batch`.
-- Worker success/failure is persisted in `export_tasks`; it is not an HTTP operation log.
+- 业务提交接口记录业务动作，例如 `module=user action=export title=用户导出`。
+- 导出任务删除记录 `module=export_task action=delete/delete_batch`。
+- worker 成功/失败写 `export_tasks`，不是 HTTP operation log。
 
-## Error handling
+## 错误处理
 
-Submit errors:
+提交阶段错误：
 
-- invalid selected ids -> 400
-- invalid filters -> 400
-- no rows found -> 404 or provider-specific bad request
-- queue unavailable after task creation -> mark failed, return 500
+- 勾选 ids 非法 -> 400
+- 筛选条件非法 -> 400
+- 查不到可导出数据 -> 404 或 provider-specific bad request
+- task 创建后队列不可用 -> 标记 failed，返回 500
 
-Worker errors:
+worker 阶段错误：
 
-- unknown kind -> mark failed
-- invalid payload -> mark failed when task id is loadable
-- provider query failure -> mark failed
-- xlsx generation failure -> mark failed
-- upload config missing or decrypt failure -> mark failed
-- COS Put failure -> mark failed
-- notification failure -> log only; do not downgrade a successful export
+- 未知 kind -> 标记 failed
+- payload 非法 -> task id 可加载时标记 failed
+- provider 查询失败 -> 标记 failed
+- xlsx 生成失败 -> 标记 failed
+- upload config 缺失或解密失败 -> 标记 failed
+- COS Put 失败 -> 标记 failed
+- notification failure -> 只记录日志；不能把成功导出降级成失败
 
-Idempotency:
+幂等规则：
 
-- success or soft-deleted task is a no-op on retry.
-- failed task may be overwritten only by an explicit future retry feature, not by random duplicate worker execution.
+- 已成功或已软删除的 task，worker retry 直接 no-op。
+- 失败 task 只有未来显式 retry 功能才能覆盖；不能被随机重复 worker 执行改回成功。
 
-## Testing strategy
+## 测试策略
 
-Backend:
+后端：
 
-- `export` registry resolves known kind and rejects unknown kind.
-- `RunPayload` validates required fields and preserves compatibility for old `user_list` selected jobs.
-- `Service.Run` marks failed on unknown kind, provider error, writer error and uploader error.
-- `COSUploader` returns `object_key`, `file_url`, `file_size`, `row_count` and uses `exports/<kind>/YYYYMMDD`.
-- repository creates/list filters by `user_id + platform + is_del`.
-- migration backfills existing rows to `kind=user_list/platform=admin`.
-- user export still accepts `{ ids }` and maps to selected `user_list`.
+- `export` registry 能解析已知 kind，并拒绝 unknown kind。
+- `RunPayload` 校验必填字段，并保留旧 `user_list` selected job 兼容。
+- `Service.Run` 在 unknown kind、provider error、writer error、uploader error 时标记 failed。
+- `COSUploader` 返回 `object_key`、`file_url`、`file_size`、`row_count`，并使用 `exports/<kind>/YYYYMMDD`。
+- repository 创建和列表查询按 `user_id + platform + is_del` 隔离。
+- migration 回填现有 rows 为 `kind=user_list/platform=admin`。
+- 用户导出仍接受 `{ ids }`，并映射到 selected `user_list`。
 
-Frontend:
+前端：
 
-- user export button still guarded by `user_userManager_export`.
-- empty selected ids still blocks submit.
-- submit helper does not hardcode Chinese text.
-- export task API includes REST paths only; no legacy action path.
-- export task page uses AppTable/Search and does not add extra page-card.
+- 用户导出按钮仍由 `user_userManager_export` 控制。
+- 空 selected ids 仍阻止提交。
+- submit helper 不硬编码中文。
+- export task API 只使用 REST path；不出现 legacy action path。
+- export task page 使用 AppTable/Search，不额外套 page-card。
 
-Smoke:
+Smoke：
 
-Default full smoke remains read-only:
+默认 full smoke 继续只读：
 
 ```text
 GET /api/admin/v1/export-tasks/status-count
 GET /api/admin/v1/export-tasks?current_page=1&page_size=20
 ```
 
-Add credential-gated real export smoke:
+新增 credential-gated 真实导出 smoke：
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\export-task-smoke.ps1 `
@@ -399,45 +399,45 @@ powershell -ExecutionPolicy Bypass -File .\scripts\export-task-smoke.ps1 `
   -RunRealExport
 ```
 
-The gated smoke:
+这个 gated smoke 做六件事：
 
-1. logs in;
-2. submits one `user_list` export for a known existing user id;
-3. polls `export-tasks` until status is success or failed;
-4. asserts success row has `.xlsx` filename, positive file size, row count and COS-style `file_url`;
-5. soft-deletes the created task through the API;
-6. does not delete the COS object.
+1. 登录；
+2. 给一个已存在用户 id 提交 `user_list` 导出；
+3. 轮询 `export-tasks`，直到 status 是成功或失败；
+4. 断言成功行有 `.xlsx` 文件名、正数 file size、row count 和 COS 风格 `file_url`；
+5. 通过 API 软删除刚创建的 task；
+6. 不删除 COS object。
 
-If enabled COS secrets cannot decrypt under the current `APP_SECRET`, the smoke fails. Skipping would hide the exact bug this feature is supposed to catch.
+如果当前 `APP_SECRET` 解不开已启用 COS secrets，smoke 必须失败。跳过就是把这个功能最该发现的问题藏起来。
 
-## Rollout plan
+## 落地阶段
 
-Phase 1:
+Phase 1：
 
-- Add schema migration for `kind/platform/object_key`.
-- Add registry and V2 run payload.
-- Keep current user export selected-only behavior.
-- Make user_list provider register through the registry.
-- Add backend tests and gated real export smoke.
-- Update contract/status/smoke docs.
+- 加 `kind/platform/object_key` schema migration。
+- 加 registry 和 V2 run payload。
+- 保持当前用户导出 selected-only 行为。
+- 让 user_list provider 通过 registry 注册。
+- 补后端测试和 gated real export smoke。
+- 更新契约、状态和 smoke 文档。
 
-Phase 2:
+Phase 2：
 
-- Add the next real export scene, preferably payment orders or wallet transactions.
-- Use explicit `scope=selected|filtered`.
-- Add export task `kind` filter to frontend if more than one kind is active.
+- 加下一个真实导出场景，优先 payment orders 或 wallet transactions。
+- 使用显式 `scope=selected|filtered`。
+- 当 active kind 超过一个时，前端导出任务页再加 `kind` 筛选。
 
-Phase 3:
+Phase 3：
 
-- Consider retry/cancel/object cleanup only after real users need it.
+- 只有真实用户需要时，再考虑 retry/cancel/object cleanup。
 
-## Acceptance criteria
+## 验收标准
 
-The design is implemented only when all of these are true:
+实现完成必须满足：
 
-1. Existing user export still works with current UI and permission.
-2. Worker can generate `.xlsx` and upload it to COS through current enabled upload config.
-3. Failed upload/config/decrypt states mark the task failed; no permanent pending.
-4. Export task list remains scoped to current token user and platform.
-5. At least one gated real export smoke proves submit -> queue -> worker -> COS -> task success.
-6. Docs distinguish implemented behavior from planned future export scenes.
+1. 现有用户导出仍按当前 UI 和权限工作。
+2. worker 能生成 `.xlsx` 并通过当前启用 upload config 上传 COS。
+3. 上传、配置、解密失败会把任务标记 failed；不会留下永久 pending。
+4. 导出任务列表仍按当前 token user 和 platform 隔离。
+5. 至少一个带凭据开关的真实导出 smoke 证明 submit -> queue -> worker -> COS -> task success。
+6. 文档明确区分已实现行为和未来计划导出场景。
