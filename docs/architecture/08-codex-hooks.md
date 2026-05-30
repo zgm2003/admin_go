@@ -49,8 +49,8 @@ Review the loaded hook sources and trust the repo-local hooks if they match the 
 | Event | Policy |
 | --- | --- |
 | `SessionStart` | Add cold-start context for `AGENTS.md`, `current-status`, Superpowers, TDD, and project agent roles. |
-| `UserPromptSubmit` | Add context when the user asks to change behavior, implement, fix, continue, or write a plan. |
-| `PreToolUse` | Deny low-dispute destructive commands such as hard reset, force clean, broad recursive delete, deleting `.git`, and force push without explicit instruction. |
+| `UserPromptSubmit` | Add governance context for docs/agent/hooks prompts first; otherwise add Superpowers/TDD context when the user asks to change behavior, implement, fix, continue, refactor, or write a plan. |
+| `PreToolUse` | Deny low-dispute destructive commands such as hard reset, force clean, broad recursive delete, deleting `.git`, and force push. Hooks cannot infer conversation-level intent; use a narrower reversible command or get explicit confirmation before retrying. |
 | `PostToolUse` | Add verification reminders when governance files changed or a command failed. |
 | `Stop` | Continue the turn when the final answer claims completion without verification evidence. |
 

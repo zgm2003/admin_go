@@ -86,17 +86,18 @@ docs/architecture/08-codex-hooks.md
 ```
 
 
-计划配置入口：
+当前配置入口：
 
 ```text
 .codex/hooks.json
-.codex/config.toml
 ```
 
-计划脚本位置：
+当前脚本位置：
 
 ```text
 .codex/hooks/*.ps1
+.codex/hooks/lib/AdminGoHookCommon.ps1
+scripts/test-codex-hooks.ps1
 ```
 
 项目 hooks 只做对话内治理：冷启动提示、Superpowers/TDD 提醒、危险命令低误伤阻断、完成前验证提醒。不要让 hooks 自动改业务代码、自动修文档或假装覆盖所有工具路径。
