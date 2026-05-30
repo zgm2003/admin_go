@@ -32,7 +32,7 @@ SSH_PORT=服务器 SSH port，未配置时 workflow 默认 22
 SSH_USER=服务器 SSH 用户
 DEPLOY_PATH=宝塔站点目录，例如 /www/wwwroot/<domain>
 VITE_GO_API_BASE_URL=https://<api-domain>
-VITE_WEB_SOCKET_URL=wss://<frontend-domain>/api/admin/v1/realtime/ws
+VITE_WEB_SOCKET_URL=wss://<api-domain>/api/admin/v1/realtime/ws
 VITE_PLATFORM=admin，可不配；workflow 默认 admin
 ```
 
@@ -40,7 +40,7 @@ VITE_PLATFORM=admin，可不配；workflow 默认 admin
 
 ```text
 VITE_GO_API_BASE_URL=https://www.zgm2003.cn
-VITE_WEB_SOCKET_URL=wss://zgm2003.cn/api/admin/v1/realtime/ws
+VITE_WEB_SOCKET_URL=wss://www.zgm2003.cn/api/admin/v1/realtime/ws
 ```
 
 不要把机器 IP、`root` 用户、站点目录写死在 workflow。生产 API 域名和 WebSocket 域名由 GitHub Actions secrets / variables 注入；仓库里的 `.env.production` 同步当前线上默认值，只供手工/本地 production build 使用。换机器、换域名、fork 仓库或多环境部署时，优先改 Actions 配置，不改 workflow。
@@ -83,12 +83,12 @@ location / {
 }
 ```
 
-WebSocket 使用当前 Go Realtime contract。浏览器不能稳定给原生 WebSocket 加 `Authorization` header；当前前端 token cookie 默认是前端域名下的 host-only cookie，所以生产推荐让 WebSocket 走前端同域，再由宝塔反代到 Go 后端：
+WebSocket 使用当前 Go Realtime contract。生产域名分工是 `<frontend-domain>` 跑静态前端、`<api-domain>` 跑 Go 后端，所以默认值必须指向后端域名：
 
 ```text
-wss://<frontend-domain>/api/admin/v1/realtime/ws
+wss://<api-domain>/api/admin/v1/realtime/ws
 ```
 
-如果你刻意改成共享父域 cookie，才考虑 `wss://<api-domain>/api/admin/v1/realtime/ws`；不要把这个当默认方案。
+如果临时改成 `wss://<frontend-domain>/api/admin/v1/realtime/ws`，才需要在前端站点额外做同域 WebSocket 反代；不要把它写进生产默认 env。
 
-宝塔 Nginx 必须保留 `Upgrade` / `Connection` header，并把 `/api/admin/v1/realtime/ws` 反代到 Go 后端。不要再新增旧 `/wss` 或 `/api/admin/WebSocket/bind` 入口。
+宝塔 Nginx 必须在 `<api-domain>` 站点保留 `Upgrade` / `Connection` header，并把 `/api/admin/v1/realtime/ws` 反代到 Go 后端。不要再新增旧 `/wss` 或 `/api/admin/WebSocket/bind` 入口。

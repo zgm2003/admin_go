@@ -9,7 +9,7 @@ FRONTEND_DOMAIN=zgm2003.cn
 API_DOMAIN=www.zgm2003.cn
 ```
 
-也就是说：浏览器打开 `https://zgm2003.cn`，REST API 走 `https://www.zgm2003.cn/api/admin/v1/...`，生产 WebSocket 默认走 `wss://zgm2003.cn/api/admin/v1/realtime/ws` 并由前端站点精确反代到 Go 后端。
+也就是说：浏览器打开 `https://zgm2003.cn`，REST API 走 `https://www.zgm2003.cn/api/admin/v1/...`，生产 WebSocket 默认走 `wss://www.zgm2003.cn/api/admin/v1/realtime/ws`，不要把后端 WebSocket 写到前端静态站域名。
 
 ## 进程模型
 
