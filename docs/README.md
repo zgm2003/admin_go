@@ -90,6 +90,7 @@ Codex hooks 落地后位于 root `.codex/`，只服务 Codex 会话生命周期�
 ```text
 docs/status/current-status.md      # 当前事实入口、关键缺口、读法
 docs/status/module-matrix.md       # 当前 per-module 明细
+docs/status/known-issues.md        # 当前已知 bug / WIP 证据，不覆盖 verified status
 docs/status/archive/*.md           # 历史变更证据，不覆盖当前入口
 ```
 
