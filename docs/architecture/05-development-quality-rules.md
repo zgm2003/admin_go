@@ -166,7 +166,22 @@ POST   /api/admin/v1/permissions             create
 PUT    /api/admin/v1/permissions/:id         replace/update
 PATCH  /api/admin/v1/permissions/:id/status  partial state change
 DELETE /api/admin/v1/permissions/:id         delete one
+DELETE /api/admin/v1/permissions             delete batch, body: { ids: number[] }
+GET    /api/admin/v1/permissions/page-init   page dictionaries/options only
 ```
+
+命名标准固定：
+
+```text
+HTTP route:   list/detail/create/update/changeStatus/deleteOne/deleteBatch/page-init
+Go handler:   List/Detail/Create/Update/ChangeStatus/DeleteOne/DeleteBatch/PageInit
+Go service:   List/Detail/Create/Update/ChangeStatus/DeleteOne/DeleteBatch/PageInit
+Frontend API: list/detail/create/update/changeStatus/deleteOne/deleteBatch/pageInit
+```
+
+`init` 只能用于明确的 bootstrap contract，例如当前登录用户初始化 `GET /api/admin/v1/users/init`。标准页面字典、筛选枚举、下拉选项统一使用 `GET /api/admin/v1/<resources>/page-init`，前端方法名统一 `pageInit()`。
+
+旧前端 wrapper 里仍存在的 `add/edit/del/init/status` 只能作为历史别名或待治理事实；新模块和 touched API wrapper 不得继续新增这些旧动作名。需要兼容公共组件时，优先让公共组件支持标准名，而不是把新契约降级成旧命名。
 
 禁止：
 
@@ -175,6 +190,7 @@ DELETE /api/admin/v1/permissions/:id         delete one
 把动作塞进 URL：/add /edit /del /status
 为了省事让一个 POST 根据 field 决定所有行为
 让前端先定义后端契约
+新增前端 API wrapper 使用 add/edit/del/init/status 伪装 RESTful
 ```
 
 旧 action POST 形态如果仍在当前运行时出现，只能作为待治理事实记录，不能污染新 REST 设计。

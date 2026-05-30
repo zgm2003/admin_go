@@ -39,7 +39,22 @@ App 端：/api/app/v1
 新 Go API 只能使用 /api/admin/v1 或 /api/app/v1 命名空间。
 新 Go API 使用 RESTful resource，不允许 /api/admin/Xxx/list、/api/admin/Xxx/add、/api/admin/Xxx/edit、/api/admin/Xxx/del 这种旧动作式 path。
 init/page-init 属于页面字典或 bootstrap contract，必须显式写清用途和 enum/dict 来源。
+标准页面字典接口统一写成 GET /api/admin/v1/<resources>/page-init；init 只保留给明确 bootstrap contract，例如 users/init。
+标准前端 API wrapper 使用 list/detail/create/update/changeStatus/deleteOne/deleteBatch/pageInit；新模块不得新增 add/edit/del/init/status 作为 REST wrapper 方法名。
 旧接口兼容入口必须标注兼容来源、退出条件和验证边界，不得伪装成新契约。
+```
+
+标准 CRUD contract 模板：
+
+```text
+GET    /api/admin/v1/<resources>/page-init    page dictionaries/options, optional
+GET    /api/admin/v1/<resources>              list/query
+GET    /api/admin/v1/<resources>/:id          detail
+POST   /api/admin/v1/<resources>              create
+PUT    /api/admin/v1/<resources>/:id          update
+PATCH  /api/admin/v1/<resources>/:id/status   changeStatus, only when status is a first-class state
+DELETE /api/admin/v1/<resources>/:id          deleteOne
+DELETE /api/admin/v1/<resources>              deleteBatch, body: { ids: number[] }
 ```
 
 本地 contract gate：
@@ -78,9 +93,9 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-contract.ps1
 | upload token create | `POST /api/admin/v1/upload-tokens` | bearer token; current-user upload capability, no RBAC button permission |
 | notification task mutations | notification-tasks create/cancel/delete | bearer token + `system_notificationTask_*` route permission |
 | current profile update | `PUT /api/admin/v1/profile` | bearer token; operation log only, no user-manager button permission |
-| wallet current-user read/consume | `GET /api/admin/v1/wallet/summary`, `GET /api/admin/v1/wallet/transactions`, `POST /api/admin/v1/wallet/consumptions` | read routes: bearer token + `wallet_transaction_list`; consume route: bearer token + `wallet_consume_add`, current user only |
-| wallet admin read | `GET /api/admin/v1/wallet/users/page-init`, `GET /api/admin/v1/wallet/users`, `GET /api/admin/v1/wallet/ledger/page-init`, `GET /api/admin/v1/wallet/ledger` | bearer token + `wallet_user_list` or `wallet_ledger_list` |
-| AI sidecar provider/agent/tool/knowledge management | ai-providers/ai-agents/ai-tools/ai-knowledge-bases/ai-knowledge-documents write routes | bearer token; mutation routes use explicit `ai_provider_*`, `ai_agent_*`, `ai_tool_*`, `ai_knowledge_*`, `ai_knowledge_document_*` route permissions and OperationLog metadata; secret fields are write-only/masked |
+| wallet current-user read | `GET /api/admin/v1/wallet/summary`, `GET /api/admin/v1/wallet/transactions` | bearer token; current-user ownership only; no `consume` HTTP route in the active product contract |
+| payment wallet admin read | `GET /api/admin/v1/payment/ledger/page-init`, `GET /api/admin/v1/payment/ledger`, `GET /api/admin/v1/payment/wallets/page-init`, `GET /api/admin/v1/payment/wallets` | bearer token + `payment_ledger_list` or `payment_wallet_list` |
+| AI sidecar provider/agent/tool/knowledge/billing management | ai-providers/ai-agents/ai-tools/ai-knowledge-bases/ai-knowledge-documents/ai-billing-rules write routes | bearer token; mutation routes use explicit `ai_provider_*`, `ai_agent_*`, `ai_tool_*`, `ai_knowledge_*`, `ai_knowledge_document_*`, and `ai_billing_rule_edit` route permissions and OperationLog metadata; secret fields are write-only/masked |
 | AI sidecar runtime current-user | ai-conversations current-user CRUD, ai-conversations/:id/messages list/send, and ai-runs read monitor | bearer token; current-user ownership where applicable; message send requires an enabled chat-scene AI agent + provider and must fail explicitly when not configured |
 | Retired AI legacy routes | legacy model/tool/prompt/agent/knowledge-base routes | not mounted in active Go runtime; only backup/rollback SQL, historical specs, or negative router tests may mention exact old route strings |
 
@@ -1555,6 +1570,39 @@ Rules:
 - `GET /ai-agents/page-init` returns `scene_arr` and `provider_model_options`; `GET /ai-agents/provider-models/:id` refreshes enabled models for a provider
 - `agent_id` / `agent_name` are the canonical AI runtime selector fields; old app aliases must not drive new DB queries or new Vue state
 
+## AI Billing Rules
+
+状态：AI billing rules are configured in AI agent config. Admin image generation is the first billed runtime caller. Canvas integration is not part of this implementation.
+
+用途：AI 计费规则只定义当前可计费场景的单价和启停；扣款/退款通过 wallet internal debit/credit 写入 `wallet_transactions`，计费审计写入 `ai_billing_records`。当前已接入 caller 是 admin AI image generation；canvas scene values may exist as selectable metadata, but no `/api/canvas/*` route and no `canvas_front_next` integration are part of this implementation.
+
+### Routes
+
+```text
+GET    /api/admin/v1/ai-billing-rules/page-init
+GET    /api/admin/v1/ai-billing-rules
+POST   /api/admin/v1/ai-billing-rules
+PUT    /api/admin/v1/ai-billing-rules/:id
+PATCH  /api/admin/v1/ai-billing-rules/:id/status
+DELETE /api/admin/v1/ai-billing-rules/:id
+```
+
+### Auth and Permission
+
+```text
+read routes: bearer token, admin read context
+mutation routes: bearer token + ai_billing_rule_edit
+```
+
+### Runtime Rules
+
+```text
+admin_image_generate must have an enabled billing rule before provider enqueue.
+Insufficient balance fails before provider enqueue and writes no billing debit transaction.
+Worker failure refunds through ai_refund exactly once for the bound billing_record_id.
+Historical image tasks with null billing_record_id skip billing/refund mutation.
+```
+
 ## AI Images / Image Playground
 
 状态：implemented as an agent-driven `gpt-image-2` image playground. It is not a provider/model configuration page.
@@ -2702,9 +2750,9 @@ DELETE /sms/logs/:id and /logs     -> system_sms_logDel, module=sms, action=dele
 
 ## Payment
 
-状态：payment config rebuild v1 + recharge cashier v1 + recharge completion closure implemented in Go backend, adapted in Vue frontend。Wallet recharge/consume v1 另见下一节 `Wallet`。
+状态：payment config rebuild v1 + recharge cashier v1 + payment/wallet/billing menu reshape implemented in code by Tasks 1-8; Task 9 only synchronizes docs. Task 10 live DB/full verification is not claimed here。
 
-用途：当前 payment active scope 只做支付宝支付配置、充值收银台和充值完成闭环：配置 CRUD、私有证书上传、本地配置测试、套餐充值、后端自动选择可用支付宝配置、创建底层支付单、拉起 web/h5 支付、手动同步状态、支付宝正式异步回调、支付中订单定时补偿同步、过期订单定时关闭、钱包余额幂等入账。退款、提现、对账、微信、订阅权益不属于 payment slice；用户消费扣款属于 wallet slice，不进入 `payment_orders`。
+用途：当前 payment active scope 只做支付宝支付配置、隐藏充值收银台、admin 收支明细、admin 用户钱包和充值完成闭环：配置 CRUD、私有证书上传、本地配置测试、套餐充值、后端自动选择可用支付宝配置、创建底层支付单、拉起 web/h5 支付、支付宝正式异步回调、支付中订单定时补偿同步、过期订单定时关闭、钱包余额幂等入账。退款、提现、对账、微信、订阅权益不属于 payment slice；AI 计费扣款属于 wallet/AI billing slice，不进入 `payment_orders`。
 
 ### Shared Rules
 
@@ -2715,8 +2763,9 @@ gateway boundary: internal/infra/payment/alipay
 provider scope: Alipay only
 active payment tables: payment_configs, payment_orders, payment_recharge_packages, payment_recharges, payment_callback_events
 shared wallet tables touched by recharge credit: user_wallets, wallet_transactions
-active pages: /payment/config, /payment/recharge, /payment/orders
-order page: /payment/orders is a product-visible Alipay/gateway collection-order ledger; raw create UX stays hidden
+visible pages: /payment/config, /payment/ledger, /payment/wallets
+hidden pages: /profile/wallet, /payment/recharge
+retired/historical visible entries: /wallet, /wallet-manage, /payment/orders
 cert storage: runtime/payment/certs/alipay/<config_code>/<sha256>.crt
 public callback: POST /api/payment/callbacks/alipay
 ```
@@ -2730,7 +2779,7 @@ Public Alipay callback is POST /api/payment/callbacks/alipay; old notify paths a
 payment_configs.sort selects the preferred enabled Alipay config; lower sort wins, then lower id.
 payment_configs has no return_url; recharge create computes return_url per payment.
 Users do not submit config_code, app_id, subject, amount_yuan, expire_minutes, or handwritten return_url on the recharge page.
-paid/credited state can only be written by verified Alipay callback, manual Alipay query/sync, or the payment sync-pending cron path that reuses the same finalizer.
+paid/credited state can only be written by verified Alipay callback, internal Alipay query, or the payment sync-pending cron path that reuses the same finalizer.
 wallet credit is DB-transactional and idempotent through wallet_transactions(source_type, source_id).
 The shared finalizer must be monotonic: a stale callback/sync/cron snapshot cannot move `credited` back to `paid`, and a recharge that is already `closed` or `failed` cannot be reopened or credited by a late finalizer.
 private_key_enc and plaintext app_private_key never appear in API response, operation log, smoke output, or frontend types.
@@ -2762,23 +2811,18 @@ GET    /api/admin/v1/payment/recharges
 GET    /api/admin/v1/payment/recharges/:id
 POST   /api/admin/v1/payment/recharges
 POST   /api/admin/v1/payment/recharges/:id/pay
-POST   /api/admin/v1/payment/recharges/:id/sync
-PATCH  /api/admin/v1/payment/recharges/:id/close
 ```
 
-Payment order routes back the product-visible `/payment/orders` ledger. The Vue page exposes list/detail/pay/sync/close operations, but still does not expose raw create UX:
+Admin money read routes:
 
 ```text
-GET    /api/admin/v1/payment/orders/page-init
-GET    /api/admin/v1/payment/orders
-GET    /api/admin/v1/payment/orders/:id
-POST   /api/admin/v1/payment/orders              # backend/internal capability; raw create UX not exposed by product page
-POST   /api/admin/v1/payment/orders/:id/pay
-POST   /api/admin/v1/payment/orders/:id/sync
-PATCH  /api/admin/v1/payment/orders/:id/close
+GET    /api/admin/v1/payment/ledger/page-init
+GET    /api/admin/v1/payment/ledger
+GET    /api/admin/v1/payment/wallets/page-init
+GET    /api/admin/v1/payment/wallets
 ```
 
-No order edit/delete endpoints exist in this slice.
+Retired/historical product-facing order and status-action routes are not current Vue product entries: `/payment/orders` page, old order HTTP surface, and recharge status action UI. The low-level `payment_orders` table remains a backend runtime fact for Alipay settlement.
 
 Public callback route:
 
@@ -2881,13 +2925,13 @@ failed
 Create -> pending, then Pay -> paying or failed
 Pay pending/failed -> paying or failed
 Pay paying with pay_url -> return existing pay_url
-Sync paying + payment_order paid -> paid -> credited
-Sync paid -> credited
-Sync waiting -> still paying
-Sync closed -> closed
-Close pending/failed/paying -> closed
-Close paid/credited -> reject
-Repeat sync credited -> return credited, no second wallet credit
+Verified callback/internal query + payment_order paid -> paid -> credited
+Internal query paid -> credited
+Internal query waiting -> still paying
+Internal query closed -> closed
+Close pending/failed/paying from backend runtime -> closed
+Close paid/credited from backend runtime -> reject
+Repeat finalized credited -> return credited, no second wallet credit
 ```
 
 新增表字段第一版用途固定：
@@ -2897,14 +2941,14 @@ payment_recharge_packages.code/name/amount_cents/badge/sort/status: page-init �
 payment_recharges.recharge_no/user_id/package_code/package_name/amount_cents/payment_order_id/status/paid_at/credited_at/failure_reason: 充值记录、return_url 回跳识别、callback/sync/cron 共用状态机和入账审计。
 payment_callback_events.provider/notify_id/out_trade_no/trade_no/trade_status/app_id/total_amount_cents/signature_valid/process_status/process_message/raw_payload_json/received_at/processed_at: 支付宝回调审计事实；不作为支付业务真相源。
 user_wallets.user_id/balance_cents/total_recharge_cents/total_consume_cents: 充值页余额展示；充值入账时原子增加 balance/total_recharge，消费由 wallet slice 原子扣减 balance/增加 total_consume。
-wallet_transactions.transaction_no/wallet_id/user_id/direction/amount_cents/balance_before_cents/balance_after_cents/source_type/source_id/remark: 钱包流水审计和 `(source_type, source_id)` 幂等约束；充值写 `direction=in/source_type=recharge`，消费写 `direction=out/source_type=consume`。
+wallet_transactions.transaction_no/wallet_id/user_id/direction/amount_cents/balance_before_cents/balance_after_cents/source_type/source_id/remark: 钱包流水审计和 `(source_type, source_id)` 幂等约束；充值写 `direction=in/source_type=recharge`，AI 扣款写 `direction=out/source_type=ai_generate`，失败退款写 `direction=in/source_type=ai_refund`。
 order_no / recharge_no / transaction_no 是后端生成的不透明唯一字符串；后端必须保证 wallet transaction_no 在充值入账和消费扣款两个写入路径之间仍全局唯一；前端和第三方回跳只保存/回传，不解析长度或时间后缀。
 is_del / created_at / updated_at: 每张新增表都有并参与过滤、排序或审计展示。
 ```
 
-### Order Contract
+### Historical Order Runtime Contract
 
-`payment/orders` 管理 `payment_orders`。它是底层支付订单 runtime：创建本地订单、拉起支付宝支付、手动同步支付宝状态、关闭未支付订单。充值服务会内部创建它；Vue 产品入口不再暴露“新增支付订单”表单。订单金额创建后不能编辑，后台不能手工改成 paid。
+`payment/orders` is retired/historical as a product-facing page. `payment_orders` remains a low-level backend runtime table: recharge service creates local gateway orders, starts Alipay payment, reconciles provider state through internal paths, and closes unpaid orders from backend compensation. Vue 产品入口不再暴露订单页、原始新增订单表单、状态同步按钮或关闭按钮。订单金额创建后不能编辑，后台不能手工改成 paid。
 
 订单状态：
 
@@ -2920,7 +2964,7 @@ failed
 
 ```text
 order_no: 本地支付订单号，同时作为支付宝 out_trade_no。
-config_id/config_code: 绑定 payment_configs，pay/sync/close 用它取证书和 app_id。
+config_id/config_code: 绑定 payment_configs，backend-internal pay/query/close 用它取证书和 app_id。
 provider/pay_method/subject/amount_cents/status/pay_url/return_url/alipay_trade_no/expired_at/paid_at/closed_at/failure_reason: 支付宝支付闭环状态。
 is_del / created_at / updated_at: 基础三字段，repository 查询固定 is_del=2。
 ```
@@ -2956,20 +3000,14 @@ BUTTON payment_config_del
 BUTTON payment_config_upload_cert
 BUTTON payment_config_test
 
-PAGE   payment_recharge_list         /payment/recharge view_key=payment/recharge
+PAGE   payment_ledger_list           /payment/ledger view_key=payment/ledger show_menu=1
+PAGE   payment_wallet_list           /payment/wallets view_key=payment/wallets show_menu=1
+PAGE   payment_recharge_list         /payment/recharge view_key=payment/recharge show_menu=2
 BUTTON payment_recharge_add
 BUTTON payment_recharge_pay
-BUTTON payment_recharge_sync
-BUTTON payment_recharge_close
-
-PAGE   payment_order_list            /payment/orders view_key=payment/orders show_menu=1
-BUTTON payment_order_add             # backend/internal raw create capability; Vue raw create UX stays retired
-BUTTON payment_order_pay
-BUTTON payment_order_sync
-BUTTON payment_order_close
 ```
 
-`payment_recharge_*` 是产品可见充值入口权限，迁移脚本默认补给 active admin roles；`payment_order_*` 是产品可见支付订单/支出流水权限，但仍按角色单独授权，不跟随充值入口自动扩散。
+`/payment` 是唯一可见支付/钱包顶级菜单；可见子项是 `/payment/config`、`/payment/ledger`、`/payment/wallets`。`/profile/wallet` 和 `/payment/recharge` 是 hidden routes。Retired/historical visible entries: `/wallet`, `/wallet-manage`, `/payment/orders`。
 
 ### Retired From Active Product Runtime
 
@@ -2977,8 +3015,11 @@ BUTTON payment_order_close
 payment_channel_* permissions and channel menu
 payment_event_* permissions and event menu
 old pay_* permissions and legacy root-only wallet route
-/payment/orders raw create UX
+retired/historical /payment/orders page and raw create UX
 PaymentOrderFormDialog raw create UX
+retired/historical /wallet/users, /wallet/ledger, /wallet/transactions left-side pages
+retired/historical /wallet/consumptions current-user HTTP mutation
+retired/historical recharge status-action UI including PaymentRechargeApi.sync and PaymentRechargeApi.close
 /api/admin/v1/payment/channels*
 /api/admin/v1/payment/events*
 /api/payment/notify/alipay
@@ -2987,36 +3028,41 @@ refund / WeChat / subscription / reconcile features
 
 ## Wallet
 
-状态：wallet recharge/consume v1 implemented in Go backend, adapted in Vue frontend。
+状态：wallet recharge/consume v1 has been reshaped for payment/wallet/billing redesign. Current-user wallet read stays under `/api/admin/v1/wallet`; admin wallet reads moved under `/api/admin/v1/payment`.
 
 用途：钱包只回答“余额是多少、怎么变的”。产品语言固定为：
 
 ```text
-支付订单 = 支付宝/第三方收款订单，给管理、财务、技术排障看。
 充值记录 = 用户充值业务记录，给用户看“我充了没有、到账没有”。
-钱包流水 = 余额变化事实，充值入账和消费扣款都在这里。
+收支明细 = admin 侧余额变化事实，充值入账、AI 扣款和退款都在这里。
+用户钱包 = admin 侧用户余额汇总。
+我的钱包 = 当前用户隐藏入口，展示余额和自己的交易记录。
 ```
 
 ### Shared Rules
 
 ```text
-resource prefix: /api/admin/v1/wallet
+current-user resource prefix: /api/admin/v1/wallet
+admin ledger resource prefix: /api/admin/v1/payment/ledger
+admin wallet resource prefix: /api/admin/v1/payment/wallets
 backend owner: internal/module/payment/wallet
 active tables: user_wallets, wallet_transactions
-current-user pages: /wallet/transactions
-admin pages: /wallet/users, /wallet/ledger
+current-user hidden page: /profile/wallet
+admin visible pages: /payment/ledger, /payment/wallets
+retired/historical left-side pages: /wallet/transactions, /wallet/users, /wallet/ledger
 ```
 
 硬规则：
 
 ```text
-Wallet v1 只做充值入账后的余额展示、资金流水查询和即时消费扣款。
-Consume 不创建 payment_orders；用户支出看 wallet_transactions(direction=out, source_type=consume)。
+Wallet v1 只做充值入账后的余额展示、资金流水查询和内部扣款/退款原语。
+No public current-user consume HTTP route remains in the active product contract.
+AI billing uses internal wallet debit/credit; it does not create payment_orders.
 amount_cents 永远为正数，收支方向由 direction 表达。
 余额变更必须在一个 DB transaction 内写 user_wallets 和 wallet_transactions。
-source_type + source_id 全局幂等；同一用户重复 consume source（包括并发 duplicate-key race 后的重试）返回已有流水，不重复扣款；其他用户复用同一 consume source 必须拒绝，不能返回别人的流水。
-余额不足不写 wallet_transactions。
-本 slice 不做 refund / withdraw / freeze / adjustment / reconcile / currency / points / membership fulfillment。
+source_type + source_id 全局幂等；同一用户重复 source 返回已有流水，不重复扣款或退款；其他用户复用同一 source 必须拒绝，不能返回别人的流水。
+余额不足不写 wallet_transactions and must fail before provider enqueue for billed AI generation.
+本 slice 不做 withdraw / freeze / manual adjustment / reconcile / currency / points / membership fulfillment。
 ```
 
 ### Routes
@@ -3026,21 +3072,20 @@ Current-user wallet center:
 ```text
 GET  /api/admin/v1/wallet/summary
 GET  /api/admin/v1/wallet/transactions
-POST /api/admin/v1/wallet/consumptions
 ```
 
-Admin wallet management:
+Admin wallet reads:
 
 ```text
-GET /api/admin/v1/wallet/users/page-init
-GET /api/admin/v1/wallet/users
-GET /api/admin/v1/wallet/ledger/page-init
-GET /api/admin/v1/wallet/ledger
+GET /api/admin/v1/payment/ledger/page-init
+GET /api/admin/v1/payment/ledger
+GET /api/admin/v1/payment/wallets/page-init
+GET /api/admin/v1/payment/wallets
 ```
 
 ### Data Contract
 
-`GET /wallet/summary`:
+`GET /api/admin/v1/wallet/summary`:
 
 ```json
 {
@@ -3053,14 +3098,14 @@ GET /api/admin/v1/wallet/ledger
 }
 ```
 
-`GET /wallet/transactions` returns current-user rows only. `GET /wallet/ledger` returns admin rows and supports filters:
+`GET /api/admin/v1/wallet/transactions` returns current-user rows only. `GET /api/admin/v1/payment/ledger` returns admin rows and supports filters:
 
 ```text
 current_page, page_size
 keyword: transaction_no / remark / user account prefix search
-user_id: ledger only
+user_id: admin ledger only
 direction: in | out
-source_type: recharge | consume
+source_type: recharge | ai_generate | ai_refund
 date_start, date_end
 ```
 
@@ -3078,7 +3123,7 @@ source_type, source_type_text, source_id
 remark, created_at
 ```
 
-`GET /wallet/users` returns:
+`GET /api/admin/v1/payment/wallets` returns and supports user keyword filtering:
 
 ```text
 id, wallet_id, user_id, username, account
@@ -3088,36 +3133,15 @@ total_consume_cents, total_consume_text
 updated_at
 ```
 
-`POST /wallet/consumptions` request:
-
-```json
-{
-  "amount_cents": 100,
-  "source_id": 12345,
-  "remark": "test consume"
-}
-```
-
-Response:
-
-```text
-transaction: wallet transaction item
-wallet: same shape as /wallet/summary
-```
-
 ### Active Menu and Permission Codes
 
 ```text
-DIR    wallet_center               /wallet show_menu=1
-PAGE   wallet_transaction_list     /wallet/transactions view_key=wallet/transactions show_menu=1
-BUTTON wallet_consume_add          hidden button permission for POST /wallet/consumptions
-
-DIR    wallet_manage               /wallet-manage show_menu=1
-PAGE   wallet_user_list            /wallet/users view_key=wallet/users show_menu=1
-PAGE   wallet_ledger_list          /wallet/ledger view_key=wallet/ledger show_menu=1
+PAGE   profile_wallet               /profile/wallet view_key=profile/wallet show_menu=2
+PAGE   payment_ledger_list          /payment/ledger view_key=payment/ledger show_menu=1
+PAGE   payment_wallet_list          /payment/wallets view_key=payment/wallets show_menu=1
 ```
 
-迁移脚本默认把 wallet read pages 授给已有支付权限角色；`wallet_consume_add` 不默认授予，避免默认 smoke 或普通管理浏览触发真实扣款。
+Retired/historical only: `/wallet`, `/wallet-manage`, `/wallet/transactions`, `/wallet/users`, `/wallet/ledger`, `/wallet/consumptions`.
 
 ## Upload Config
 
@@ -3889,7 +3913,7 @@ payment_close_expired_order.handler = payment:close-expired-order:v1
 
 `ai_run_timeout` 是 stale-run sweeper only：worker 只处理超过代码内置 AI run stale timeout 默认值的残留 `running` 运行，不负责正常在线流式请求超时。
 
-支付定时任务只做最终一致性补偿：`payment_sync_pending_order` 扫描支付中支付宝订单并复用手动 sync / callback 的 paid finalizer；`payment_close_expired_order` 扫描过期未支付订单并关闭本地/支付宝订单。支付宝返回 `ACQ.TRADE_NOT_EXIST` 且本地订单已过期时按未支付过期处理，同步关闭本地支付订单和关联充值单。
+支付定时任务只做最终一致性补偿：`payment_sync_pending_order` 扫描支付中支付宝订单并复用 internal Alipay query / callback 的 paid finalizer；`payment_close_expired_order` 扫描过期未支付订单并关闭本地/支付宝订单。支付宝返回 `ACQ.TRADE_NOT_EXIST` 且本地订单已过期时按未支付过期处理，同步关闭本地支付订单和关联充值单。
 
 ### Routes
 

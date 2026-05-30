@@ -586,25 +586,23 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
 ### payment config + recharge cashier Alipay v1
 
 - Backend:
-  - implemented: `internal/module/payment` owns Alipay config CRUD, private local certificate upload, local config
-    test, recharge cashier, low-level payment order runtime, public Alipay callback, callback audit, shared paid
-    finalizer, wallet balance and wallet transaction crediting
+  - implemented: `internal/module/payment` owns Alipay config CRUD, private local certificate upload, recharge cashier,
+    low-level payment order runtime, public Alipay callback, callback audit, shared paid finalizer, wallet balance, and
+    wallet transaction crediting
   - active payment tables are `payment_configs`, `payment_orders`, `payment_recharge_packages`, `payment_recharges`,
-    and `payment_callback_events`
-  - recharge credit also writes shared `user_wallets` / `wallet_transactions`
+    and `payment_callback_events`; recharge credit also writes shared `user_wallets` / `wallet_transactions`
   - `payment_configs.sort` selects the preferred enabled Alipay config
-  - recharge REST supports page-init/list/detail/create/pay/sync/close
-  - callback/manual sync/cron compensation share transaction-protected idempotent crediting via
+  - current admin read surfaces split money facts into `/payment/ledger` and `/payment/wallets`; recharge keeps
+    page-init/list/detail/create/pay, while gateway order operations remain backend runtime internals
+  - callback/operator gateway query/cron compensation share transaction-protected idempotent crediting via
     `wallet_transactions(source_type, source_id)`
   - existing orders settle against their bound Alipay config even if that config is later disabled or soft-deleted; configs with
     pending/paying orders are locked against mutation, disable, and delete
   - payment order status transitions use CAS guards so pay/fail/close operations do not overwrite already-paid orders
   - CAS misses are treated as state changes, not success: finalizer re-reads before wallet credit and `PayOrder` never returns a stale
     gateway `pay_url` if the local order changed under it
-  - recharge paid markers are CAS guarded and wallet credit locks the current recharge row, so a stale callback/sync/cron finalizer cannot
+  - recharge paid markers are CAS guarded and wallet credit locks the current recharge row, so a stale callback/query/cron finalizer cannot
     downgrade `credited` back to `paid` or credit a recharge that was closed concurrently
-  - manual sync and cron close paths close the linked recharge when Alipay returns closed or expired not-found; cron
-    also compensates `order=paid` + uncredited recharge rows so a transient finalizer failure can still credit wallet
   - Alipay callback audit payload is marshaled as valid JSON after per-field truncation; audit insert failure does
     not block verified settlement
   - callback audit amount parsing shares the strict digit rule for yuan/cent fragments; malformed values such as `10.-1`
@@ -612,77 +610,80 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
   - first wallet creation handles `uk_user_wallet_user` duplicate races by returning the existing wallet instead of surfacing a
     one-off 500
   - wallet transaction number hardening is closed: shared serial generation no longer wraps at one million same-timestamp
-    calls, `Consume` retries `uk_wallet_transaction_no` collisions without breaking source idempotency, and recharge
+    calls, debit/credit paths retry `uk_wallet_transaction_no` collisions without breaking source idempotency, and recharge
     credit uses the same bounded retry path
   - Alipay notify amount parsing rejects signed or non-digit cent fragments instead of normalizing malformed values
   - expired Alipay `ACQ.TRADE_NOT_EXIST` rows close the local order and linked recharge instead of retrying forever
 - Frontend:
-  - adapted: active product pages are `/payment/config`, `/payment/recharge`, and `/payment/orders`
-  - `/payment/recharge` checkout creation is gated by `payment_recharge_add`; `paid` stays warning until wallet credit
-    reaches `credited`
-  - `/payment/recharge` reopen auto-syncs a small batch of visible paying records; transient auto-sync failures and
-    successful-but-still-`paying` responses remain retryable in the current page session
-  - return-url recharge sync marks a `recharge_no` as synced only after the synced status leaves `paying`, so the user's
-    post-Alipay return path can retry while the gateway still reports waiting
+  - Visible menu: 支付管理 -> 支付配置 / 收支明细 / 用户钱包
+  - Hidden user route: /profile/wallet
+  - Hidden recharge route: /payment/recharge
+  - Retired visible entries: /wallet, /wallet-manage, /payment/orders
+  - adapted: active product pages are `/payment/config`, `/payment/ledger`, `/payment/wallets`, hidden current-user
+    wallet `/profile/wallet`, and hidden recharge cashier `/payment/recharge`
+  - `/payment/recharge` opens from `/profile/wallet`, keeps create/pay/list/detail refresh, and does not expose a manual
+    gateway status action button
   - `/payment/config` notify URL guidance points at the canonical public callback
     `https://www.zgm2003.cn/api/payment/callbacks/alipay`
-  - `/payment/orders` is the visible Alipay/gateway collection-order ledger without raw create UX; the manual sync action is only exposed for `paying` orders
-  - active files include `src/api/payment/config.ts`, `src/api/payment/recharges.ts`, `views/Main/payment/config`,
-    `views/Main/payment/recharge`, and a read/operation-only `views/Main/payment/orders`
-  - channel/event/old wallet pages stay retired
+  - active files include `src/api/payment/config.ts`, `src/api/payment/recharges.ts`, `src/api/wallet/index.ts`,
+    `views/Main/payment/config`, `views/Main/payment/ledger`, `views/Main/payment/wallets`, and
+    `views/Main/personal/wallet`
+  - channel/event/old wallet/order menu pages stay retired
 - Tests:
   - `internal/module/payment`, `internal/infra/payment`, `internal/infra/payment/alipay`, `internal/bootstrap`,
     `internal/server`
-  - payment callback/config/state-CAS/wallet-create-race regression tests; frontend payment config/order/recharge Vitest,
-    recharge auto-sync/return-sync retry Vitest, eslint + vue-tsc
+  - payment callback/config/state-CAS/wallet-create-race regression tests; frontend payment config/recharge/wallet Vitest,
+    eslint + vue-tsc
 - Smoke:
-  - full smoke read gate probes payment config page-init/list, payment recharge page-init/list, payment order
-    page-init/list, users/init visible `/payment/config` + `/payment/recharge` + `/payment/orders`, and cron
-    registry for payment compensation
+  - 2026-05-31 full smoke passed for payment config page-init/list, payment recharge page-init/list, payment ledger
+    page-init/list with filters, payment wallets page-init/list with keyword filter, current-user wallet summary/transactions,
+    and users/init menu state
+  - menu gate expects a single visible payment top-level entry with visible children `/payment/config`, `/payment/ledger`,
+    and `/payment/wallets`; `/profile/wallet` and `/payment/recharge` are hidden routes
   - default smoke does not upload certs, call config test, create real paid orders, call real Alipay, write paid
     state, or invoke the real Alipay callback
-  - credential-gated manual smoke may create sandbox recharge/pay/sync
+  - credential-gated probes may create sandbox recharge/pay only when explicitly enabled
 - Docs:
-  - payment config/order/recharge specs/plans + recharge completion closure spec/plan + admin API contract + smoke
-    matrix
+  - payment config/recharge/wallet billing redesign specs/plans + recharge completion closure spec/plan + admin API
+    contract + smoke matrix
 - Risk:
   - Alipay only
-  - no refund, reconcile, WeChat, subscription, or business fulfillment in this slice
-  - user consume belongs to wallet, not `payment_orders`
+  - no refund, reconcile, WeChat, subscription, business fulfillment, manual balance adjustment, points, or canvas credit
+    table in this slice
+  - user debit belongs to wallet/AI billing, not `payment_orders`
   - `private_key_enc`/plaintext key/cert content/raw callback payload must never leak
   - `return_url` belongs to each recharge/payment order, not `payment_configs`
 
 ### wallet recharge/consume v1
 
 - Backend:
-  - implemented: `internal/module/payment/wallet` owns wallet summary, current-user transactions, admin wallet
-    users, admin ledger, and guarded current-user consume
+  - implemented: `internal/module/payment/wallet` owns wallet summary, current-user transactions, admin wallet users,
+    admin ledger, and internal debit/credit primitives for billing callers
   - wallet now lives under `admin_back_go/internal/module/payment/wallet` while package identifiers and `wallet.*`
     i18n keys remain stable
   - `user_wallets.total_consume_cents` records cumulative spend
-  - consume uses a DB transaction, row lock, positive amount, same-user `source_type=consume + source_id`
-    idempotency including duplicate-key race recovery, cross-user source ownership rejection, balance check, and
-    `wallet_transactions(direction=out)`
+  - internal debit/credit use a DB transaction, row lock, positive amount, source idempotency, duplicate-key race
+    recovery, cross-user source ownership rejection, balance check for debit, and `wallet_transactions(direction=in|out)`
 - Frontend:
-  - adapted: `/wallet/transactions`, `/wallet/users`, and `/wallet/ledger` use typed `src/api/wallet`, `Search`,
-    `AppTable`, `useTable`, and Vue i18n
-  - `/payment/recharge` wallet summary also includes cumulative consume
+  - adapted: admin wallet reads moved under `/payment/ledger` and `/payment/wallets`; current-user wallet moved to
+    hidden `/profile/wallet` and uses typed `src/api/wallet`, `Search`, `AppTable`, `useTable`, and Vue i18n
+  - `/payment/recharge` is reached from the current-user wallet recharge button and is not a left-side menu entry
 - Tests:
   - verified baseline packages include `internal/module/payment/wallet`, `internal/module/payment`,
     `internal/server`, `internal/bootstrap`, `internal/shared/i18n`
   - transaction number hardening is covered: shared `serialno` no longer wraps at one million calls for the same
-    timestamp, `Consume` retries `uk_wallet_transaction_no` without breaking `uk_wallet_transaction_source`
-    idempotency, and `CreditRecharge` retries the same transaction-no collision path
+    timestamp, mutation paths retry `uk_wallet_transaction_no` without breaking source idempotency, and `CreditRecharge`
+    retries the same transaction-no collision path
   - frontend wallet API/page Vitest + `vue-tsc`
 - Smoke:
-  - full smoke read gate probes wallet summary, current-user transactions, wallet users init/list, wallet ledger
-    init/list, and users/init visible `/wallet/transactions`, `/wallet/users`, `/wallet/ledger`
-  - default smoke does not call consume
-- Docs: wallet recharge/consume spec/plan + admin API contract + smoke matrix
+  - 2026-05-31 full smoke passed for current-user wallet summary/transactions, payment ledger init/list,
+    payment wallets init/list, and users/init payment menu state
+  - default smoke does not call internal debit/credit
+- Docs: wallet recharge/consume + payment-wallet-billing redesign spec/plan + admin API contract + smoke matrix
 - Risk:
   - v1 intentionally excludes refund, withdraw, freeze, manual adjustment, reconcile, currency, points, membership
     fulfillment, and `/wallet/recharge` migration
-  - `wallet_consume_add` is not granted by default
+  - no public current-user consume HTTP route remains in the active product contract
 
 ## AI suite and realtime conversation runtime
 
@@ -746,6 +747,8 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
 - Risk:
   - config MVP is done
   - chat page consumes option avatar/system_prompt and agent config page now owns tool/knowledge usage binding
+  - AI billing rules are configured in AI agent config.
+  - Canvas integration is not part of this implementation.
 
 ### AI image playground gpt-image-2
 
@@ -779,6 +782,8 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
     agent
   - upload runtime is Tencent COS-only
   - `bucket_domain` is stored as a bare host and runtime builds HTTPS public URLs
+  - Admin image generation is the first billed runtime caller.
+  - Canvas integration is not part of this implementation.
 
 ### AI run monitor token-only MVP
 

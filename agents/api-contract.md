@@ -35,6 +35,7 @@ agents/architect.md
 禁止在没有契约时让 backend worker 猜接口
 禁止把旧 action POST 接口原样搬进 Go 新架构
 禁止为了兼容污染新 RESTful 命名
+禁止新前端 API wrapper 继续使用 add/edit/del/init/status 作为 REST CRUD 方法名
 禁止直接改数据库模型
 ```
 
@@ -59,3 +60,15 @@ frontend impact
 legacy = business reference
 openapi = new contract
 ```
+
+## RESTful 命名口径
+
+标准 CRUD 命名只用一套：
+
+```text
+route:        GET list/detail, POST create, PUT update, PATCH changeStatus, DELETE deleteOne/deleteBatch
+handler:      List/Detail/Create/Update/ChangeStatus/DeleteOne/DeleteBatch/PageInit
+frontend API: list/detail/create/update/changeStatus/deleteOne/deleteBatch/pageInit
+```
+
+`init` 只允许作为明确 bootstrap contract，例如 `users/init`；普通后台页面的字典、枚举、筛选项初始化统一叫 `page-init` / `pageInit()`。

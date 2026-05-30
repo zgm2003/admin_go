@@ -39,6 +39,7 @@ docs/status/archive/2026-05-runtime-change-log.md     # 历史证据：2026-05 v
 详细变更记录看 `docs/status/archive/2026-05-runtime-change-log.md`。近期关键批次：
 
 ```text
+2026-05-31 payment/wallet/AI billing redesign verified: backend full tests, frontend targeted tests/typecheck/quality, live DB migration check, and full-admin-smoke passed
 2026-05-30 COS upload secrets re-entered and full-admin-smoke passed; UPLOAD-RUNTIME-001 closed
 2026-05-30 AI chat cancel late-event guard fixed: canceled request ids survive later completions and WebSocket start/delta/completed/failed acknowledgements only mutate the matching in-flight request or matching streaming assistant message
 2026-05-30 payment finalizer state regression hardening: stale finalizer snapshots cannot downgrade credited recharges back to paid or credit recharges that were closed concurrently; recharge paid markers are CAS guarded
