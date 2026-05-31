@@ -668,7 +668,7 @@ interface UserExportResponse {
 }
 ```
 
-规则：只接受显式勾选的正整数用户 id；service 去重后只导出未软删除用户。创建 `export_tasks` pending 记录后投递 `export:run:v1` 到 low queue；队列投递失败必须把任务标记 failed，不允许留下永久 pending。
+规则：只接受显式勾选的正整数用户 id；service 去重后只导出未软删除用户。当前用户管理页外部契约继续是 `{ ids: number[] }`，但内部归一化为 `kind=user_list`、`scope=selected`、`platform=admin` 的导出任务。创建 `export_tasks` pending 记录后投递 `export:run:v1` 到 low queue；队列投递失败必须把任务标记 failed，不允许留下永久 pending。
 
 ## Current User Quick Entry
 
@@ -968,7 +968,7 @@ Legacy `UserSession/kick` and `UserSession/batchKick` are no longer active front
 
 ## Export Tasks
 
-状态：implemented in Go backend, adapted in Vue frontend for status-count/list/delete。worker 第一版只支持 `kind=user_list`，生成 `.xlsx` 并上传当前启用的 COS。
+状态：implemented in Go backend, adapted in Vue frontend for status-count/list/delete。导出运行时统一归 `internal/module/export`：业务模块拥有 submit endpoint、权限码和 provider；runtime 拥有 `export_tasks` 生命周期、`export:run:v1`、xlsx writer、COS uploader、状态落库和通知。当前 worker 只注册 `kind=user_list` provider，生成 `.xlsx` 并上传当前启用的 COS。
 
 用途：当前登录用户查看自己的异步导出任务、按状态统计、软删除导出任务。
 
@@ -980,6 +980,7 @@ Query：
 
 ```ts
 interface ExportTaskStatusCountQuery {
+  kind?: string
   title?: string
   file_name?: string
 }
@@ -1006,6 +1007,7 @@ interface ExportTaskListQuery {
   current_page?: number
   page_size?: number
   status?: 1 | 2 | 3
+  kind?: string
   title?: string
   file_name?: string
 }
@@ -1017,6 +1019,8 @@ Response `data`：
 interface ExportTaskListResponse {
   list: Array<{
     id: number
+    kind: string
+    kind_text: string
     title: string
     file_name: string | null
     file_url: string | null
@@ -1039,7 +1043,7 @@ DELETE /api/admin/v1/export-tasks/:id
 DELETE /api/admin/v1/export-tasks        body: { ids: number[] }
 ```
 
-规则：status-count/list/delete 均按当前 token user scoped；查询前软删除过期任务；`title` 和 `file_name` 使用 prefix LIKE；删除只软删 `export_tasks`，不删除 COS 对象。导出 worker 的 queue payload 只放 `task_id/kind/user_id/platform/ids`，不放渲染后的 rows。
+规则：status-count/list/delete 均按当前 token `user_id + platform` scoped；当前 `kind=user_list` 时 `kind_text='用户列表'`。查询前软删除过期任务；`title` 和 `file_name` 使用 prefix LIKE；删除只软删 `export_tasks`，不删除 COS 对象。`export_tasks.kind/platform/object_key` 是 V2 运行时字段：kind 表示导出场景，platform 表示入口隔离，object_key 表示 COS object key。API list 不暴露 object_key，只返回 file_url 下载地址。导出 worker 的 queue payload 只放 `task_id/kind/user_id/platform/ids`，不放渲染后的 rows。COS uploader 使用 `exports/<kind>/YYYYMMDD/...` key 前缀，成功落库 `object_key/file_url/file_size/row_count`。
 
 ## Profile
 

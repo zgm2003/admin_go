@@ -33,12 +33,14 @@ docs/status/archive/2026-05-runtime-change-log.md     # 历史证据：2026-05 v
 - 2026-05-27 multi-platform Phase 2 code/docs/frontend gates and the later full admin smoke gate have now passed for the current local Go/Vue runtime.
 - Docker-first readiness 和 smoke 是两条验证链：Docker runtime 用 `127.0.0.1:8080 /health /ready`；smoke 脚本默认临时端口是 basic `127.0.0.1:18080`、full `127.0.0.1:18081`。
 - `admin_app` 机器局域网默认值已清掉；本轮未跑真机 smoke，LAN 调试仍需按本机 IP 配置 `VITE_APP_API_BASE_URL`、后端监听地址、防火墙和 `CORS_ALLOW_ORIGINS`。
+- Export runtime V2 code/tests are complete in the export worktree, but the credential-gated real submit-to-COS smoke has not been run in this environment; do not claim COS upload runtime closure until `scripts/export-task-smoke.ps1 -RunRealExport` passes.
 
 ## Latest status / change-log pointers
 
 详细变更记录看 `docs/status/archive/2026-05-runtime-change-log.md`。近期关键批次：
 
 ```text
+2026-05-31 export runtime v2: registry-driven export runtime, `kind/platform/object_key`, frontend export submit helper, and gated real-export smoke script landed; real submit-to-COS smoke still pending
 2026-05-31 payment/wallet final review: legacy wallet consume DTO/service/repository/i18n surfaces removed; wallet mutations are now explicit Debit/Credit with ai_generate/ai_refund sources
 2026-05-31 payment/wallet/AI billing redesign verified: backend full tests, frontend targeted tests/typecheck/quality, live DB migration check, and full-admin-smoke passed
 2026-05-30 COS upload secrets re-entered and full-admin-smoke passed; UPLOAD-RUNTIME-001 closed

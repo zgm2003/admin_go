@@ -227,10 +227,10 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
 - Backend:
   - implemented for page-init/list/edit/batch-edit/status/delete/export submit
   - admin HTTP routes are owned by `internal/module/user/transport/admin`
-  - export submit creates `export_tasks` pending row and enqueues `export:run:v1` low queue
+  - export submit creates `export_tasks` pending row with `kind=user_list` and `platform=admin`, then enqueues `export:run:v1` low queue
 - Frontend:
   - adapted for user manager page
-  - export button uses Go REST `POST /api/admin/v1/users/export` and keeps `user_userManager_export`
+  - export button uses Go REST `POST /api/admin/v1/users/export`, keeps `user_userManager_export`, and now goes through shared `useExportSubmit`
 - Tests:
   - `internal/module/user`, `internal/module/user/transport/admin`, `internal/module/export`, `internal/jobs`,
     `internal/server`, `internal/bootstrap`
@@ -282,19 +282,21 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
   - implemented: `GET /api/admin/v1/export-tasks/status-count`, `GET /api/admin/v1/export-tasks`, `DELETE
     /api/admin/v1/export-tasks/:id`, `DELETE /api/admin/v1/export-tasks`
   - capability directory is `internal/module/export` while Go package identifiers and i18n keys remain `exporttask`
-  - worker handles `kind=user_list`, writes xlsx with string cells, uploads to current COS, marks success/failed,
-    sends notification, and returns localized backend error keys
-- Frontend: adapted: `src/api/system/exportTask.ts` uses Go REST `request`, no legacy export-task adapter
+  - runtime is registry-driven: provider registration lives in bootstrap, queries are scoped by `user_id + platform + kind`, and success rows persist `object_key/file_url/file_size/row_count`
+  - worker handles `kind=user_list`, writes xlsx with string cells, uploads to current COS under `exports/<kind>/YYYYMMDD/...`, marks success/failed, sends notification, and returns localized backend error keys
+- Frontend:
+  - adapted: `src/api/system/exportTask.ts` uses Go REST `request`, no legacy export-task adapter
+  - export task list/status query now supports `kind`; item shape includes `kind/kind_text`; delete APIs expose `deleteOne/deleteBatch` while `del` stays as compatibility alias
 - Tests:
   - `internal/module/export`, `internal/jobs`, `internal/bootstrap`, `internal/server`
-  - frontend `tests/shared/system/export-task-api.test.ts`
+  - frontend `tests/shared/system/export-task-api.test.ts`, `tests/shared/system/export-submit-helper.test.ts`
 - Smoke:
-  - full smoke read-only probes status-count/list
+  - full smoke read-only probes status-count/list with `kind=user_list`
   - route snapshot and backend full tests preserve API surface
-  - actual export e2e requires queue worker + enabled Tencent COS config
+  - credential-gated `scripts/export-task-smoke.ps1 -RunRealExport` covers submit -> worker -> COS upload when API/worker/Redis/COS secrets are ready
 - Docs: contract + backend architecture + smoke matrix
 - Risk:
-  - no universal export platform
+  - current provider coverage is still only `kind=user_list`
   - no OSS runtime
   - no retry/cancel/COS delete UI in this slice
 
