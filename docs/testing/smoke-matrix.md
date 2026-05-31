@@ -34,7 +34,7 @@ Smoke 脚本默认启动临时后端/worker 进程，端口分别是 `127.0.0.1:
 | AI conversation/run monitor disabled-baseline | no | yes | `GET /api/admin/v1/ai-conversations`, optional `GET /api/admin/v1/ai-conversations/:id/messages` shape when fixture exists, `GET /api/admin/v1/ai-runs/page-init`, `GET /api/admin/v1/ai-runs`, optional `GET /api/admin/v1/ai-runs/:id` when a run fixture exists, `GET /api/admin/v1/ai-runs/stats` | no successful mutation by default | n/a | full smoke proves conversation and token-only run-monitor read paths use the local AI schema. Run monitor status filter is `status`, stats return `avg_duration_ms`, events are lifecycle-only, and run detail returns `tool_calls` plus `knowledge_retrievals` from separate audit tables when present. Conversation send is a mutation and is covered by unit/contract tests unless an explicit live provider probe is enabled; browser chat no longer calls `/api/admin/v1/ai-chat/runs` or REST event polling. Stream timeout governance is unit-tested: live max duration, provider idle timeout, and stale-run cron cleanup are separate. `AI-FE-001` is covered by focused Vitest regression cases, not smoke. |
 | users management read | yes | via basic | `GET /api/admin/v1/users/page-init`, `GET /api/admin/v1/users` | no | n/a | 验证用户管理页 Go REST read path |
 | user legacy closure | no | yes | `PUT /api/admin/v1/users/me/quick-entries`, `GET /api/admin/v1/users/login-logs/page-init`, `GET /api/admin/v1/users/login-logs?current_page=1&page_size=10`, `GET /api/admin/v1/user-sessions/page-init`, `GET /api/admin/v1/user-sessions?current_page=1&page_size=10`, `GET /api/admin/v1/user-sessions/stats`, `PATCH /api/admin/v1/user-sessions/:id/revoke` current-session failure probe | yes, quick-entry save only | restore original current user's quick_entry | full smoke 保存一个当前用户已有 PAGE 到 quick-entry，再恢复原值；登录日志只读 shape；会话列表继续断言 token hash 不泄漏；revoke 只验证当前 session 不能踢自己，不随机踢 live session |
-| export tasks read | no | yes | `GET /api/admin/v1/export-tasks/status-count`, `GET /api/admin/v1/export-tasks?current_page=1&page_size=20` | no | n/a | full smoke 只探测当前用户导出任务状态统计和分页 shape；不触发真实导出、不等待 worker、不上传 COS |
+| export tasks read | no | yes | `GET /api/admin/v1/export-tasks/status-count?kind=user_list`, `GET /api/admin/v1/export-tasks?current_page=1&page_size=20&kind=user_list` | no | n/a | full smoke 只探测当前用户导出任务状态统计和分页 shape，断言 `kind/kind_text` 字段；不触发真实导出、不等待 worker、不上传 COS |
 | profile + avatar first upload slice | no | yes | `GET /api/admin/v1/profile`, `GET /api/admin/v1/users/:id/profile`, `PUT /api/admin/v1/profile`, avatar upload token via shared client contract | harmless self-update of same values | n/a | full smoke 读取 profile shape，PUT 原值证明路由/operation log；真实头像直传仍由前端上传 token flow 负责 |
 | account security writes | no | failure probes only | `PUT /api/admin/v1/profile/security/password`, `PUT /api/admin/v1/profile/security/email`, `PUT /api/admin/v1/profile/security/phone`; forgot-password success is unit-tested via `POST /api/admin/v1/auth/forgot-password` | no successful mutation | n/a | full smoke 只验证错误旧密码/错误邮箱验证码/错误手机号验证码返回 `code=100`，不修改真实测试账号密码、手机号、邮箱；forgot-password 成功会改密码，所以不放默认 smoke 写路径 |
 | auth platform read | yes | via basic | `GET /api/admin/v1/auth-platforms/page-init`, `GET /api/admin/v1/auth-platforms` | no | n/a | 验证 captcha dict 存在 |
@@ -99,6 +99,18 @@ powershell -ExecutionPolicy Bypass -File .\scripts\full-admin-smoke.ps1 `
 ```
 
 Payment/wallet smoke is read-only by default in this rebuild. Payment probes config page-init/list, recharge page-init/list shape, `/payment/ledger` page-init/list filters, `/payment/wallets` page-init/list filters, current-user wallet summary/transactions, hidden `/profile/wallet`, hidden `/payment/recharge`, and payment menu state only. Certificate upload, config test with real credentials, sandbox recharge/order creation, pay URL generation, wallet credit, AI billing debit/refund, notify, and real Alipay calls remain manual, unit/service, or future credential-gated probes. 2026-05-31 full-admin-smoke passed after the payment/wallet/AI billing smoke probes were updated.
+
+Export runtime V2 keeps default full smoke read-only. Real submit -> worker -> COS upload is credential-gated and must be run explicitly with:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\export-task-smoke.ps1 `
+  -Account 15671628271 `
+  -Password 123456 `
+  -BaseURL http://127.0.0.1:8080 `
+  -RunRealExport
+```
+
+Expected gated result: JSON contains `status: 2`, `.xlsx`, `row_count >= 1`, and `file_url_present: true`.
 
 ## Rules
 
