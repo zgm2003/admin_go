@@ -40,9 +40,9 @@ App 端：/api/app/v1
 新 Go API 使用 RESTful resource，不允许 /api/admin/Xxx/list、/api/admin/Xxx/add、/api/admin/Xxx/edit、/api/admin/Xxx/del 这种旧动作式 path。
 init/page-init 属于页面字典或 bootstrap contract，必须显式写清用途和 enum/dict 来源。
 标准页面字典接口统一写成 GET /api/admin/v1/<resources>/page-init；init 只保留给明确 bootstrap contract，例如 users/init。
-标准前端 API wrapper 使用 list/detail/create/update/changeStatus/deleteOne/deleteBatch/pageInit；新模块不得新增 add/edit/del/init/status 作为 REST wrapper 方法名。
+标准前端 API wrapper 使用 list/detail/create/update/changeStatus/deleteOne/deleteBatch/pageInit；不得新增或保留 CRUD init/add/edit/del/status wrapper。
 旧接口兼容入口必须标注兼容来源、退出条件和验证边界，不得伪装成新契约。
-RESTful 命名迁移期允许旧 page dictionary `/init` 和旧 frontend wrapper alias 暂存；alias 必须指向标准 `page-init/pageInit` 或 CRUD 标准名，退出条件是 frontend 调用和 smoke/route snapshot 全部切到标准名。
+`init` 只保留给明确 bootstrap contract，例如当前登录用户初始化 `GET /api/admin/v1/users/init`；普通页面字典不保留 `/init` route 或 `init()` wrapper alias。
 ```
 
 标准 CRUD contract 模板：
@@ -76,7 +76,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-contract.ps1
 | logout | `POST /api/admin/v1/auth/logout` | bearer token |
 | current user bootstrap | `GET /api/admin/v1/users/me`, `GET /api/admin/v1/users/init` | bearer token |
 | App auth baseline | `GET /api/app/v1/auth/login-config`, `GET /api/app/v1/auth/captcha`, `POST /api/app/v1/auth/send-code`, `POST /api/app/v1/auth/login`, `GET /api/app/v1/users/me`, `GET/PUT /api/app/v1/profile`, `POST /api/app/v1/upload-tokens`, `POST /api/app/v1/auth/logout` | auth config/captcha/send-code/login: public; current user/profile/upload-token/logout: bearer token; app bearer requests default `platform=app` |
-| read-only admin resources | permissions/auth-platforms/roles/users/profile/operation-logs/system-settings/mail/upload-drivers/upload-rules/upload-settings/notifications list or page-init/init alias | bearer token |
+| read-only admin resources | permissions/auth-platforms/roles/users/profile/operation-logs/system-settings/mail/upload-drivers/upload-rules/upload-settings/notifications list or page-init | bearer token |
 | user quick-entry current-user write | `PUT /api/admin/v1/users/me/quick-entries` | bearer token; current user only, no user-manager button permission |
 | user login logs read | `GET /api/admin/v1/users/login-logs/page-init`, `GET /api/admin/v1/users/login-logs` | bearer token |
 | user sessions read/revoke | `GET /api/admin/v1/user-sessions/page-init`, `GET /api/admin/v1/user-sessions`, `GET /api/admin/v1/user-sessions/stats`, `PATCH /api/admin/v1/user-sessions/:id/revoke`, `PATCH /api/admin/v1/user-sessions/revoke` | read routes: bearer token; revoke routes: bearer token + `user_userManager_kick` |
@@ -3958,7 +3958,7 @@ GET    /api/admin/v1/cron-tasks/:id/logs
 Auth/RBAC：
 
 ```text
-read/page-init/init alias/list: bearer token
+read/page-init/list: bearer token
 create: devTools_cronTask_add
 update: devTools_cronTask_edit
 status: devTools_cronTask_status

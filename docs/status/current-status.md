@@ -40,7 +40,7 @@ docs/status/archive/2026-05-runtime-change-log.md     # 历史证据：2026-05 v
 详细变更记录看 `docs/status/archive/2026-05-runtime-change-log.md`。近期关键批次：
 
 ```text
-2026-05-31 RESTful API naming cleanup: frontend standard wrapper names and legacy page dictionary `/init` routes removed; page dictionaries use `/page-init` only while `users/init` remains bootstrap
+2026-05-31 RESTful API naming full standardization: frontend CRUD wrappers and active call sites use standard names only; backend page dictionary routes bind PageInit-style handlers/services; `users/init` remains the bootstrap exception
 2026-05-31 payment serial readability hardening: RCG/PAY/WLT no longer append a 20-digit zero-padded sequence; new rows use compact uppercase base36 suffix while old rows stay unchanged
 2026-05-31 export runtime v2 verified: registry-driven export runtime, `kind/platform/object_key`, frontend export submit helper, migration dry-run, and gated real submit-to-COS smoke all passed
 2026-05-31 payment/wallet final review: legacy wallet consume DTO/service/repository/i18n surfaces removed; wallet mutations are now explicit Debit/Credit with ai_generate/ai_refund sources

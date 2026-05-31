@@ -286,7 +286,7 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
   - worker handles `kind=user_list`, writes xlsx with string cells, uploads to current COS under `exports/<kind>/YYYYMMDD/...`, marks success/failed, sends notification, and returns localized backend error keys
 - Frontend:
   - adapted: `src/api/system/exportTask.ts` uses Go REST `request`, no legacy export-task adapter
-  - export task list/status query now supports `kind`; item shape includes `kind/kind_text`; delete APIs expose `deleteOne/deleteBatch` while `del` stays as compatibility alias
+  - export task list/status query now supports `kind`; item shape includes `kind/kind_text`; delete APIs expose standard `deleteOne/deleteBatch` methods only
 - Tests:
   - `internal/module/export`, `internal/jobs`, `internal/bootstrap`, `internal/server`
   - frontend `tests/shared/system/export-task-api.test.ts`, `tests/shared/system/export-submit-helper.test.ts`
