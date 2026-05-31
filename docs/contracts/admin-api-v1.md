@@ -158,6 +158,8 @@ interface AppSendCodeBody {
 
 状态：implemented and verified in Go backend + `canvas_front_next`; live DB/full smoke baseline passed on 2026-05-31.
 
+Route ownership：`/api/canvas/v1/auth/*` -> `internal/module/auth/transport/canvas`；`/api/canvas/v1/users/me` -> `internal/module/profile/transport/canvas`；`/api/canvas/v1/wallet/*` -> `internal/module/payment/wallet/transport/canvas`；`/api/canvas/v1/payment/recharges*` -> `internal/module/payment/transport/canvas`；`/api/canvas/v1/prompts|assets|settings` -> `internal/module/canvas/transport/canvas`。
+
 `canvas_front_next` 是独立 Next.js 前端，所有安全、钱包、provider、billing 和公共库数据都通过 Go 后端 `/api/canvas/v1/*`。Next 前端不保存 provider API key/base_url，不调用旧 `infinite-canvas` 后端。
 
 ```text
@@ -190,7 +192,7 @@ GET  /api/canvas/v1/ai/videos/:id/content
 规则：
 
 ```text
-canvas auth 复用 auth/transport/app Prefix+Platform 模式，token platform 必须是 canvas。
+canvas auth 归属 `internal/module/auth/transport/canvas`；token platform 必须是 canvas，不再通过 `auth/transport/app` 的 Prefix+Platform 动态注册。
 canvas auth/login-config 返回 login_type_arr、captcha_enabled、captcha_type、allow_register；allow_register 只控制验证码登录自动开户，不代表存在独立 register endpoint。
 canvas 不暴露 `/api/canvas/v1/auth/register`；前端不得臆造注册页或注册 API。
 canvas email/phone 登录必须调用 `/api/canvas/v1/auth/send-code` 后以 `login_type=email|phone` + `code` 登录；未注册账号是否自动开户由 `allow_register` 决定。

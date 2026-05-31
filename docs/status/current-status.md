@@ -27,6 +27,7 @@ docs/status/archive/2026-05-runtime-change-log.md     # 历史证据：2026-05 v
 - Queue / scheduler 当前已有 Redis-backed scheduler lock；worker hot reload 和 DB+queue outbox 仍是 planned。
 - Canvas Front Next integration 当前已完成本轮代码、live DB、full smoke 和治理验证：`canvas_front_next` 独立 Next.js 前端只调用 `/api/canvas/v1/*`，Go 后端新增 `platform=canvas` auth/RBAC/wallet/recharge/prompts/assets/settings/AI routes；文本、图片、视频生成统一通过后端托管 provider 和 `ai_billing_records(platform=canvas)` 扣费审计。
 - Canvas auth/RBAC hotfix：后台菜单管理 `permissions/page-init` 默认平台字典必须包含 `admin/app/canvas`；Canvas 登录页必须读 `/api/canvas/v1/auth/login-config` 渲染 email/phone/password 登录方式，email/phone 走 `/send-code` 验证码登录并按 `allow_register` 自动开户，password 登录点击提交后再弹 slide captcha，不提供独立注册入口；`canvas_front_next` 的 `(user)` 页面由登录态 guard 保护，401 跳登录、403 显示无权限页。
+- Canvas auth/RBAC transport boundary hardening：Canvas auth 现在由 `internal/module/auth/transport/canvas` 拥有 `/api/canvas/v1/auth/*`，Canvas current-user 由 `internal/module/profile/transport/canvas` 拥有 `/api/canvas/v1/users/me`，Canvas wallet/recharge current-user routes 由 `internal/module/payment/wallet/transport/canvas` 与 `internal/module/payment/transport/canvas` 拥有；app/admin transports 不再挂载 canvas URL prefix。 本轮已重新跑 backend architecture/targeted/full tests、go vet、basic-admin-smoke、full-admin-smoke 和 root governance gates。
 
 ## Current verification gaps
 
@@ -44,7 +45,7 @@ docs/status/archive/2026-05-runtime-change-log.md     # 历史证据：2026-05 v
 
 ```text
 2026-05-31 Canvas Front Next integration verified: canvas auth platform/routes, wallet/recharge thin routes, public prompts/assets/settings, backend-managed text/image/video AI generation, Next frontend boundary/type/build gates, live DB migration/query, full-admin-smoke, and root governance gates passed
-2026-05-31 Canvas auth/RBAC hotfix: permission platform dictionary includes canvas by default, login-config exposes allow_register, Canvas Next removes fake register endpoint, renders configured login-type tabs, opens slide captcha only after password submit, uses axios-backed API/proxy requests, and adds login guard/401/403 handling
+2026-05-31 Canvas auth/RBAC route-line hardening verified: canvas auth/users/wallet/recharge URL prefixes are owned by matching transport/canvas packages instead of app/admin dynamic registration; backend architecture/targeted/full tests, go vet, basic-admin-smoke, full-admin-smoke, and root governance gates passed
 2026-05-31 RESTful API naming full standardization: frontend CRUD wrappers and active call sites use standard names only; backend page dictionary routes bind PageInit-style handlers/services; `users/init` remains the bootstrap exception
 2026-05-31 payment serial readability hardening: RCG/PAY/WLT no longer append a 20-digit zero-padded sequence; new rows use compact uppercase base36 suffix while old rows stay unchanged
 2026-05-31 export runtime v2 verified: registry-driven export runtime, `kind/platform/object_key`, frontend export submit helper, migration dry-run, and gated real submit-to-COS smoke all passed

@@ -592,7 +592,7 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
 - Backend:
   - implemented: `internal/module/payment` owns Alipay config CRUD, private local certificate upload, recharge cashier,
     low-level payment order runtime, public Alipay callback, callback audit, shared paid finalizer, wallet balance, and
-    wallet transaction crediting
+    wallet transaction crediting; admin transport owns management routes and canvas transport owns current-user recharge routes
   - active payment tables are `payment_configs`, `payment_orders`, `payment_recharge_packages`, `payment_recharges`,
     and `payment_callback_events`; recharge credit also writes shared `user_wallets` / `wallet_transactions`
   - `payment_configs.sort` selects the preferred enabled Alipay config
@@ -662,7 +662,7 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
 
 - Backend:
   - implemented: `internal/module/payment/wallet` owns wallet summary, current-user transactions, admin wallet users,
-    admin ledger, and internal debit/credit primitives for billing callers
+    admin ledger, and internal debit/credit primitives for billing callers; admin transport owns admin/current-admin wallet surfaces and canvas transport owns `/api/canvas/v1/wallet/*`
   - wallet now lives under `admin_back_go/internal/module/payment/wallet` while package identifiers and `wallet.*`
     i18n keys remain stable
   - `user_wallets.total_consume_cents` records cumulative spend
@@ -934,6 +934,7 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
 
 - Backend:
   - implemented: `auth_platforms.canvas` seed and canvas capability permissions, `/api/canvas/v1/auth/*`, `/api/canvas/v1/users/me`, current-user wallet summary/transactions, current-user recharge page-init/list/create/pay, public settings/prompts/assets, and AI text/image/video generation routes.
+  - route ownership: auth has dedicated `transport/admin`, `transport/app`, and `transport/canvas`; profile app owns `/api/app/v1/users/me` plus `/api/app/v1/profile`, while profile canvas owns only `/api/canvas/v1/users/me`; payment admin owns management routes while payment canvas owns current-user recharge routes; payment/wallet admin owns admin/current-admin wallet surfaces while payment/wallet canvas owns canvas wallet summary/transactions.
   - implemented: `permissions/page-init` default platform dictionary includes `admin/app/canvas`; canvas RBAC gates live in `permissions.platform='canvas'` and are not copied into an admin menu tree.
   - implemented: `/api/*/auth/login-config` returns `allow_register`; Canvas uses it with login types and slide captcha, and no `/api/canvas/v1/auth/register` route is exposed.
   - implemented: text/image/video generation use backend-managed provider config; canvas text and video charge `ai_billing_records(platform=canvas)` before provider calls; video binds upstream task id to `ai_billing_records.provider_task_id` and reads status/content by billing record ownership (`id + user_id + platform + scene`).
