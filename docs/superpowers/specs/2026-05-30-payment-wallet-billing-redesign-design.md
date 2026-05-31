@@ -1,8 +1,8 @@
 # 支付钱包与 AI 扣费整改设计 Spec
 
 日期：2026-05-30
-状态：用户已认可，未实现，等待 Claude 审查和实施计划执行
-范围：`E:\admin_go` 当前 Go/Vue admin 系统的支付、钱包、AI 场景计费基础；只写设计，不改生产代码。本轮实现只改 admin 系统，不改 `canvas_front_next`，不接 infinite-canvas 运行时接口。
+状态：已实现并进入 2026-05-31 终审；本轮终审已要求删除 legacy `consume` 内部表面，当前事实以 runtime、测试和 `docs/status/current-status.md` 为准。
+范围：`E:\admin_go` 当前 Go/Vue admin 系统的支付、钱包、AI 场景计费基础。本轮实现只改 admin 系统，不改 `canvas_front_next`，不接 infinite-canvas 运行时接口。
 
 ---
 
@@ -86,17 +86,18 @@ user_wallets.total_recharge_cents
 user_wallets.total_consume_cents
 wallet_transactions.direction = in/out
 wallet_transactions.source_type/source_id 幂等约束
-Consume 会在 DB transaction 内扣余额 + 写流水
+Debit/Credit 会在 DB transaction 内改余额 + 写流水
 ```
 
-但当前 source type 只有：
+当前有效 source type 是：
 
 ```text
 recharge
-consume
+ai_generate
+ai_refund
 ```
 
-AI 生成扣费需要扩展成明确的业务 source，而不是继续拿 `consume` 当垃圾桶。
+legacy `consume` 不能继续当垃圾桶；没有当前调用方就不保留。
 
 ---
 
@@ -519,17 +520,18 @@ AI chat token 计费以后单独 spec
 
 ## 7. 钱包服务整改
 
-### 7.1 现有 `Consume` 的问题
+### 7.1 legacy `Consume` 的结论
 
-当前 `wallet.Consume` 做对了事务和幂等，但接口语义偏窄：
+`wallet.Consume` 已退役。它曾经复用了事务和幂等，但语义是错的：
 
 ```text
-source_type 固定 consume
+旧实现把 source_type 固定成 legacy consume
 只支持支出
 没有退款/通用入账能力
+没有当前产品调用方
 ```
 
-AI 扣费不能继续硬塞成 `consume`，否则收支明细里只会看到一堆“消费”，没有业务语义。
+AI 扣费必须走明确业务 source：`ai_generate` / `ai_refund`。保留 `consume` wrapper 只会让下一个开发者误以为还有通用消费入口。
 
 ### 7.2 新服务接口
 
@@ -550,13 +552,7 @@ source_type + source_id 全局幂等
 余额不足不写流水
 ```
 
-现有 `Consume` 可以退化为兼容 wrapper：
-
-```text
-Consume(...) -> Debit(..., source_type=consume, ...)
-```
-
-等新业务全部切过去，再决定是否保留这个 HTTP 测试消费入口。
+不保留 `Consume` wrapper，也不保留 HTTP 测试消费入口。当前没有调用方，保留就是架构噪音。
 
 ### 7.3 用户余额展示
 
@@ -681,7 +677,6 @@ canvas_ai_generate        canvas 平台发起 AI 生成
 不建议继续默认暴露：
 
 ```text
-wallet_consume_add
 payment_order_add
 payment_order_sync
 payment_recharge_sync
@@ -957,7 +952,7 @@ return-url 回跳 -> 可以触发轻量状态刷新，但不要求用户点同�
 
 - 查询 live `permissions`，确认当前支付/钱包菜单。
 - 查询 live 支付钱包表和索引。
-- 确认当前 wallet `Consume` 幂等和余额事务。
+- 确认当前 wallet Debit/Credit 幂等和余额事务。
 
 ### Phase 1：菜单收敛
 
@@ -967,7 +962,7 @@ return-url 回跳 -> 可以触发轻量状态刷新，但不要求用户点同�
 
 ### Phase 2：钱包服务能力补齐
 
-- `Consume` 抽象为 `Debit`。
+- 删除 legacy `Consume` 表面，保留明确的 `Debit` / `Credit`。
 - 新增 `Credit/Refund` 内部能力。
 - source type 增加 `ai_generate`、`ai_refund`。
 - 保持旧 current-user wallet API 可用，避免破坏已有充值页。

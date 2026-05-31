@@ -1,6 +1,6 @@
 # Admin Go/Vue Runtime Current Status
 
-状态更新时间：2026-05-30
+状态更新时间：2026-05-31
 
 本文是当前运行时事实入口，只放最新关键事实、验证缺口和跳转。详细 per-module 分组明细已经分层到 `docs/status/module-matrix.md`；历史变更记录已经归档到 `docs/status/archive/2026-05-runtime-change-log.md`。
 
@@ -39,6 +39,7 @@ docs/status/archive/2026-05-runtime-change-log.md     # 历史证据：2026-05 v
 详细变更记录看 `docs/status/archive/2026-05-runtime-change-log.md`。近期关键批次：
 
 ```text
+2026-05-31 payment/wallet final review: legacy wallet consume DTO/service/repository/i18n surfaces removed; wallet mutations are now explicit Debit/Credit with ai_generate/ai_refund sources
 2026-05-31 payment/wallet/AI billing redesign verified: backend full tests, frontend targeted tests/typecheck/quality, live DB migration check, and full-admin-smoke passed
 2026-05-30 COS upload secrets re-entered and full-admin-smoke passed; UPLOAD-RUNTIME-001 closed
 2026-05-30 AI chat cancel late-event guard fixed: canceled request ids survive later completions and WebSocket start/delta/completed/failed acknowledgements only mutate the matching in-flight request or matching streaming assistant message

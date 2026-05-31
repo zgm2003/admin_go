@@ -55,7 +55,7 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
   - `upload runtime/token`
 - Payment and wallet:
   - `payment config + recharge cashier Alipay v1`
-  - `wallet recharge/consume v1`
+  - `wallet recharge + debit/credit v1`
 - AI suite and realtime conversation runtime:
   - `AI provider config / OpenAI first slice`
   - `AI agent config MVP`
@@ -654,7 +654,7 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
   - `private_key_enc`/plaintext key/cert content/raw callback payload must never leak
   - `return_url` belongs to each recharge/payment order, not `payment_configs`
 
-### wallet recharge/consume v1
+### wallet recharge + debit/credit v1
 
 - Backend:
   - implemented: `internal/module/payment/wallet` owns wallet summary, current-user transactions, admin wallet users,
@@ -679,7 +679,7 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
   - 2026-05-31 full smoke passed for current-user wallet summary/transactions, payment ledger init/list,
     payment wallets init/list, and users/init payment menu state
   - default smoke does not call internal debit/credit
-- Docs: wallet recharge/consume + payment-wallet-billing redesign spec/plan + admin API contract + smoke matrix
+- Docs: wallet recharge/debit-credit + payment-wallet-billing redesign spec/plan + admin API contract + smoke matrix
 - Risk:
   - v1 intentionally excludes refund, withdraw, freeze, manual adjustment, reconcile, currency, points, membership
     fulfillment, and `/wallet/recharge` migration

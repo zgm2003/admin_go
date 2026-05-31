@@ -3028,7 +3028,7 @@ refund / WeChat / subscription / reconcile features
 
 ## Wallet
 
-状态：wallet recharge/consume v1 has been reshaped for payment/wallet/billing redesign. Current-user wallet read stays under `/api/admin/v1/wallet`; admin wallet reads moved under `/api/admin/v1/payment`.
+状态：wallet recharge + debit/credit v1 has been reshaped for payment/wallet/billing redesign. Current-user wallet read stays under `/api/admin/v1/wallet`; admin wallet reads moved under `/api/admin/v1/payment`; legacy consume DTO/service/repository/i18n surfaces are retired.
 
 用途：钱包只回答“余额是多少、怎么变的”。产品语言固定为：
 

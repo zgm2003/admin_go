@@ -230,7 +230,7 @@ go test ./internal/architecture -run PaymentWalletBillingRedesign -count=1
 
 Expected: `ok admin_back_go/internal/architecture`.
 
-### Task 3: Replace wallet “consume” with real Debit/Credit primitives
+### Task 3: Replace legacy wallet consume with real Debit/Credit primitives
 
 **Files:**
 - Modify: `admin_back_go/internal/module/payment/wallet/dto.go`
@@ -337,9 +337,9 @@ wallet.mutation.source_id.owner_mismatch
 wallet.mutation.failed
 ```
 
-- [x] **Step 6: Remove public consume surface**
+- [x] **Step 6: Remove all legacy consume surface**
 
-Delete public HTTP handling for `POST /api/admin/v1/wallet/consumptions`. This route has no product caller after AI billing uses internal `Debit`.
+Delete public HTTP handling for `POST /api/admin/v1/wallet/consumptions` and delete internal `SourceConsume`, `ConsumeInput`, `ConsumeResponse`, `Service.Consume`, `Repository.Consume`, and `wallet.consume.*` i18n keys. This route and wrapper have no product caller after AI billing uses explicit `Debit` / `Credit`.
 
 - [x] **Step 7: Run wallet tests**
 
@@ -658,7 +658,7 @@ usersInit: () => request.get<WalletUsersPageInitResponse>(`${ADMIN_API_PREFIX}/p
 users: (params: WalletUserListParams) => request.get<PaginatedResponse<WalletUserItem>>(`${ADMIN_API_PREFIX}/payment/wallets`, { params }),
 ```
 
-Remove `consume` API.
+Remove `consume` API and do not expose a `WalletConsume` type.
 
 - [x] **Step 2: Move admin wallet pages under payment**
 
