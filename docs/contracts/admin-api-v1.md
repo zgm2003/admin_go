@@ -42,6 +42,7 @@ init/page-init 属于页面字典或 bootstrap contract，必须显式写清用�
 标准页面字典接口统一写成 GET /api/admin/v1/<resources>/page-init；init 只保留给明确 bootstrap contract，例如 users/init。
 标准前端 API wrapper 使用 list/detail/create/update/changeStatus/deleteOne/deleteBatch/pageInit；新模块不得新增 add/edit/del/init/status 作为 REST wrapper 方法名。
 旧接口兼容入口必须标注兼容来源、退出条件和验证边界，不得伪装成新契约。
+RESTful 命名迁移期允许旧 page dictionary `/init` 和旧 frontend wrapper alias 暂存；alias 必须指向标准 `page-init/pageInit` 或 CRUD 标准名，退出条件是 frontend 调用和 smoke/route snapshot 全部切到标准名。
 ```
 
 标准 CRUD contract 模板：
@@ -75,7 +76,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-contract.ps1
 | logout | `POST /api/admin/v1/auth/logout` | bearer token |
 | current user bootstrap | `GET /api/admin/v1/users/me`, `GET /api/admin/v1/users/init` | bearer token |
 | App auth baseline | `GET /api/app/v1/auth/login-config`, `GET /api/app/v1/auth/captcha`, `POST /api/app/v1/auth/send-code`, `POST /api/app/v1/auth/login`, `GET /api/app/v1/users/me`, `GET/PUT /api/app/v1/profile`, `POST /api/app/v1/upload-tokens`, `POST /api/app/v1/auth/logout` | auth config/captcha/send-code/login: public; current user/profile/upload-token/logout: bearer token; app bearer requests default `platform=app` |
-| read-only admin resources | permissions/auth-platforms/roles/users/profile/operation-logs/system-settings/mail/upload-drivers/upload-rules/upload-settings/notifications list or init | bearer token |
+| read-only admin resources | permissions/auth-platforms/roles/users/profile/operation-logs/system-settings/mail/upload-drivers/upload-rules/upload-settings/notifications list or page-init/init alias | bearer token |
 | user quick-entry current-user write | `PUT /api/admin/v1/users/me/quick-entries` | bearer token; current user only, no user-manager button permission |
 | user login logs read | `GET /api/admin/v1/users/login-logs/page-init`, `GET /api/admin/v1/users/login-logs` | bearer token |
 | user sessions read/revoke | `GET /api/admin/v1/user-sessions/page-init`, `GET /api/admin/v1/user-sessions`, `GET /api/admin/v1/user-sessions/stats`, `PATCH /api/admin/v1/user-sessions/:id/revoke`, `PATCH /api/admin/v1/user-sessions/revoke` | read routes: bearer token; revoke routes: bearer token + `user_userManager_kick` |
@@ -422,9 +423,11 @@ BUTTON 授权由 Go service 自动带出父 PAGE 和祖先 DIR；buttonCodes 只
 
 用途：管理 admin/app 范围内的 DIR / PAGE / BUTTON 权限定义。
 
-### Init
+### Page Init
 
-`GET /api/admin/v1/permissions/init`
+Primary: `GET /api/admin/v1/permissions/page-init`
+
+No `/permissions/init` alias; page dictionaries use `GET /api/admin/v1/permissions/page-init`.
 
 Response `data.dict`：
 
@@ -1225,11 +1228,12 @@ missing user                                -> code 404 / 用户不存在
 
 用途：管理角色和角色权限矩阵。当前模型是单用户单角色；没有隐藏 super admin bypass。
 
-### Init / List
+### Page Init / List
 
 ```text
-GET /api/admin/v1/roles/init
-GET /api/admin/v1/roles
+GET /api/admin/v1/roles/page-init   # primary page dictionary
+No `/roles/init` alias; page dictionaries use `GET /api/admin/v1/roles/page-init`.
+GET /api/admin/v1/roles             # list
 ```
 
 List Query：
@@ -1309,9 +1313,11 @@ DELETE /api/admin/v1/roles        body: { ids: number[] }
 
 用途：后台操作审计列表、按用户/动作/日期筛选，以及删除历史日志。
 
-### Init
+### Page Init
 
-`GET /api/admin/v1/operation-logs/init`
+Primary: `GET /api/admin/v1/operation-logs/page-init`
+
+No `/operation-logs/init` alias; page dictionaries use `GET /api/admin/v1/operation-logs/page-init`.
 
 当前返回空 `data`，保留为页面初始化契约位。
 
@@ -1367,9 +1373,11 @@ DELETE 只走 REST: /api/admin/v1/operation-logs/:id 和 /api/admin/v1/operation
 
 用途：当前登录用户的通知中心和首页通知卡片。该切片只处理用户自己的 `notifications` 读路径和已读/删除动作，不迁移 `notification_task` 发布任务，也不声明 WebSocket 业务推送已经实现。
 
-### Init
+### Page Init
 
-`GET /api/admin/v1/notifications/init`
+Primary: `GET /api/admin/v1/notifications/page-init`
+
+No `/notifications/init` alias; page dictionaries use `GET /api/admin/v1/notifications/page-init`.
 
 Auth: bearer token.
 
@@ -2030,9 +2038,11 @@ Rules:
 
 用途：后台通知发布任务管理。它不是当前用户通知 inbox，而是管理端创建 `notification_task`，由 `admin-worker` 通过 Asynq + gocron/v2 发送到 `notifications`。
 
-### Init
+### Page Init
 
-`GET /api/admin/v1/notification-tasks/init`
+Primary: `GET /api/admin/v1/notification-tasks/page-init`
+
+No `/notification-tasks/init` alias; page dictionaries use `GET /api/admin/v1/notification-tasks/page-init`.
 
 Auth: bearer token.
 
@@ -2227,9 +2237,11 @@ DELETE -> module=notification_task, action=delete
 
 用途：后台系统设置菜单页的键值配置 CRUD。该页面存在菜单和按钮权限，所以不能留空页或继续走 legacy；但它不是队列监控配置中心。
 
-### Init
+### Page Init
 
-`GET /api/admin/v1/system-settings/init`
+Primary: `GET /api/admin/v1/system-settings/page-init`
+
+No `/system-settings/init` alias; page dictionaries use `GET /api/admin/v1/system-settings/page-init`.
 
 Response `data.dict`：
 
@@ -3184,9 +3196,11 @@ OSS is not an active runtime and is not selectable in V1; do not silently fallba
 
 ### Upload Drivers
 
-#### Init
+#### Page Init
 
-`GET /api/admin/v1/upload-drivers/init`
+Primary: `GET /api/admin/v1/upload-drivers/page-init`
+
+No `/upload-drivers/init` alias; page dictionaries use `GET /api/admin/v1/upload-drivers/page-init`.
 
 Response `data.dict`：
 
@@ -3294,9 +3308,11 @@ DELETE /api/admin/v1/upload-drivers    body: { ids: number[] }
 
 ### Upload Rules
 
-#### Init
+#### Page Init
 
-`GET /api/admin/v1/upload-rules/init`
+Primary: `GET /api/admin/v1/upload-rules/page-init`
+
+No `/upload-rules/init` alias; page dictionaries use `GET /api/admin/v1/upload-rules/page-init`.
 
 Response `data.dict`：
 
@@ -3375,9 +3391,11 @@ DELETE /api/admin/v1/upload-rules    body: { ids: number[] }
 
 ### Upload Settings
 
-#### Init
+#### Page Init
 
-`GET /api/admin/v1/upload-settings/init`
+Primary: `GET /api/admin/v1/upload-settings/page-init`
+
+No `/upload-settings/init` alias; page dictionaries use `GET /api/admin/v1/upload-settings/page-init`.
 
 Response `data.dict`：
 
@@ -3575,9 +3593,11 @@ file_compress=true
 
 所以不是一个 `admin-api.log` 无限增长。Docker-first env 只保留 `LOG_DIR` 作为部署路径；`admin-api.log` / `admin-worker.log` 文件名、轮转策略、`.log` 白名单和 2000 行 tail 上限都是代码内置默认值。
 
-### Init
+### Page Init
 
-`GET /api/admin/v1/system-logs/init`
+Primary: `GET /api/admin/v1/system-logs/page-init`
+
+No `/system-logs/init` alias; page dictionaries use `GET /api/admin/v1/system-logs/page-init`.
 
 Auth: bearer token.
 
@@ -3736,9 +3756,11 @@ auth_platforms.refresh_ttl = refresh_token 总有效期，单位秒
 .env 只保存 `APP_SECRET` 和 `TOKEN_REDIS_DB` 这类认证/session 部署基础项；token Redis prefix `token:`、session cache TTL `30m`、single-session pointer TTL `720h` 是代码内置默认。access_ttl / refresh_ttl 仍以 auth_platforms 表为业务事实源。
 ```
 
-### Enum / Dict
+### Page Init / Enum / Dict
 
-`GET /api/admin/v1/auth-platforms/init`
+Primary: `GET /api/admin/v1/auth-platforms/page-init`
+
+No `/auth-platforms/init` alias; page dictionaries use `GET /api/admin/v1/auth-platforms/page-init`.
 
 响应 `data.dict`：
 
@@ -3918,7 +3940,8 @@ payment_close_expired_order.handler = payment:close-expired-order:v1
 ### Routes
 
 ```text
-GET    /api/admin/v1/cron-tasks/init
+GET    /api/admin/v1/cron-tasks/page-init
+No `/cron-tasks/init` alias; page dictionaries use `GET /api/admin/v1/cron-tasks/page-init`.
 GET    /api/admin/v1/cron-tasks
 POST   /api/admin/v1/cron-tasks
 PUT    /api/admin/v1/cron-tasks/:id
@@ -3931,7 +3954,7 @@ GET    /api/admin/v1/cron-tasks/:id/logs
 Auth/RBAC：
 
 ```text
-read/init/list: bearer token
+read/page-init/init alias/list: bearer token
 create: devTools_cronTask_add
 update: devTools_cronTask_edit
 status: devTools_cronTask_status

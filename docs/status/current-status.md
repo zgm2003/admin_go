@@ -39,6 +39,8 @@ docs/status/archive/2026-05-runtime-change-log.md     # 历史证据：2026-05 v
 详细变更记录看 `docs/status/archive/2026-05-runtime-change-log.md`。近期关键批次：
 
 ```text
+2026-05-31 RESTful API naming cleanup: frontend standard wrapper names and legacy page dictionary `/init` routes removed; page dictionaries use `/page-init` only while `users/init` remains bootstrap
+2026-05-31 payment serial readability hardening: RCG/PAY/WLT no longer append a 20-digit zero-padded sequence; new rows use compact uppercase base36 suffix while old rows stay unchanged
 2026-05-31 payment/wallet final review: legacy wallet consume DTO/service/repository/i18n surfaces removed; wallet mutations are now explicit Debit/Credit with ai_generate/ai_refund sources
 2026-05-31 payment/wallet/AI billing redesign verified: backend full tests, frontend targeted tests/typecheck/quality, live DB migration check, and full-admin-smoke passed
 2026-05-30 COS upload secrets re-entered and full-admin-smoke passed; UPLOAD-RUNTIME-001 closed

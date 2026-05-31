@@ -610,8 +610,8 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
   - first wallet creation handles `uk_user_wallet_user` duplicate races by returning the existing wallet instead of surfacing a
     one-off 500
   - wallet transaction number hardening is closed: shared serial generation no longer wraps at one million same-timestamp
-    calls, debit/credit paths retry `uk_wallet_transaction_no` collisions without breaking source idempotency, and recharge
-    credit uses the same bounded retry path
+    calls and no longer appends a 20-digit zero-padded sequence; debit/credit paths retry `uk_wallet_transaction_no`
+    collisions without breaking source idempotency, and recharge credit uses the same bounded retry path
   - Alipay notify amount parsing rejects signed or non-digit cent fragments instead of normalizing malformed values
   - expired Alipay `ACQ.TRADE_NOT_EXIST` rows close the local order and linked recharge instead of retrying forever
 - Frontend:
@@ -672,8 +672,8 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
   - verified baseline packages include `internal/module/payment/wallet`, `internal/module/payment`,
     `internal/server`, `internal/bootstrap`, `internal/shared/i18n`
   - transaction number hardening is covered: shared `serialno` no longer wraps at one million calls for the same
-    timestamp, mutation paths retry `uk_wallet_transaction_no` without breaking source idempotency, and `CreditRecharge`
-    retries the same transaction-no collision path
+    timestamp and no longer appends a 20-digit zero-padded sequence; mutation paths retry `uk_wallet_transaction_no`
+    without breaking source idempotency, and `CreditRecharge` retries the same transaction-no collision path
   - frontend wallet API/page Vitest + `vue-tsc`
 - Smoke:
   - 2026-05-31 full smoke passed for current-user wallet summary/transactions, payment ledger init/list,
