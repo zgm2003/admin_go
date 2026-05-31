@@ -183,6 +183,8 @@ Frontend API: list/detail/create/update/changeStatus/deleteOne/deleteBatch/pageI
 
 旧前端 wrapper 里仍存在的 `add/edit/del/init/status` 只能作为历史别名或待治理事实；新模块和 touched API wrapper 不得继续新增这些旧动作名。需要兼容公共组件时，优先让公共组件支持标准名，而不是把新契约降级成旧命名。
 
+任何触碰 backend route、handler/service CRUD 方法或 `admin_front_ts/src/api/**/*.ts` 的 feature plan，都必须写明 RESTful naming guard：是否新增 route、是否属于允许的业务命令例外、是否新增标准 frontend API 方法名、旧动作名是否只是兼容 alias。没有这段 guard 的计划不准进入实现。
+
 禁止：
 
 ```text

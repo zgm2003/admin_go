@@ -25,6 +25,16 @@ git -C admin_front_ts status --short
 
 推荐执行方式：每个 task 一个小提交。实现阶段若使用独立 worktree，先用 `superpowers:using-git-worktrees` 建隔离工作区。
 
+## RESTful naming guard
+
+本计划必须同时遵守 `docs/superpowers/specs/2026-05-30-restful-api-naming-audit-design.md` 和 `docs/architecture/05-development-quality-rules.md` 的 RESTful API 规则：
+
+- `POST /api/admin/v1/users/export` 保留，因为它是允许的 P3 business command，不是 CRUD 的 `/add`、`/edit`、`/del` 伪装。
+- 本计划不得新增 `/list`、`/add`、`/edit`、`/del`、`/status` 这类动作式 URL。
+- 新增 frontend helper/API 不得使用 `add/edit/del/init/status` 旧动作名。
+- 触碰 `admin_front_ts/src/api/system/exportTask.ts` 时，必须补标准 `deleteOne/deleteBatch` 方法；旧 `del` 只能作为兼容 alias 保留，不能继续作为新调用入口。
+- `admin_front_ts/src/api/user/users.ts` 本轮只保留 `export()` 业务命令和现有调用兼容，不借导出切片顺手迁移 `init/edit/del`。这些旧名归 RESTful API naming audit 后续 touched-module 迁移处理。
+
 ## 文件结构
 
 ### Root docs
@@ -34,6 +44,7 @@ git -C admin_front_ts status --short
 - Modify: `docs/status/module-matrix.md`：更新 user/export lifecycle 明细。
 - Modify: `docs/testing/smoke-matrix.md`：保留默认 read-only smoke，新增 credential-gated real export smoke。
 - Plan source: `docs/superpowers/specs/2026-05-30-export-runtime-v2-design.md`。
+- Naming source: `docs/superpowers/specs/2026-05-30-restful-api-naming-audit-design.md` and `docs/architecture/05-development-quality-rules.md`.
 
 ### Backend runtime
 
@@ -56,7 +67,7 @@ git -C admin_front_ts status --short
 
 - Create: `admin_front_ts/src/hooks/useExportSubmit.ts`：复用 selected ids 校验、submit 调用、i18n success 提示。
 - Modify: `admin_front_ts/src/views/Main/user/userManager/components/UserList/index.vue`：保持按钮和权限，使用 helper 提交。
-- Modify: `admin_front_ts/src/api/system/exportTask.ts`：增加 `kind/kind_text` 类型和可选 `kind` query。
+- Modify: `admin_front_ts/src/api/system/exportTask.ts`：增加 `kind/kind_text` 类型、可选 `kind` query，并补 `deleteOne/deleteBatch` 标准方法；旧 `del` 只保留为兼容 alias。
 - Modify: `admin_front_ts/src/api/user/users.ts`：第一阶段继续保留 `{ ids: number[] }` 外部调用。
 - Modify: `admin_front_ts/src/i18n/locales/zh-CN.ts`：新增 helper 所需可见文案。
 - Modify: `admin_front_ts/src/i18n/locales/en-US.ts`：新增英文文案。
@@ -1031,7 +1042,7 @@ and:
 exporttaskmodule.DeleteInput{UserID: identity.UserID, Platform: identity.Platform, IDs: req.IDs}
 ```
 
-- [ ] **Step 4: Frontend helper test first**
+- [ ] **Step 4: Frontend helper and API naming tests first**
 
 Create `admin_front_ts/tests/shared/system/export-submit-helper.test.ts`:
 
@@ -1065,14 +1076,24 @@ describe('export submit helper contract', () => {
 })
 ```
 
-- [ ] **Step 5: Run frontend helper test to verify failure**
+In `admin_front_ts/tests/shared/system/export-task-api.test.ts`, extend the first test with the naming guard:
+
+```ts
+expect(source).toContain('deleteOne: (id: Id) => {')
+expect(source).toContain('deleteBatch: (idsInput: Id[]) => {')
+expect(source).toContain('del: (params: { id: Id | Id[] }) => {')
+expect(source).toContain('return ExportTaskApi.deleteOne(ids[0])')
+expect(source).toContain('return ExportTaskApi.deleteBatch(ids)')
+```
+
+- [ ] **Step 5: Run frontend helper/API naming tests to verify failure**
 
 ```powershell
 cd E:\admin_go\admin_front_ts
-npm run test -- tests/shared/system/export-submit-helper.test.ts
+npm run test -- tests/shared/system/export-submit-helper.test.ts tests/shared/system/export-task-api.test.ts
 ```
 
-Expected: fail because hook file does not exist.
+Expected: fail because hook file does not exist and `exportTask.ts` does not expose `deleteOne/deleteBatch` yet.
 
 - [ ] **Step 6: Create frontend helper**
 
@@ -1134,7 +1155,7 @@ const exportExcel = async () => {
 
 - [ ] **Step 8: Update export task API type**
 
-In `admin_front_ts/src/api/system/exportTask.ts`, update the type blocks:
+In `admin_front_ts/src/api/system/exportTask.ts`, update the type blocks and API method names. `deleteOne/deleteBatch` are the standard names; `del` remains only as a compatibility alias for existing callers.
 
 ```ts
 export interface ExportTaskListParams extends RequestPayload {
@@ -1160,6 +1181,36 @@ export interface ExportTaskItem {
   error_msg?: string | null
   expire_at?: string | null
   created_at: string
+}
+```
+
+Update the API object:
+
+```ts
+export const ExportTaskApi = {
+  statusCount: (params: Pick<ExportTaskListParams, 'kind' | 'title' | 'file_name'>) =>
+    request.get<ExportTaskStatusItem[]>(`${ADMIN_API_PREFIX}/export-tasks/status-count`, { params }),
+
+  list: (params: ExportTaskListParams) =>
+    request.get<PaginatedResponse<ExportTaskItem>>(`${ADMIN_API_PREFIX}/export-tasks`, { params }),
+
+  deleteOne: (id: Id) => {
+    const ids = normalizePositiveIDs(id, 'export task')
+    return request.delete<void>(`${ADMIN_API_PREFIX}/export-tasks/${ids[0]}`)
+  },
+
+  deleteBatch: (idsInput: Id[]) => {
+    const ids = normalizePositiveIDs(idsInput, 'export task')
+    return request.delete<void, { ids: number[] }>(`${ADMIN_API_PREFIX}/export-tasks`, { data: { ids } })
+  },
+
+  del: (params: { id: Id | Id[] }) => {
+    const ids = normalizePositiveIDs(params.id, 'export task')
+    if (ids.length === 1) {
+      return ExportTaskApi.deleteOne(ids[0])
+    }
+    return ExportTaskApi.deleteBatch(ids)
+  },
 }
 ```
 

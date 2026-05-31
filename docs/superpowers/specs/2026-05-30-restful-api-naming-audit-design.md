@@ -1,6 +1,6 @@
 # RESTful API Naming Standard and Audit Design
 
-状态：rough spec for user review。
+状态：accepted governance spec。硬规则已固化到 `docs/architecture/05-development-quality-rules.md`；后续触碰 route 或 frontend API wrapper 的 feature plan 必须显式引用本规范或根治理文档的 RESTful API 规则。
 
 本文只定义后续审查和迁移边界，不在本轮扫描全仓、不修改后端或前端 runtime。当前有另一个 Codex 正在写代码，本 spec 必须避免制造并发冲突。
 
