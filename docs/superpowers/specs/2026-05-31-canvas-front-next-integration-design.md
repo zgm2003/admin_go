@@ -1,7 +1,7 @@
 # Canvas Front Next 集成设计 Spec
 
 日期：2026-05-31
-状态：根据 2026-05-31 支付/钱包/AI 计费整改后的新基线重写；未实现。
+状态：本轮实现已完成并通过 Task 12 验证；后端全量测试、Next test/typecheck/build、live DB 查询、full-admin-smoke 和 root governance gates 已通过。
 范围：新增 `canvas_front_next` Next.js 前端，并把 `E:\GitDownload\infinite-canvas` 的可用业务能力接入 `admin_go` Go 后端。当前不改 `admin_front_ts` 的支付菜单；支付/钱包能力按已完成的 admin 基线复用。
 
 ---
@@ -176,8 +176,9 @@ is_del = 2
 
 ```text
 GET  /api/canvas/v1/auth/login-config
+GET  /api/canvas/v1/auth/captcha
+POST /api/canvas/v1/auth/send-code
 POST /api/canvas/v1/auth/login
-POST /api/canvas/v1/auth/register
 GET  /api/canvas/v1/users/me
 POST /api/canvas/v1/auth/logout
 ```
@@ -185,10 +186,14 @@ POST /api/canvas/v1/auth/logout
 实现要求：
 
 ```text
-internal/module/auth/transport/canvas/* 只能做 request/response 适配
+优先复用 internal/module/auth/transport/app 的 Prefix+Platform 注册模式
 内部复用 auth session service
 token platform 必须是 canvas
 不得调用 admin transport handler
+必须补 /api/canvas/v1/auth/* skip paths 和 /api/canvas/v1/* 默认 platform=canvas
+登录页必须先读 login-config；登录方式、slide captcha、allow_register 都以后端为准
+登录页必须按 login_type_arr 渲染 email/phone/password 登录方式；email/phone 调 `/api/canvas/v1/auth/send-code` 后用 code 登录；password 点击登录后再弹 slide captcha，不把验证码常驻嵌进表单
+allow_register 只控制验证码登录自动开户，不代表 Canvas 有独立注册页；不得臆造 /api/canvas/v1/auth/register
 ```
 
 ### 4.3 RBAC
@@ -418,7 +423,7 @@ GET  /api/canvas/v1/ai/videos/:id/content
 `settings` 只返回前端需要的公开能力：
 
 ```text
-allow_register
+allow_register display snapshot only; login/register policy must still read auth/login-config
 available_scenes
 available_models display only
 billing_rule price snapshot for UI display
@@ -436,7 +441,7 @@ admin-only settings
 
 ### 8.2 Admin 管理 API
 
-如果要继续管理提示词/素材公共库，放到 admin 后台的新模块：
+如果要继续管理提示词/素材公共库，放到 admin 后台的新模块。本文只定义接口边界；当前执行计划第一轮不做 `admin_front_ts` Canvas CRUD 页面，Vue 管理页应作为单独窄切片按 Search + AppTable + AppDialog + useCrudTable、i18n、route metadata 和菜单迁移落地：
 
 ```text
 GET    /api/admin/v1/canvas/prompts/page-init
@@ -460,7 +465,7 @@ DELETE /api/admin/v1/canvas/assets/:id
 AI 管理 或 内容管理 下增加：Canvas 提示词 / Canvas 素材
 ```
 
-不新增“Canvas 管理”一级菜单，除非后续 canvas 模块变成多个管理页面。
+不新增“Canvas 管理”一级菜单，除非后续 canvas 模块变成多个管理页面。本轮若只落 backend API，不得声称 admin Vue 管理页面已实现。
 
 ---
 

@@ -64,6 +64,8 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
   - `AI tool runtime MVP`
   - `AI knowledge base RAG MVP`
   - `realtime / WebSocket / AI conversation`
+- Canvas frontend runtime:
+  - `canvas_front_next / canvas platform API`
 - Removed / retired scope:
   - `admin chat room`
 
@@ -750,7 +752,7 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
   - config MVP is done
   - chat page consumes option avatar/system_prompt and agent config page now owns tool/knowledge usage binding
   - AI billing rules are configured in AI agent config.
-  - Canvas integration is not part of this implementation.
+  - Canvas frontend integration is now tracked under `canvas_front_next / canvas platform API`; admin AI image remains independently supported.
 
 ### AI image playground gpt-image-2
 
@@ -785,7 +787,7 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
   - upload runtime is Tencent COS-only
   - `bucket_domain` is stored as a bare host and runtime builds HTTPS public URLs
   - Admin image generation is the first billed runtime caller.
-  - Canvas integration is not part of this implementation.
+  - Canvas frontend integration is now tracked under `canvas_front_next / canvas platform API`; admin AI image remains independently supported.
 
 ### AI run monitor token-only MVP
 
@@ -924,6 +926,32 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
   - OpenAI-compatible `/chat/completions` cancellation is by request context, not provider stop API
   - run monitor stores only final lifecycle/token facts
   - ticket auth still planned for cross-domain/gateway cases
+
+
+## Canvas frontend runtime
+
+### canvas_front_next / canvas platform API
+
+- Backend:
+  - implemented: `auth_platforms.canvas` seed and canvas capability permissions, `/api/canvas/v1/auth/*`, `/api/canvas/v1/users/me`, current-user wallet summary/transactions, current-user recharge page-init/list/create/pay, public settings/prompts/assets, and AI text/image/video generation routes.
+  - implemented: `permissions/page-init` default platform dictionary includes `admin/app/canvas`; canvas RBAC gates live in `permissions.platform='canvas'` and are not copied into an admin menu tree.
+  - implemented: `/api/*/auth/login-config` returns `allow_register`; Canvas uses it with login types and slide captcha, and no `/api/canvas/v1/auth/register` route is exposed.
+  - implemented: text/image/video generation use backend-managed provider config; canvas text and video charge `ai_billing_records(platform=canvas)` before provider calls; video binds upstream task id to `ai_billing_records.provider_task_id` and reads status/content by billing record ownership (`id + user_id + platform + scene`).
+  - not implemented in this slice: `admin_front_ts` Canvas prompt/asset CRUD UI and cloud-synced `canvas_projects`.
+- Frontend:
+  - implemented: `canvas_front_next` is an independent Next.js repo on `master`; source comes from `infinite-canvas/web` but old admin UI and local/custom API-key channel mode are removed.
+  - implemented: auth/settings/prompts/assets/wallet/text/image/video clients call `/api/canvas/v1/*`; no user-entered provider API key/base URL is used for generation.
+  - implemented: Canvas login page reads `/api/canvas/v1/auth/login-config`, renders the configured email/phone/password login-type tabs, uses `/api/canvas/v1/auth/send-code` for email/phone code login and `allow_register` auto-open-account semantics, opens slide captcha only after password-login submit, removes standalone register UI/API, and protects `(user)` pages with an auth guard; 401 redirects to login and 403 renders an explicit no-permission state.
+- Tests:
+  - backend focused gates cover architecture migration guards, auth/platform, permission, wallet/recharge route wiring, canvas service/transport, OpenAI-compatible video adapter, and bootstrap wiring.
+  - frontend gates cover canvas API boundary, API service behavior, typecheck, and Next build.
+- Smoke:
+  - live DB migration/query, backend full tests, Next test/typecheck/build, full-admin-smoke, and root governance gates passed on 2026-05-31 for this slice.
+- Docs:
+  - canvas spec/plan, current-status, module matrix, admin API contract, and smoke matrix.
+- Risk:
+  - live provider credentials/model availability still determines real text/image/video generation success; provider calls are backend-owned and fail closed/refund through billing service.
+  - only new canvas business tables are `canvas_prompts` and `canvas_assets`; do not add `canvas_users`, `canvas_credit_logs`, `canvas_settings`, `canvas_projects`, or `canvas_wallets` without a new spec.
 
 ## Removed / retired scope
 

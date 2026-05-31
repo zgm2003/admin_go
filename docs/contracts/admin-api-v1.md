@@ -24,6 +24,7 @@ data 里的业务内容不自动翻译。
 ```text
 后台管理端：/api/admin/v1
 App 端：/api/app/v1
+Canvas 前端：/api/canvas/v1
 ```
 
 ## Contract Source Policy
@@ -152,6 +153,64 @@ interface AppSendCodeBody {
 }
 ```
 
+
+## Canvas API v1
+
+状态：implemented and verified in Go backend + `canvas_front_next`; live DB/full smoke baseline passed on 2026-05-31.
+
+`canvas_front_next` 是独立 Next.js 前端，所有安全、钱包、provider、billing 和公共库数据都通过 Go 后端 `/api/canvas/v1/*`。Next 前端不保存 provider API key/base_url，不调用旧 `infinite-canvas` 后端。
+
+```text
+GET  /api/canvas/v1/auth/login-config
+GET  /api/canvas/v1/auth/captcha
+POST /api/canvas/v1/auth/send-code
+POST /api/canvas/v1/auth/login
+POST /api/canvas/v1/auth/logout
+GET  /api/canvas/v1/users/me
+
+GET  /api/canvas/v1/settings
+GET  /api/canvas/v1/prompts
+GET  /api/canvas/v1/assets
+
+GET  /api/canvas/v1/wallet/summary
+GET  /api/canvas/v1/wallet/transactions
+GET  /api/canvas/v1/payment/recharges/page-init
+GET  /api/canvas/v1/payment/recharges
+POST /api/canvas/v1/payment/recharges
+POST /api/canvas/v1/payment/recharges/:id/pay
+
+POST /api/canvas/v1/ai/chat/completions
+POST /api/canvas/v1/ai/images/generations
+POST /api/canvas/v1/ai/images/edits
+POST /api/canvas/v1/ai/videos
+GET  /api/canvas/v1/ai/videos/:id
+GET  /api/canvas/v1/ai/videos/:id/content
+```
+
+规则：
+
+```text
+canvas auth 复用 auth/transport/app Prefix+Platform 模式，token platform 必须是 canvas。
+canvas auth/login-config 返回 login_type_arr、captcha_enabled、captcha_type、allow_register；allow_register 只控制验证码登录自动开户，不代表存在独立 register endpoint。
+canvas 不暴露 `/api/canvas/v1/auth/register`；前端不得臆造注册页或注册 API。
+canvas email/phone 登录必须调用 `/api/canvas/v1/auth/send-code` 后以 `login_type=email|phone` + `code` 登录；未注册账号是否自动开户由 `allow_register` 决定。
+canvas password 登录必须按 login-config + captcha 完成 slide 验证后再提交。
+canvas bearer 请求默认 platform=canvas。
+wallet/recharge 只暴露 current-user 路径；不暴露 admin ledger/wallet management、manual consume、sync 或 close routes。
+prompts/assets 是 public list；后台 Vue CRUD UI 不在本切片。
+AI text/image/video 统一使用后端托管 provider；扣费审计写 ai_billing_records(platform=canvas)，钱包流水写 wallet_transactions。
+视频以 ai_billing_records.id 作为 canvas task id，provider_task_id 绑定在 ai_billing_records.provider_task_id；status/content 读取必须按 id + user_id + platform=canvas + scene=canvas_video_generate 校验 ownership。
+```
+
+新增业务表仅允许：
+
+```text
+canvas_prompts
+canvas_assets
+```
+
+明确不新增：`canvas_users`、`canvas_credit_logs`、`canvas_settings`、`canvas_model_channels`、`canvas_projects`、`canvas_wallets`。
+
 ## Health / Readiness
 
 状态：implemented。
@@ -216,13 +275,14 @@ Response example：
       { "label": "密码登录", "value": "password" }
     ],
     "captcha_enabled": true,
-    "captcha_type": "slide"
+    "captcha_type": "slide",
+    "allow_register": true
   },
   "msg": "ok"
 }
 ```
 
-规则：`login_type_arr` 顺序固定为 `email -> phone -> password`，由 Go enum/dict 派生，前端不手写 fallback。
+规则：`login_type_arr` 顺序固定为 `email -> phone -> password`，由 Go enum/dict 派生，前端不手写 fallback。`allow_register` 来自当前 platform 的 `auth_platforms.allow_register`，只控制验证码登录自动注册。
 
 ### Send Code
 
@@ -435,9 +495,11 @@ Response `data.dict`：
 interface PermissionInitDict {
   permission_tree: PermissionTreeNode[]
   permission_type_arr: Array<{ label: string; value: 1 | 2 | 3 }>
-  permission_platform_arr: Array<{ label: string; value: 'admin' | 'app' }>
+  permission_platform_arr: Array<{ label: string; value: 'admin' | 'app' | 'canvas' }>
 }
 ```
+
+规则：后台菜单管理的平台 tab 来自 `permission_platform_arr`，默认必须包含 `admin/app/canvas`。`auth_platforms.canvas` 是认证策略；RBAC capability gate 仍由 `permissions.platform='canvas'` 管，不把 canvas 当成 admin 菜单树复制。
 
 ### List
 
@@ -447,7 +509,7 @@ Query：
 
 ```ts
 interface PermissionListQuery {
-  platform: 'admin' | 'app'
+  platform: 'admin' | 'app' | 'canvas'
   name?: string
   path?: string
   type?: 1 | 2 | 3
@@ -465,7 +527,7 @@ Body：
 
 ```ts
 interface PermissionMutationBody {
-  platform: 'admin' | 'app'
+  platform: 'admin' | 'app' | 'canvas'
   type: 1 | 2 | 3
   name: string
   parent_id: number
@@ -1584,9 +1646,9 @@ Rules:
 
 ## AI Billing Rules
 
-状态：AI billing rules are configured in AI agent config. Admin image generation is the first billed runtime caller. Canvas integration is not part of this implementation.
+状态：AI billing rules are configured in AI agent config. Admin image generation and Canvas text/image/video generation are billed runtime callers.
 
-用途：AI 计费规则只定义当前可计费场景的单价和启停；扣款/退款通过 wallet internal debit/credit 写入 `wallet_transactions`，计费审计写入 `ai_billing_records`。当前已接入 caller 是 admin AI image generation；canvas scene values may exist as selectable metadata, but no `/api/canvas/*` route and no `canvas_front_next` integration are part of this implementation.
+用途：AI 计费规则只定义当前可计费场景的单价和启停；扣款/退款通过 wallet internal debit/credit 写入 `wallet_transactions`，计费审计写入 `ai_billing_records`。当前已接入 caller 是 admin AI image generation 以及 Canvas text/image/video generation；Canvas 通过 `/api/canvas/v1/*` 走后端托管 provider、wallet debit/refund 和 `ai_billing_records(platform=canvas)` 审计。
 
 ### Routes
 

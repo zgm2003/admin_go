@@ -25,6 +25,8 @@ docs/status/archive/2026-05-runtime-change-log.md     # 历史证据：2026-05 v
 - `admin_app` H5/LAN dev 当前仍是直连 Go backend `/api/app/v1`：runtime 默认 API base 是 `http://127.0.0.1:8080/api/app/v1`；部署或 LAN 真机调试必须用 `VITE_APP_API_BASE_URL` 覆盖为当前可访问的 Go backend origin。
 - Realtime 当前是 admin WebSocket + notification fan-out + AI conversation events；AI cancel 是 REST `POST /api/admin/v1/ai-conversations/:id/messages/cancel`，WebSocket 只发 `ai.response.start/delta/completed/failed.v1`。
 - Queue / scheduler 当前已有 Redis-backed scheduler lock；worker hot reload 和 DB+queue outbox 仍是 planned。
+- Canvas Front Next integration 当前已完成本轮代码、live DB、full smoke 和治理验证：`canvas_front_next` 独立 Next.js 前端只调用 `/api/canvas/v1/*`，Go 后端新增 `platform=canvas` auth/RBAC/wallet/recharge/prompts/assets/settings/AI routes；文本、图片、视频生成统一通过后端托管 provider 和 `ai_billing_records(platform=canvas)` 扣费审计。
+- Canvas auth/RBAC hotfix：后台菜单管理 `permissions/page-init` 默认平台字典必须包含 `admin/app/canvas`；Canvas 登录页必须读 `/api/canvas/v1/auth/login-config` 渲染 email/phone/password 登录方式，email/phone 走 `/send-code` 验证码登录并按 `allow_register` 自动开户，password 登录点击提交后再弹 slide captcha，不提供独立注册入口；`canvas_front_next` 的 `(user)` 页面由登录态 guard 保护，401 跳登录、403 显示无权限页。
 
 ## Current verification gaps
 
@@ -33,13 +35,16 @@ docs/status/archive/2026-05-runtime-change-log.md     # 历史证据：2026-05 v
 - 2026-05-27 multi-platform Phase 2 code/docs/frontend gates and the later full admin smoke gate have now passed for the current local Go/Vue runtime.
 - Docker-first readiness 和 smoke 是两条验证链：Docker runtime 用 `127.0.0.1:8080 /health /ready`；smoke 脚本默认临时端口是 basic `127.0.0.1:18080`、full `127.0.0.1:18081`。
 - `admin_app` 机器局域网默认值已清掉；本轮未跑真机 smoke，LAN 调试仍需按本机 IP 配置 `VITE_APP_API_BASE_URL`、后端监听地址、防火墙和 `CORS_ALLOW_ORIGINS`。
-- Export runtime V2 code/tests are complete in the export worktree, but the credential-gated real submit-to-COS smoke has not been run in this environment; do not claim COS upload runtime closure until `scripts/export-task-smoke.ps1 -RunRealExport` passes.
+- Export runtime V2 code/tests are complete in the export worktree, but the credential-gated real submit-to-COS smoke has not been run in this environment; do not claim COS upload runtime closure until `scripts/export-task-smoke.ps1 -RunRealExport` passes。
+- Canvas Front Next live DB 已应用/查询 `20260531_canvas_front_next_integration.sql`：当前仅新增 `canvas_prompts`、`canvas_assets` 两张 canvas 业务表，`canvas_users` / `canvas_credit_logs` / `canvas_settings` / `canvas_projects` / `canvas_wallets` 不存在；full-admin-smoke、后端全量 Go tests、Next test/typecheck/build 和 root governance gates 已通过。
 
 ## Latest status / change-log pointers
 
 详细变更记录看 `docs/status/archive/2026-05-runtime-change-log.md`。近期关键批次：
 
 ```text
+2026-05-31 Canvas Front Next integration verified: canvas auth platform/routes, wallet/recharge thin routes, public prompts/assets/settings, backend-managed text/image/video AI generation, Next frontend boundary/type/build gates, live DB migration/query, full-admin-smoke, and root governance gates passed
+2026-05-31 Canvas auth/RBAC hotfix: permission platform dictionary includes canvas by default, login-config exposes allow_register, Canvas Next removes fake register endpoint, renders configured login-type tabs, opens slide captcha only after password submit, uses axios-backed API/proxy requests, and adds login guard/401/403 handling
 2026-05-31 RESTful API naming full standardization: frontend CRUD wrappers and active call sites use standard names only; backend page dictionary routes bind PageInit-style handlers/services; `users/init` remains the bootstrap exception
 2026-05-31 payment serial readability hardening: RCG/PAY/WLT no longer append a 20-digit zero-padded sequence; new rows use compact uppercase base36 suffix while old rows stay unchanged
 2026-05-31 export runtime v2 verified: registry-driven export runtime, `kind/platform/object_key`, frontend export submit helper, migration dry-run, and gated real submit-to-COS smoke all passed
