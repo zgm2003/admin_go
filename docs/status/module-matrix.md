@@ -653,13 +653,13 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
     state, or invoke the real Alipay callback
   - credential-gated probes may create sandbox recharge/pay only when explicitly enabled
 - Docs:
-  - payment config/recharge/wallet billing redesign specs/plans + recharge completion closure spec/plan + admin API
+  - payment config/recharge/wallet redesign specs/plans plus old AI billing retirement plan + recharge completion closure spec/plan + admin API
     contract + smoke matrix
 - Risk:
   - Alipay only
   - no refund, reconcile, WeChat, subscription, business fulfillment, manual balance adjustment, points, or canvas credit
     table in this slice
-  - user debit belongs to wallet/AI billing, not `payment_orders`
+  - old user debit belonged to retired wallet/AI billing, not `payment_orders`; new AI generation is free
   - `private_key_enc`/plaintext key/cert content/raw callback payload must never leak
   - `return_url` belongs to each recharge/payment order, not `payment_configs`
 
@@ -667,7 +667,7 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
 
 - Backend:
   - implemented: `internal/module/payment/wallet` owns wallet summary, current-user transactions, admin wallet users,
-    admin ledger, and internal debit/credit primitives for billing callers; admin transport owns admin/current-admin wallet surfaces and canvas transport owns `/api/canvas/v1/wallet/*`
+    admin ledger, and historical debit/credit primitives; admin transport owns admin/current-admin wallet surfaces; Canvas AI generation no longer depends on `/api/canvas/v1/wallet/*`
   - wallet now lives under `admin_back_go/internal/module/payment/wallet` while package identifiers and `wallet.*`
     i18n keys remain stable
   - `user_wallets.total_consume_cents` records cumulative spend
@@ -688,7 +688,7 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
   - 2026-05-31 full smoke passed for current-user wallet summary/transactions, payment ledger init/list,
     payment wallets init/list, and users/init payment menu state
   - default smoke does not call internal debit/credit
-- Docs: wallet recharge/debit-credit + payment-wallet-billing redesign spec/plan + admin API contract + smoke matrix
+- Docs: wallet recharge/debit-credit + payment-wallet redesign spec/plan + old AI billing retirement plan + admin API contract + smoke matrix
 - Risk:
   - v1 intentionally excludes refund, withdraw, freeze, manual adjustment, reconcile, currency, points, membership
     fulfillment, and `/wallet/recharge` migration
@@ -759,7 +759,7 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
 - Risk:
   - config MVP is done
   - chat page consumes option avatar/system_prompt and agent config page now owns tool/knowledge usage binding
-  - AI billing rules are configured in AI agent config.
+  - Old AI billing rules are retired; AI agent config now owns runtime scene/model selection only.
   - Canvas frontend integration is now tracked under `canvas_front_next / canvas platform API`; admin AI image remains independently supported.
 
 ### AI image playground gpt-image-2
@@ -941,29 +941,32 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
 ### canvas_front_next / canvas platform API
 
 - Backend:
-  - implemented: `auth_platforms.canvas` seed and canvas capability permissions, `/api/canvas/v1/auth/*`, `/api/canvas/v1/users/me`, `/api/canvas/v1/profile`, current-user wallet summary/transactions, current-user recharge page-init/list/create/pay, public settings/prompts/assets, and AI text/image/video generation routes.
-  - route ownership: auth has dedicated `transport/admin`, `transport/app`, and `transport/canvas`; user app owns `/api/app/v1/users/me`, user canvas owns `/api/canvas/v1/users/me`; profile app owns `/api/app/v1/profile`, profile canvas owns `/api/canvas/v1/profile`; payment admin owns management routes while payment canvas owns current-user recharge routes; payment/wallet admin owns admin/current-admin wallet surfaces while payment/wallet canvas owns canvas wallet summary/transactions.
+  - implemented: `auth_platforms.canvas` seed and canvas capability permissions, `/api/canvas/v1/auth/*`, `/api/canvas/v1/users/me`, `/api/canvas/v1/profile`, public settings/prompts/assets, and AI text/image/video generation routes. Old Canvas wallet/recharge UI/routes are retired from the Canvas free-generation surface; payment/wallet基础域 remains outside Canvas AI.
+  - route ownership: auth has dedicated `transport/admin`, `transport/app`, and `transport/canvas`; user app owns `/api/app/v1/users/me`, user canvas owns `/api/canvas/v1/users/me`; profile app owns `/api/app/v1/profile`, profile canvas owns `/api/canvas/v1/profile`; payment/wallet admin routes remain payment-owned, but Canvas AI generation no longer depends on payment/wallet transport.
   - implemented: `permissions/page-init` default platform dictionary includes `admin/app/canvas`; canvas RBAC gates live in `permissions.platform='canvas'` and are not copied into an admin menu tree.
-  - implemented: `20260531_canvas_front_next_integration.sql` seeds Canvas PAGE rows (`canvas_page`, `canvas_image_page`, `canvas_video_page`, `canvas_prompts_page`, `canvas_assets_page`, `canvas_profile_page`, `canvas_wallet_page`) and BUTTON rows (`canvas_access`, `canvas_prompt_read`, `canvas_asset_read`, `canvas_ai_image_generate`, `canvas_ai_video_generate`, `canvas_wallet_read`, `canvas_recharge_add`, `canvas_recharge_pay`); `20260601_canvas_profile_wallet_recharge_menu.sql` adds `canvas_recharge_page` and reparents recharge buttons under that PAGE; canvas auth login `data.user` and `/api/canvas/v1/users/me` return the canonical users/me payload (`user_id`, `username`, `avatar`, `role_name`, `permissions`, `router`, `buttonCodes`) instead of permission alias fields.
+  - planned cleanup: Canvas PAGE rows stay focused on free-generation pages (`canvas_page`, `canvas_image_page`, `canvas_video_page`, `canvas_prompts_page`, `canvas_assets_page`, `canvas_profile_page`) and BUTTON rows stay focused on generation/assets/prompts (`canvas_access`, `canvas_prompt_read`, `canvas_asset_read`, `canvas_ai_image_generate`, `canvas_ai_video_generate`); old wallet/recharge Canvas rows are retired with the old AI billing surface. Canvas auth login `data.user` and `/api/canvas/v1/users/me` return the canonical users/me payload (`user_id`, `username`, `avatar`, `role_name`, `permissions`, `router`, `buttonCodes`) instead of permission alias fields.
   - implemented: `/api/*/auth/login-config` returns `allow_register`; Canvas uses it with login types and slide captcha, and no `/api/canvas/v1/auth/register` route is exposed.
-  - implemented: text/image/video generation use backend-managed provider config; canvas text and video charge `ai_billing_records(platform=canvas)` before provider calls; video binds upstream task id to `ai_billing_records.provider_task_id` and reads status/content by billing record ownership (`id + user_id + platform + scene`).
+  - implemented: text/image/video generation use backend-managed provider config for free; old `ai_billing_records(platform=canvas)` charge/refund/audit is deleted; video binds upstream task id to `canvas_video_tasks.provider_task_id` and reads status/content by task ownership (`id + user_id + is_del=2`).
+  - implemented: `/api/canvas/v1/settings` exposes selectable AI runtime through `agents.text|image|video` derived from enabled `ai_agents` Canvas-specific scene bindings (`canvas_text_generate`, `canvas_image_generate`, `canvas_video_generate`); old billing-scene metadata is removed and must not be treated as a model source.
   - not implemented in this slice: `admin_front_ts` Canvas prompt/asset CRUD UI and cloud-synced `canvas_projects`.
 - Frontend:
   - implemented: `canvas_front_next` is an independent Next.js repo on `master`; source comes from `infinite-canvas/web` but old admin UI and local/custom API-key channel mode are removed.
-  - implemented: auth/settings/prompts/assets/profile/wallet/recharge/text/image/video clients call `/api/canvas/v1/*`; no user-entered provider API key/base URL is used for generation.
+  - implemented boundary: auth/settings/prompts/assets/profile/text/image/video clients call `/api/canvas/v1/*`; no user-entered provider API key/base URL is used for generation; wallet/recharge UI is removed from Canvas free-generation surface while payment/wallet基础域保留 outside Canvas AI.
+  - implemented: Canvas model/agent pickers use only configured `agents.*` options from settings, submit only `agent_id`, and no longer invent `canvas_text_generate` / `canvas_image_generate` / `canvas_video_generate` as selectable models.
   - implemented: Canvas login page reads `/api/canvas/v1/auth/login-config`, renders the configured email/phone/password login-type tabs, uses `/api/canvas/v1/auth/send-code` for email/phone code login and `allow_register` auto-open-account semantics, opens slide captcha only after password-login submit, removes standalone register UI/API, and protects `(user)` pages with an auth guard; 401 redirects to login and 403 renders an explicit no-permission state.
-  - implemented: Canvas frontend RBAC registry keeps local route labels/icons while route authorization comes from backend `router` paths; session store keeps `routePaths` separate from BUTTON-only `buttonCodes`; `can(code)` reads only `buttonCodes`; top/mobile navigation and route guard use `routePaths`; prompts/assets/settings protected API calls require ready token plus matching BUTTON permission before firing; profile, wallet, and recharge account pages are exposed from the account menu. `/profile` reads/saves through profile service; `/wallet` imports the split wallet API; `/recharge` uses page-init/create/pay.
+  - implemented/planned boundary: Canvas frontend RBAC registry keeps local route labels/icons while route authorization comes from backend `router` paths; session store keeps `routePaths` separate from BUTTON-only `buttonCodes`; `can(code)` reads only `buttonCodes`; top/mobile navigation and route guard use `routePaths`; prompts/assets/settings protected API calls require ready token plus matching BUTTON permission before firing; `/profile` reads/saves through profile service; wallet/recharge account pages and cost wording are removed from the Canvas AI surface.
 - Tests:
-  - backend focused gates cover architecture migration guards, auth/platform, permission, wallet/recharge route wiring, canvas service/transport, OpenAI-compatible video adapter, and bootstrap wiring.
+  - backend focused gates cover architecture migration guards, auth/platform, permission, Canvas service/transport, OpenAI-compatible video adapter, and bootstrap wiring; old wallet/recharge route wiring is not an active Canvas free-generation expectation.
   - frontend gates cover canvas API boundary, auth/RBAC shell behavior, API service behavior, typecheck, and Next build.
 - Smoke:
   - live DB migration/query, backend full tests, Next test/typecheck/build, full-admin-smoke, and root governance gates passed on 2026-05-31 for the baseline slice.
-  - 2026-06-01 parity verification rebuilt Docker backend, checked `/health` and `/ready`, confirmed protected `/api/canvas/v1/profile` and `/api/canvas/v1/payment/recharges/page-init` return 401 instead of 404, and passed Next targeted tests/typecheck/build.
+  - 2026-06-01 parity verification rebuilt Docker backend, checked `/health` and `/ready`, confirmed protected `/api/canvas/v1/profile` baseline behavior, and passed Next targeted tests/typecheck/build; `/api/canvas/v1/payment/recharges*` is retired from the Canvas AI surface in this slice.
+  - 2026-06-01 agent-scene hardening passed backend `go test ./...`, Canvas Next Vitest/typecheck/build, and live DB inspection confirmed baseline `chat` and `image_generate` agents existed before this free-generation scene split; the new slice requires `canvas_*` scene assertions instead.
 - Docs:
   - canvas spec/plan, current-status, module matrix, admin API contract, and smoke matrix.
 - Risk:
-  - live provider credentials/model availability still determines real text/image/video generation success; provider calls are backend-owned and fail closed/refund through billing service.
-  - only new canvas business tables are `canvas_prompts` and `canvas_assets`; do not add `canvas_users`, `canvas_credit_logs`, `canvas_settings`, `canvas_projects`, or `canvas_wallets` without a new spec.
+  - live provider credentials/model availability still determines real text/image/video generation success; provider calls are backend-owned and fail closed without billing refund side effects.
+  - only new canvas business tables are `canvas_prompts`, `canvas_assets`, and `canvas_video_tasks`; do not add `canvas_users`, `canvas_credit_logs`, `canvas_settings`, `canvas_projects`, or `canvas_wallets` without a new spec.
 
 ## Removed / retired scope
 

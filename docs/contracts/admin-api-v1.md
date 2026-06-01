@@ -96,7 +96,8 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-contract.ps1
 | current profile update | `PUT /api/admin/v1/profile` | bearer token; operation log only, no user-manager button permission |
 | wallet current-user read | `GET /api/admin/v1/wallet/summary`, `GET /api/admin/v1/wallet/transactions` | bearer token; current-user ownership only; no `consume` HTTP route in the active product contract |
 | payment wallet admin read | `GET /api/admin/v1/payment/ledger/page-init`, `GET /api/admin/v1/payment/ledger`, `GET /api/admin/v1/payment/wallets/page-init`, `GET /api/admin/v1/payment/wallets` | bearer token + `payment_ledger_list` or `payment_wallet_list` |
-| AI sidecar provider/agent/tool/knowledge/billing management | ai-providers/ai-agents/ai-tools/ai-knowledge-bases/ai-knowledge-documents/ai-billing-rules write routes | bearer token; mutation routes use explicit `ai_provider_*`, `ai_agent_*`, `ai_tool_*`, `ai_knowledge_*`, `ai_knowledge_document_*`, and `ai_billing_rule_edit` route permissions and OperationLog metadata; secret fields are write-only/masked |
+| AI sidecar provider/agent/tool/knowledge management | ai-providers/ai-agents/ai-tools/ai-knowledge-bases/ai-knowledge-documents write routes | bearer token; mutation routes use explicit `ai_provider_*`, `ai_agent_*`, `ai_tool_*`, `ai_knowledge_*`, and `ai_knowledge_document_*` route permissions and OperationLog metadata; secret fields are write-only/masked |
+| Retired old AI billing system | `/api/admin/v1/ai-billing-rules*`, `ai_billing_rules`, `ai_billing_records`, `ai_billing_rule_edit` | retired/deleted from active contract; AI generation is free in this slice and must not debit wallet balance or require billing rules |
 | AI sidecar runtime current-user | ai-conversations current-user CRUD, ai-conversations/:id/messages list/send, and ai-runs read monitor | bearer token; current-user ownership where applicable; message send requires an enabled chat-scene AI agent + provider and must fail explicitly when not configured |
 | Retired AI legacy routes | legacy model/tool/prompt/agent/knowledge-base routes | not mounted in active Go runtime; only backup/rollback SQL, historical specs, or negative router tests may mention exact old route strings |
 
@@ -154,11 +155,11 @@ interface AppSendCodeBody {
 
 ## Canvas API v1
 
-状态：implemented and verified in Go backend + `canvas_front_next`; live DB/full smoke baseline passed on 2026-05-31. Canvas profile/wallet/recharge parity verified on 2026-06-01.
+状态：implemented and verified in Go backend + `canvas_front_next`; live DB/full smoke baseline passed on 2026-05-31. Old Canvas wallet/recharge UI and old AI billing are retired from the active Canvas contract.
 
-Route ownership：`/api/canvas/v1/auth/*` -> `internal/module/auth/transport/canvas`；`/api/canvas/v1/users/me` -> `internal/module/user/transport/canvas`；`/api/canvas/v1/profile` -> `internal/module/profile/transport/canvas`；`/api/canvas/v1/wallet/*` -> `internal/module/payment/wallet/transport/canvas`；`/api/canvas/v1/payment/recharges*` -> `internal/module/payment/transport/canvas`；`/api/canvas/v1/prompts|assets|settings` -> `internal/module/canvas/transport/canvas`。
+Route ownership：`/api/canvas/v1/auth/*` -> `internal/module/auth/transport/canvas`；`/api/canvas/v1/users/me` -> `internal/module/user/transport/canvas`；`/api/canvas/v1/profile` -> `internal/module/profile/transport/canvas`；`/api/canvas/v1/prompts|assets|settings` -> `internal/module/canvas/transport/canvas`。
 
-`canvas_front_next` 是独立 Next.js 前端，所有安全、钱包、provider、billing 和公共库数据都通过 Go 后端 `/api/canvas/v1/*`。Next 前端不保存 provider API key/base_url，不调用旧 `infinite-canvas` 后端。
+`canvas_front_next` 是独立 Next.js 前端，所有安全、provider 和公共库数据都通过 Go 后端 `/api/canvas/v1/*`。Next 前端不保存 provider API key/base_url，不调用旧 `infinite-canvas` 后端。旧 AI billing 已从 Canvas 生成链路退休；payment/wallet 基础充值域保留给非本切片能力，但 AI 生成不扣余额。
 
 ```text
 GET  /api/canvas/v1/auth/login-config
@@ -174,19 +175,35 @@ GET  /api/canvas/v1/settings
 GET  /api/canvas/v1/prompts
 GET  /api/canvas/v1/assets
 
-GET  /api/canvas/v1/wallet/summary
-GET  /api/canvas/v1/wallet/transactions
-GET  /api/canvas/v1/payment/recharges/page-init
-GET  /api/canvas/v1/payment/recharges
-POST /api/canvas/v1/payment/recharges
-POST /api/canvas/v1/payment/recharges/:id/pay
-
 POST /api/canvas/v1/ai/chat/completions
 POST /api/canvas/v1/ai/images/generations
 POST /api/canvas/v1/ai/images/edits
 POST /api/canvas/v1/ai/videos
 GET  /api/canvas/v1/ai/videos/:id
 GET  /api/canvas/v1/ai/videos/:id/content
+```
+
+Canvas settings response exposes runtime agent selection only; old billing metadata is retired:
+
+```ts
+interface CanvasSettingsResponse {
+  allow_register: boolean
+  scenes: Array<'canvas_text_generate' | 'canvas_image_generate' | 'canvas_video_generate'>
+  agents: {
+    text: CanvasAgentOption[]  // ai_agents.scenes_json contains "canvas_text_generate"
+    image: CanvasAgentOption[] // ai_agents.scenes_json contains "canvas_image_generate"
+    video: CanvasAgentOption[] // ai_agents.scenes_json contains "canvas_video_generate"
+  }
+}
+
+interface CanvasAgentOption {
+  id: number
+  name: string
+  avatar: string
+  model_id: string
+  model_display_name: string
+  scene: 'canvas_text_generate' | 'canvas_image_generate' | 'canvas_video_generate'
+}
 ```
 
 Canvas profile response reuses the profile service shape:
@@ -238,10 +255,11 @@ canvas password 登录必须按 login-config + captcha 完成 slide 验证后再
 canvas bearer 请求默认 platform=canvas。
 canvas profile 只暴露当前用户基础资料读取/保存；安全修改邮箱/手机号/密码仍不在 canvas profile slice。
 Canvas PAGE 授权只通过 `permissions` + `router` 表达，供前端菜单/路由过滤；BUTTON 授权只通过 `buttonCodes` 表达，供按钮和动作 `can(code)` 判断。前端不得把 PAGE code 塞进 `buttonCodes`，也不得用 `permissionCodes` 合并 PAGE/BUTTON。
-wallet/recharge 只暴露 current-user 路径；不暴露 admin ledger/wallet management、manual consume、sync 或 close routes。
+Canvas free-generation surface does not expose wallet/recharge routes, menus, dialogs, balance display, recharge action, unit price, billing rule, debit, or refund concepts. Payment/wallet基础域仍可用于 admin/payment 合同，但不是 Canvas AI 生成依赖。
 prompts/assets 是 public list；后台 Vue CRUD UI 不在本切片。
-AI text/image/video 统一使用后端托管 provider；扣费审计写 ai_billing_records(platform=canvas)，钱包流水写 wallet_transactions。
-视频以 ai_billing_records.id 作为 canvas task id，provider_task_id 绑定在 ai_billing_records.provider_task_id；status/content 读取必须按 id + user_id + platform=canvas + scene=canvas_video_generate 校验 ownership。
+AI text/image/video 统一使用后端托管 provider；Canvas 前端只能提交 `agent_id`，不能提交或覆盖 provider model；模型来自已启用的 `ai_agents.model_id` 与 Canvas 专属场景。
+AI generation is free in this slice: 不查余额、不扣款、不退款、不写 `ai_billing_records`，也不要求 `/api/admin/v1/ai-billing-rules`。
+视频使用 `canvas_video_tasks.id` 作为 canvas task id，provider_task_id 绑定在 `canvas_video_tasks.provider_task_id`；status/content 读取必须按 `id + user_id + is_del=2` 校验 ownership。
 ```
 
 新增业务表仅允许：
@@ -249,13 +267,15 @@ AI text/image/video 统一使用后端托管 provider；扣费审计写 ai_billi
 ```text
 canvas_prompts
 canvas_assets
+canvas_video_tasks
 ```
 
-Canvas RBAC seed in `20260531_canvas_front_next_integration.sql` plus `20260601_canvas_profile_wallet_recharge_menu.sql`:
+Canvas free-generation RBAC target after old AI billing retirement:
 
 ```text
-PAGE: canvas_page, canvas_image_page, canvas_video_page, canvas_prompts_page, canvas_assets_page, canvas_profile_page, canvas_wallet_page, canvas_recharge_page
-BUTTON: canvas_access, canvas_prompt_read, canvas_asset_read, canvas_ai_image_generate, canvas_ai_video_generate, canvas_wallet_read, canvas_recharge_add, canvas_recharge_pay
+PAGE: canvas_page, canvas_image_page, canvas_video_page, canvas_prompts_page, canvas_assets_page, canvas_profile_page
+BUTTON: canvas_access, canvas_prompt_read, canvas_asset_read, canvas_ai_image_generate, canvas_ai_video_generate
+Retired Canvas billing UI rows: canvas_wallet_page, canvas_recharge_page, canvas_wallet_read, canvas_recharge_add, canvas_recharge_pay
 ```
 
 明确不新增：`canvas_users`、`canvas_credit_logs`、`canvas_settings`、`canvas_model_channels`、`canvas_projects`、`canvas_wallets`。
@@ -1641,47 +1661,30 @@ Rules:
 - `provider_id` points to the local provider row
 - create/update require a concrete `model_id` selected from enabled `ai_provider_models` under the selected provider
 - `model_display_name` is denormalized from the selected provider model for list display
-- list query supports `scene=chat`, `scene=agent_generate`, and `scene=image_generate`; there is no agent code or agent type filter in the MVP
-- MVP scene field is `scenes`; current allowed values are `chat`, `agent_generate`, and `image_generate`; empty internal input normalizes to `["chat"]`
+- list query supports `scene=chat`, `scene=agent_generate`, `scene=image_generate`, `scene=canvas_text_generate`, `scene=canvas_image_generate`, and `scene=canvas_video_generate`; there is no agent code or agent type filter in the MVP
+- MVP scene field is `scenes`; current allowed values are `chat`, `agent_generate`, `image_generate`, `canvas_text_generate`, `canvas_image_generate`, and `canvas_video_generate`; empty internal input normalizes to `["chat"]`
 - MVP form fields are name, model cascader, scenes, status, optional system prompt, and optional avatar
 - `ai_agents` deliberately does not store agent code, agent type, per-agent external app ids, per-agent API keys, response mode, runtime config JSON, model snapshot JSON, `created_by`, or `updated_by`; those are future contracts, not MVP columns
 - runtime uses the selected agent plus its provider credentials; per-agent credential override is not part of this slice
-- `GET /ai-agents/options` feeds runtime selectors and accepts optional `scene`; blank defaults to enabled `chat` scene agents, `scene=image_generate` is used by the image playground
+- `GET /ai-agents/options` feeds runtime selectors and accepts optional `scene`; blank defaults to enabled `chat` scene agents, `scene=image_generate` is used by the admin image playground, and Canvas uses only `canvas_text_generate` / `canvas_image_generate` / `canvas_video_generate`
 - `GET /ai-agents/page-init` returns `scene_arr` and `provider_model_options`; `GET /ai-agents/provider-models/:id` refreshes enabled models for a provider
 - `agent_id` / `agent_name` are the canonical AI runtime selector fields; old app aliases must not drive new DB queries or new Vue state
 
-## AI Billing Rules
+## Retired AI Billing Rules
 
-状态：AI billing rules are configured in AI agent config. Admin image generation and Canvas text/image/video generation are billed runtime callers.
+状态：retired/deleted from the active contract. The old global AI billing system is not a compatibility surface.
 
-用途：AI 计费规则只定义当前可计费场景的单价和启停；扣款/退款通过 wallet internal debit/credit 写入 `wallet_transactions`，计费审计写入 `ai_billing_records`。当前已接入 caller 是 admin AI image generation 以及 Canvas text/image/video generation；Canvas 通过 `/api/canvas/v1/*` 走后端托管 provider、wallet debit/refund 和 `ai_billing_records(platform=canvas)` 审计。
-
-### Routes
+用途：旧 `/api/admin/v1/ai-billing-rules*`、`ai_billing_rules`、`ai_billing_records`、`ai_billing_rule_edit`、Admin Vue billing dialog/API 和 AI generation wallet debit/refund runtime are retired in this slice. Canvas text/image/video and Admin image generation are free runtime callers: they do not check balance, do not require billing rules, do not debit `wallet_transactions`, and do not write `ai_billing_records`.
 
 ```text
-GET    /api/admin/v1/ai-billing-rules/page-init
-GET    /api/admin/v1/ai-billing-rules
-POST   /api/admin/v1/ai-billing-rules
-PUT    /api/admin/v1/ai-billing-rules/:id
-PATCH  /api/admin/v1/ai-billing-rules/:id/status
-DELETE /api/admin/v1/ai-billing-rules/:id
+Retired routes: /api/admin/v1/ai-billing-rules*
+Retired tables: ai_billing_rules, ai_billing_records
+Retired column: ai_image_tasks.billing_record_id
+Retired permission: ai_billing_rule_edit
+Replacement: agent-scene selection + provider runtime; Canvas video task identity lives in canvas_video_tasks
 ```
 
-### Auth and Permission
-
-```text
-read routes: bearer token, admin read context
-mutation routes: bearer token + ai_billing_rule_edit
-```
-
-### Runtime Rules
-
-```text
-admin_image_generate must have an enabled billing rule before provider enqueue.
-Insufficient balance fails before provider enqueue and writes no billing debit transaction.
-Worker failure refunds through ai_refund exactly once for the bound billing_record_id.
-Historical image tasks with null billing_record_id skip billing/refund mutation.
-```
+Payment/wallet/recharge 基础域仍保留，用于支付宝充值、钱包余额展示和未来会员/订阅模型；不要把旧 AI billing 语义塞回 payment_orders、payment_recharges、user_wallets 或 wallet_transactions。
 
 ## AI Images / Image Playground
 
@@ -2838,9 +2841,9 @@ DELETE /sms/logs/:id and /logs     -> system_sms_logDel, module=sms, action=dele
 
 ## Payment
 
-状态：payment config rebuild v1 + recharge cashier v1 + payment/wallet/billing menu reshape implemented in code by Tasks 1-8; Task 9 only synchronizes docs. Task 10 live DB/full verification is not claimed here。
+状态：payment config rebuild v1 + recharge cashier v1 + payment/wallet menu reshape implemented. Old AI billing is retired separately and is no longer part of the payment active contract。
 
-用途：当前 payment active scope 只做支付宝支付配置、隐藏充值收银台、admin 收支明细、admin 用户钱包和充值完成闭环：配置 CRUD、私有证书上传、本地配置测试、套餐充值、后端自动选择可用支付宝配置、创建底层支付单、拉起 web/h5 支付、支付宝正式异步回调、支付中订单定时补偿同步、过期订单定时关闭、钱包余额幂等入账。退款、提现、对账、微信、订阅权益不属于 payment slice；AI 计费扣款属于 wallet/AI billing slice，不进入 `payment_orders`。
+用途：当前 payment active scope 只做支付宝支付配置、隐藏充值收银台、admin 收支明细、admin 用户钱包和充值完成闭环：配置 CRUD、私有证书上传、本地配置测试、套餐充值、后端自动选择可用支付宝配置、创建底层支付单、拉起 web/h5 支付、支付宝正式异步回调、支付中订单定时补偿同步、过期订单定时关闭、钱包余额幂等入账。退款、提现、对账、微信、订阅权益不属于 payment slice；旧 AI billing 已退休，AI 生成不进入 `payment_orders`，也不通过 wallet 扣余额。
 
 ### Shared Rules
 
@@ -3028,8 +3031,8 @@ Repeat finalized credited -> return credited, no second wallet credit
 payment_recharge_packages.code/name/amount_cents/badge/sort/status: page-init 套餐展示和创建充值单的金额事实源。
 payment_recharges.recharge_no/user_id/package_code/package_name/amount_cents/payment_order_id/status/paid_at/credited_at/failure_reason: 充值记录、return_url 回跳识别、callback/sync/cron 共用状态机和入账审计。
 payment_callback_events.provider/notify_id/out_trade_no/trade_no/trade_status/app_id/total_amount_cents/signature_valid/process_status/process_message/raw_payload_json/received_at/processed_at: 支付宝回调审计事实；不作为支付业务真相源。
-user_wallets.user_id/balance_cents/total_recharge_cents/total_consume_cents: 充值页余额展示；充值入账时原子增加 balance/total_recharge，消费由 wallet slice 原子扣减 balance/增加 total_consume。
-wallet_transactions.transaction_no/wallet_id/user_id/direction/amount_cents/balance_before_cents/balance_after_cents/source_type/source_id/remark: 钱包流水审计和 `(source_type, source_id)` 幂等约束；充值写 `direction=in/source_type=recharge`，AI 扣款写 `direction=out/source_type=ai_generate`，失败退款写 `direction=in/source_type=ai_refund`。
+user_wallets.user_id/balance_cents/total_recharge_cents/total_consume_cents: 充值页余额展示；充值入账时原子增加 balance/total_recharge。旧 AI billing 退休后，AI 生成不再增加 total_consume。
+wallet_transactions.transaction_no/wallet_id/user_id/direction/amount_cents/balance_before_cents/balance_after_cents/source_type/source_id/remark: 钱包流水审计和 `(source_type, source_id)` 幂等约束；充值写 `direction=in/source_type=recharge`。历史 `ai_generate` / `ai_refund` 流水可作为旧审计留存，但新 AI 生成不再写入。
 order_no / recharge_no / transaction_no 是后端生成的不透明唯一字符串；后端必须保证 wallet transaction_no 在充值入账和消费扣款两个写入路径之间仍全局唯一；前端和第三方回跳只保存/回传，不解析长度或时间后缀。
 is_del / created_at / updated_at: 每张新增表都有并参与过滤、排序或审计展示。
 ```
@@ -3116,13 +3119,13 @@ refund / WeChat / subscription / reconcile features
 
 ## Wallet
 
-状态：wallet recharge + debit/credit v1 has been reshaped for payment/wallet/billing redesign. Current-user wallet read stays under `/api/admin/v1/wallet`; admin wallet reads moved under `/api/admin/v1/payment`; legacy consume DTO/service/repository/i18n surfaces are retired.
+状态：wallet recharge + ledger read remains active for payment. Old AI billing debit/refund callers are retired; current-user wallet read stays under `/api/admin/v1/wallet`; admin wallet reads moved under `/api/admin/v1/payment`; legacy consume DTO/service/repository/i18n surfaces are retired.
 
 用途：钱包只回答“余额是多少、怎么变的”。产品语言固定为：
 
 ```text
 充值记录 = 用户充值业务记录，给用户看“我充了没有、到账没有”。
-收支明细 = admin 侧余额变化事实，充值入账、AI 扣款和退款都在这里。
+收支明细 = admin 侧余额变化事实，充值入账和历史余额流水都在这里；新 AI 生成不再写扣款/退款流水。
 用户钱包 = admin 侧用户余额汇总。
 我的钱包 = 当前用户隐藏入口，展示余额和自己的交易记录。
 ```
@@ -3145,11 +3148,10 @@ retired/historical left-side pages: /wallet/transactions, /wallet/users, /wallet
 ```text
 Wallet v1 只做充值入账后的余额展示、资金流水查询和内部扣款/退款原语。
 No public current-user consume HTTP route remains in the active product contract.
-AI billing uses internal wallet debit/credit; it does not create payment_orders.
+Old AI billing debit/refund callers are retired; AI generation must not call wallet debit/credit in this slice.
 amount_cents 永远为正数，收支方向由 direction 表达。
 余额变更必须在一个 DB transaction 内写 user_wallets 和 wallet_transactions。
 source_type + source_id 全局幂等；同一用户重复 source 返回已有流水，不重复扣款或退款；其他用户复用同一 source 必须拒绝，不能返回别人的流水。
-余额不足不写 wallet_transactions and must fail before provider enqueue for billed AI generation.
 本 slice 不做 withdraw / freeze / manual adjustment / reconcile / currency / points / membership fulfillment。
 ```
 
