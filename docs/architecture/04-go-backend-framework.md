@@ -199,7 +199,7 @@ handler 直接查 DB/Redis
 users.role_id 单角色模型，第一阶段不改多角色
 permissions: DIR / PAGE / BUTTON
 role_permissions: DIR 不授权，PAGE 授权，BUTTON 授权并隐含父 PAGE
-Users/init 返回 permissions + router + buttonCodes + quick_entry
+users/me 返回 permissions + router + buttonCodes
 platform 使用 session.platform，不盲信 header
 route access grant cache key 语义保持稳定
 show_menu 只控制菜单显示，不代表无页面权限
@@ -210,7 +210,7 @@ role/permission 变更必须清理受影响用户的 route access grant cache
 
 ### RBAC RouteAccessCodes 与 buttonCodes 分离
 
-`users/init.buttonCodes` 是前端按钮显隐契约，只能包含 BUTTON code。后端 `PermissionCheck` 使用内部 `RouteAccessCodes` 判断 route metadata code；`RouteAccessCodes` 可包含 PAGE code 和 BUTTON code。不要为了读接口创建 `view` / `查看` BUTTON，也不要把 PAGE code 暴露成前端按钮能力。
+`users/me.buttonCodes` 是前端按钮显隐契约，只能包含 BUTTON code。后端 `PermissionCheck` 使用内部 `RouteAccessCodes` 判断 route metadata code；`RouteAccessCodes` 可包含 PAGE code 和 BUTTON code。不要为了读接口创建 `view` / `查看` BUTTON，也不要把 PAGE code 暴露成前端按钮能力。
 
 ## Middleware 顺序
 
@@ -381,7 +381,7 @@ Phase A: 架构骨架文档和目录边界
 Phase B: 整理当前最小 system 模块到 route/handler/service
 Phase C: 接入 config/log/response/error/middleware 基线
 Phase D: 接入 MySQL/Redis infra 层
-Phase E: 接入 RBAC read path: CheckToken / CheckPermission / Users/init
+Phase E: 接入 RBAC read path: CheckToken / CheckPermission / users/me
 Phase F: 接入 RBAC write path: Permission / Role / AuthPlatform
 Phase G: 业务模块演进
 ```

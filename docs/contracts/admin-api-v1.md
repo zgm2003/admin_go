@@ -39,11 +39,11 @@ Canvas 前端：/api/canvas/v1
 每个迁移到 Go 的资源必须先更新本文，再改前端调用。
 新 Go API 只能使用 /api/admin/v1 或 /api/app/v1 命名空间。
 新 Go API 使用 RESTful resource，不允许 /api/admin/Xxx/list、/api/admin/Xxx/add、/api/admin/Xxx/edit、/api/admin/Xxx/del 这种旧动作式 path。
-init/page-init 属于页面字典或 bootstrap contract，必须显式写清用途和 enum/dict 来源。
-标准页面字典接口统一写成 GET /api/admin/v1/<resources>/page-init；init 只保留给明确 bootstrap contract，例如 users/init。
+page-init 属于页面字典 contract，必须显式写清用途和 enum/dict 来源。
+标准页面字典接口统一写成 GET /api/admin/v1/<resources>/page-init；当前用户 bootstrap 统一使用 users/me，不保留旧 init 例外。
 标准前端 API wrapper 使用 list/detail/create/update/changeStatus/deleteOne/deleteBatch/pageInit；不得新增或保留 CRUD init/add/edit/del/status wrapper。
 旧接口兼容入口必须标注兼容来源、退出条件和验证边界，不得伪装成新契约。
-`init` 只保留给明确 bootstrap contract，例如当前登录用户初始化 `GET /api/admin/v1/users/init`；普通页面字典不保留 `/init` route 或 `init()` wrapper alias。
+普通页面字典不保留 `/init` route 或 `init()` wrapper alias；当前登录用户初始化固定为 `GET /api/{admin,app,canvas}/v1/users/me`。
 ```
 
 标准 CRUD contract 模板：
@@ -75,10 +75,9 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-contract.ps1
 | health/readiness | `GET /health`, `GET /ready` | public |
 | auth config/captcha/code/login/forgot-password/refresh | `/api/admin/v1/auth/login-config`, `/captcha`, `/send-code`, `/forgot-password`, `/login`, `/refresh` | public |
 | logout | `POST /api/admin/v1/auth/logout` | bearer token |
-| current user bootstrap | `GET /api/admin/v1/users/me`, `GET /api/admin/v1/users/init` | bearer token |
+| current user bootstrap | `GET /api/admin/v1/users/me`, `GET /api/app/v1/users/me`, `GET /api/canvas/v1/users/me` | bearer token |
 | App auth baseline | `GET /api/app/v1/auth/login-config`, `GET /api/app/v1/auth/captcha`, `POST /api/app/v1/auth/send-code`, `POST /api/app/v1/auth/login`, `GET /api/app/v1/users/me`, `GET/PUT /api/app/v1/profile`, `POST /api/app/v1/upload-tokens`, `POST /api/app/v1/auth/logout` | auth config/captcha/send-code/login: public; current user/profile/upload-token/logout: bearer token; app bearer requests default `platform=app` |
 | read-only admin resources | permissions/auth-platforms/roles/users/profile/operation-logs/system-settings/mail/upload-drivers/upload-rules/upload-settings/notifications list or page-init | bearer token |
-| user quick-entry current-user write | `PUT /api/admin/v1/users/me/quick-entries` | bearer token; current user only, no user-manager button permission |
 | user login logs read | `GET /api/admin/v1/users/login-logs/page-init`, `GET /api/admin/v1/users/login-logs` | bearer token |
 | user sessions read/revoke | `GET /api/admin/v1/user-sessions/page-init`, `GET /api/admin/v1/user-sessions`, `GET /api/admin/v1/user-sessions/stats`, `PATCH /api/admin/v1/user-sessions/:id/revoke`, `PATCH /api/admin/v1/user-sessions/revoke` | read routes: bearer token; revoke routes: bearer token + `user_userManager_kick` |
 
@@ -123,11 +122,10 @@ POST /api/app/v1/auth/logout
 login-config / captcha / send-code / login 是 app 公共 auth 入口，不需要 bearer token。
 app login-config 强制按 platform=app 查询 auth_platforms，不信任前端 header。
 app 密码登录必须提交 slide captcha，遵守 auth_platforms.captcha_type，不再跳过验证码。
-app login 请求使用 login_type/login_account/password|code/captcha_id/captcha_answer，与 admin auth 入参语义一致，但返回 data.token + data.user{id,nickname,avatar}。
-users/me 只返回 id/nickname/avatar，不返回 admin RBAC 字段。
+app login 请求使用 login_type/login_account/password|code/captcha_id/captcha_answer，与 admin auth 入参语义一致，但返回 data.token + data.user，user 字段与 `/api/app/v1/users/me` 同形。
 logout 返回 data:null。
 App bearer 请求在路径为 /api/app/v1/* 时默认 platform=app。
-Ownership：`/api/app/v1/auth/*` 归属 `internal/module/auth/transport/app`；`/api/app/v1/users/me` 和 `/api/app/v1/profile` 当前由 `internal/module/profile/transport/app` 作为 current-user profile 编译入口注册，并复用现有 user service；`/api/app/v1/upload-tokens` 归属 `internal/module/uploadtoken/transport/app`。平台 app 是 route/policy scope，不是 appauth module。
+Ownership：`/api/app/v1/auth/*` 归属 `internal/module/auth/transport/app`；`/api/app/v1/users/me` 归属 `internal/module/user/transport/app`；`/api/app/v1/profile` 归属 `internal/module/profile/transport/app`；`/api/app/v1/upload-tokens` 归属 `internal/module/uploadtoken/transport/app`。平台 app 是 route/policy scope，不是 appauth module。
 ```
 
 请求：
@@ -158,7 +156,7 @@ interface AppSendCodeBody {
 
 状态：implemented and verified in Go backend + `canvas_front_next`; live DB/full smoke baseline passed on 2026-05-31.
 
-Route ownership：`/api/canvas/v1/auth/*` -> `internal/module/auth/transport/canvas`；`/api/canvas/v1/users/me` -> `internal/module/profile/transport/canvas`；`/api/canvas/v1/wallet/*` -> `internal/module/payment/wallet/transport/canvas`；`/api/canvas/v1/payment/recharges*` -> `internal/module/payment/transport/canvas`；`/api/canvas/v1/prompts|assets|settings` -> `internal/module/canvas/transport/canvas`。
+Route ownership：`/api/canvas/v1/auth/*` -> `internal/module/auth/transport/canvas`；`/api/canvas/v1/users/me` -> `internal/module/user/transport/canvas`；`/api/canvas/v1/wallet/*` -> `internal/module/payment/wallet/transport/canvas`；`/api/canvas/v1/payment/recharges*` -> `internal/module/payment/transport/canvas`；`/api/canvas/v1/prompts|assets|settings` -> `internal/module/canvas/transport/canvas`。
 
 `canvas_front_next` 是独立 Next.js 前端，所有安全、钱包、provider、billing 和公共库数据都通过 Go 后端 `/api/canvas/v1/*`。Next 前端不保存 provider API key/base_url，不调用旧 `infinite-canvas` 后端。
 
@@ -198,7 +196,6 @@ canvas 不暴露 `/api/canvas/v1/auth/register`；前端不得臆造注册页或
 canvas email/phone 登录必须调用 `/api/canvas/v1/auth/send-code` 后以 `login_type=email|phone` + `code` 登录；未注册账号是否自动开户由 `allow_register` 决定。
 canvas password 登录必须按 login-config + captcha 完成 slide 验证后再提交。
 canvas bearer 请求默认 platform=canvas。
-canvas login 的 `data.user` 与 `/api/canvas/v1/users/me` 的 `data` 使用 users/init 同形 contract：`user_id`、`username`、`avatar`、`role_name`、`permissions`、`router`、`buttonCodes`、`quick_entry`。稳定字段名不加兜底别名；不得返回 `id`、`nickname`、`display_name`、`avatar_url`、`permissionCodes`、`permission_codes`、`button_codes` 这类 Canvas 自造 alias。
 Canvas PAGE 授权只通过 `permissions` + `router` 表达，供前端菜单/路由过滤；BUTTON 授权只通过 `buttonCodes` 表达，供按钮和动作 `can(code)` 判断。前端不得把 PAGE code 塞进 `buttonCodes`，也不得用 `permissionCodes` 合并 PAGE/BUTTON。
 wallet/recharge 只暴露 current-user 路径；不暴露 admin ledger/wallet management、manual consume、sync 或 close routes。
 prompts/assets 是 public list；后台 Vue CRUD UI 不在本切片。
@@ -437,11 +434,12 @@ Logout 需要 `Authorization: Bearer <access_token>`。
 
 状态：implemented in Go backend, adapted in Vue frontend。
 
-用途：登录后初始化当前后台用户、菜单树、动态路由、按钮权限和快捷入口。
+用途：登录后初始化当前用户、菜单树、动态路由和按钮权限。
 
 ```text
 GET /api/admin/v1/users/me
-GET /api/admin/v1/users/init
+GET /api/app/v1/users/me
+GET /api/canvas/v1/users/me
 ```
 
 Response `data`：
@@ -455,7 +453,6 @@ interface UserInitResponse {
   permissions: PermissionMenuItem[]
   router: DynamicRouteItem[]
   buttonCodes: string[]
-  quick_entry: QuickEntryItem[]
 }
 ```
 
@@ -472,7 +469,6 @@ Response example：
     "permissions": [],
     "router": [],
     "buttonCodes": ["system_permission_add"],
-    "quick_entry": []
   },
   "msg": "ok"
 }
@@ -481,9 +477,8 @@ Response example：
 规则：
 
 ```text
-permissions/router/buttonCodes/quick_entry 是稳定字段名，不加兜底别名。
 show_menu 只控制菜单显示，不影响 router 页面权限真相。
-PAGE 授权让 permissions tree + router 包含该 PAGE；PAGE code 可进入后端内部 RouteAccessCodes，但不返回到 users/init.buttonCodes。
+PAGE 授权让 permissions tree + router 包含该 PAGE；PAGE code 可进入后端内部 RouteAccessCodes，但不返回到 users/me.buttonCodes。
 BUTTON 授权由 Go service 自动带出父 PAGE 和祖先 DIR；buttonCodes 只包含 BUTTON code。
 前端按钮显隐只读 buttonCodes；API 放行只由 PermissionCheck 使用内部 RouteAccessCodes 判断。
 ```
@@ -599,7 +594,7 @@ DELETE /api/admin/v1/permissions               body: { ids: number[] }
 
 `GET /api/admin/v1/users/page-init`
 
-注意：`GET /api/admin/v1/users/init` 只服务当前登录用户 bootstrap，不能复用成用户管理页字典接口。
+注意：当前登录用户 bootstrap 只使用 `GET /api/admin/v1/users/me`，不能复用成用户管理页字典接口。
 
 Response `data.dict`：
 
@@ -745,48 +740,6 @@ interface UserExportResponse {
 ```
 
 规则：只接受显式勾选的正整数用户 id；service 去重后只导出未软删除用户。当前用户管理页外部契约继续是 `{ ids: number[] }`，但内部归一化为 `kind=user_list`、`scope=selected`、`platform=admin` 的导出任务。创建 `export_tasks` pending 记录后投递 `export:run:v1` 到 low queue；队列投递失败必须把任务标记 failed，不允许留下永久 pending。
-
-## Current User Quick Entry
-
-状态：implemented in Go backend, adapted in Vue frontend。HTTP route ownership lives in `internal/module/profile/transport/admin`; the URL stays `PUT /api/admin/v1/users/me/quick-entries` and quick-entry persistence now lives in `internal/module/profile`.
-
-用途：首页“快捷入口”保存当前登录用户选择的后台页面权限。读取仍通过 `GET /api/admin/v1/users/init` 的稳定字段 `quick_entry` 返回。
-
-```text
-PUT /api/admin/v1/users/me/quick-entries
-```
-
-Request：
-
-```ts
-interface CurrentUserQuickEntrySaveRequest {
-  permission_ids: number[]
-}
-```
-
-Response `data`：
-
-```ts
-interface CurrentUserQuickEntrySaveResponse {
-  quick_entry: Array<{
-    id: number
-    permission_id: number
-    sort: number
-  }>
-}
-```
-
-Rules：
-
-```text
-Auth: bearer token only, current user owns the write.
-No user-manager RBAC button permission; this is not editing another user.
-permission_ids must be positive integers; service deduplicates while preserving order.
-max count: 6.
-accepted permission rows: permissions.platform=admin, type=PAGE(2), status=1, is_del=2.
-write is transactional: soft-delete current user's old users_quick_entry rows, insert the new ordered rows, then return the current active rows.
-response field name remains quick_entry; no quickEntry alias.
-```
 
 ## User Login Logs
 

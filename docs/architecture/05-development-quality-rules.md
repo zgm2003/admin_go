@@ -179,7 +179,7 @@ Go service:   List/Detail/Create/Update/ChangeStatus/DeleteOne/DeleteBatch/PageI
 Frontend API: list/detail/create/update/changeStatus/deleteOne/deleteBatch/pageInit
 ```
 
-`init` 只能用于明确的 bootstrap contract，例如当前登录用户初始化 `GET /api/admin/v1/users/init`。标准页面字典、筛选枚举、下拉选项统一使用 `GET /api/admin/v1/<resources>/page-init`，前端方法名统一 `pageInit()`。
+`init` 不再作为 REST bootstrap 例外；当前登录用户初始化统一使用 `GET /api/{admin,app,canvas}/v1/users/me`。标准页面字典、筛选枚举、下拉选项统一使用 `GET /api/admin/v1/<resources>/page-init`，前端方法名统一 `pageInit()`。
 
 旧前端 wrapper 里仍存在的 `add/edit/del/init/status` 只能作为历史别名或待治理事实；新模块和 touched API wrapper 不得继续新增这些旧动作名。需要兼容公共组件时，优先让公共组件支持标准名，而不是把新契约降级成旧命名。
 

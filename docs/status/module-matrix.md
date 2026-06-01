@@ -249,8 +249,7 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
 ### user legacy closure
 
 - Backend:
-  - implemented: quick-entry save `PUT /api/admin/v1/users/me/quick-entries` is owned by `profile/transport/admin`
-    and `profile` quick-entry service/repository/model
+  - removed: fast-entry/shortcut-entry current-user write route and persistence are no longer part of the product contract.
   - auth-owned login-log read `GET /api/admin/v1/users/login-logs/page-init` + `GET /api/admin/v1/users/login-logs`,
     and auth-owned user-session read/revoke `GET /api/admin/v1/user-sessions*` + `PATCH
     /api/admin/v1/user-sessions/:id/revoke` + `PATCH /api/admin/v1/user-sessions/revoke` with localized backend
@@ -934,9 +933,9 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
 
 - Backend:
   - implemented: `auth_platforms.canvas` seed and canvas capability permissions, `/api/canvas/v1/auth/*`, `/api/canvas/v1/users/me`, current-user wallet summary/transactions, current-user recharge page-init/list/create/pay, public settings/prompts/assets, and AI text/image/video generation routes.
-  - route ownership: auth has dedicated `transport/admin`, `transport/app`, and `transport/canvas`; profile app owns `/api/app/v1/users/me` plus `/api/app/v1/profile`, while profile canvas owns only `/api/canvas/v1/users/me`; payment admin owns management routes while payment canvas owns current-user recharge routes; payment/wallet admin owns admin/current-admin wallet surfaces while payment/wallet canvas owns canvas wallet summary/transactions.
+  - route ownership: auth has dedicated `transport/admin`, `transport/app`, and `transport/canvas`; user app owns `/api/app/v1/users/me`, user canvas owns `/api/canvas/v1/users/me`, while profile app owns `/api/app/v1/profile`; payment admin owns management routes while payment canvas owns current-user recharge routes; payment/wallet admin owns admin/current-admin wallet surfaces while payment/wallet canvas owns canvas wallet summary/transactions.
   - implemented: `permissions/page-init` default platform dictionary includes `admin/app/canvas`; canvas RBAC gates live in `permissions.platform='canvas'` and are not copied into an admin menu tree.
-  - implemented: `20260531_canvas_front_next_integration.sql` seeds Canvas PAGE rows (`canvas_page`, `canvas_image_page`, `canvas_video_page`, `canvas_prompts_page`, `canvas_assets_page`, `canvas_profile_page`, `canvas_wallet_page`) and BUTTON rows (`canvas_access`, `canvas_prompt_read`, `canvas_asset_read`, `canvas_ai_image_generate`, `canvas_ai_video_generate`, `canvas_wallet_read`, `canvas_recharge_add`, `canvas_recharge_pay`); canvas auth login `data.user` and profile `/users/me` return the canonical users/init-shaped payload (`user_id`, `username`, `avatar`, `role_name`, `permissions`, `router`, `buttonCodes`, `quick_entry`) instead of `permissionCodes` or alias fields.
+  - implemented: `20260531_canvas_front_next_integration.sql` seeds Canvas PAGE rows (`canvas_page`, `canvas_image_page`, `canvas_video_page`, `canvas_prompts_page`, `canvas_assets_page`, `canvas_profile_page`, `canvas_wallet_page`) and BUTTON rows (`canvas_access`, `canvas_prompt_read`, `canvas_asset_read`, `canvas_ai_image_generate`, `canvas_ai_video_generate`, `canvas_wallet_read`, `canvas_recharge_add`, `canvas_recharge_pay`); canvas auth login `data.user` and `/api/canvas/v1/users/me` return the canonical users/me payload (`user_id`, `username`, `avatar`, `role_name`, `permissions`, `router`, `buttonCodes`) instead of permission alias fields.
   - implemented: `/api/*/auth/login-config` returns `allow_register`; Canvas uses it with login types and slide captcha, and no `/api/canvas/v1/auth/register` route is exposed.
   - implemented: text/image/video generation use backend-managed provider config; canvas text and video charge `ai_billing_records(platform=canvas)` before provider calls; video binds upstream task id to `ai_billing_records.provider_task_id` and reads status/content by billing record ownership (`id + user_id + platform + scene`).
   - not implemented in this slice: `admin_front_ts` Canvas prompt/asset CRUD UI and cloud-synced `canvas_projects`.
