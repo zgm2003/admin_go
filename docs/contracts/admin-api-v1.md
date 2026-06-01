@@ -154,9 +154,9 @@ interface AppSendCodeBody {
 
 ## Canvas API v1
 
-状态：implemented and verified in Go backend + `canvas_front_next`; live DB/full smoke baseline passed on 2026-05-31.
+状态：implemented and verified in Go backend + `canvas_front_next`; live DB/full smoke baseline passed on 2026-05-31. Canvas profile/wallet/recharge parity verified on 2026-06-01.
 
-Route ownership：`/api/canvas/v1/auth/*` -> `internal/module/auth/transport/canvas`；`/api/canvas/v1/users/me` -> `internal/module/user/transport/canvas`；`/api/canvas/v1/wallet/*` -> `internal/module/payment/wallet/transport/canvas`；`/api/canvas/v1/payment/recharges*` -> `internal/module/payment/transport/canvas`；`/api/canvas/v1/prompts|assets|settings` -> `internal/module/canvas/transport/canvas`。
+Route ownership：`/api/canvas/v1/auth/*` -> `internal/module/auth/transport/canvas`；`/api/canvas/v1/users/me` -> `internal/module/user/transport/canvas`；`/api/canvas/v1/profile` -> `internal/module/profile/transport/canvas`；`/api/canvas/v1/wallet/*` -> `internal/module/payment/wallet/transport/canvas`；`/api/canvas/v1/payment/recharges*` -> `internal/module/payment/transport/canvas`；`/api/canvas/v1/prompts|assets|settings` -> `internal/module/canvas/transport/canvas`。
 
 `canvas_front_next` 是独立 Next.js 前端，所有安全、钱包、provider、billing 和公共库数据都通过 Go 后端 `/api/canvas/v1/*`。Next 前端不保存 provider API key/base_url，不调用旧 `infinite-canvas` 后端。
 
@@ -167,6 +167,8 @@ POST /api/canvas/v1/auth/send-code
 POST /api/canvas/v1/auth/login
 POST /api/canvas/v1/auth/logout
 GET  /api/canvas/v1/users/me
+GET  /api/canvas/v1/profile
+PUT  /api/canvas/v1/profile
 
 GET  /api/canvas/v1/settings
 GET  /api/canvas/v1/prompts
@@ -187,6 +189,44 @@ GET  /api/canvas/v1/ai/videos/:id
 GET  /api/canvas/v1/ai/videos/:id/content
 ```
 
+Canvas profile response reuses the profile service shape:
+
+```ts
+interface CanvasProfileResponse {
+  profile: {
+    user_id: number
+    username: string
+    email: string
+    avatar: string
+    phone: string
+    role_id: number
+    role_name: string
+    address_id: number
+    detail_address: string
+    sex: number
+    birthday: string
+    bio: string
+    is_self: number
+    has_password: boolean
+  }
+  dict: {
+    auth_address_tree: Array<{ id: number; parent_id: number; label: string; value: number; children?: unknown[] }>
+    sexArr: Array<{ label: string; value: number }>
+    verify_type_arr: Array<{ label: string; value: 'password' | 'code' }>
+  }
+}
+
+interface CanvasProfileUpdateBody {
+  username: string
+  avatar?: string
+  sex: 0 | 1 | 2
+  birthday?: string
+  address_id: number
+  detail_address?: string
+  bio?: string
+}
+```
+
 规则：
 
 ```text
@@ -196,6 +236,7 @@ canvas 不暴露 `/api/canvas/v1/auth/register`；前端不得臆造注册页或
 canvas email/phone 登录必须调用 `/api/canvas/v1/auth/send-code` 后以 `login_type=email|phone` + `code` 登录；未注册账号是否自动开户由 `allow_register` 决定。
 canvas password 登录必须按 login-config + captcha 完成 slide 验证后再提交。
 canvas bearer 请求默认 platform=canvas。
+canvas profile 只暴露当前用户基础资料读取/保存；安全修改邮箱/手机号/密码仍不在 canvas profile slice。
 Canvas PAGE 授权只通过 `permissions` + `router` 表达，供前端菜单/路由过滤；BUTTON 授权只通过 `buttonCodes` 表达，供按钮和动作 `can(code)` 判断。前端不得把 PAGE code 塞进 `buttonCodes`，也不得用 `permissionCodes` 合并 PAGE/BUTTON。
 wallet/recharge 只暴露 current-user 路径；不暴露 admin ledger/wallet management、manual consume、sync 或 close routes。
 prompts/assets 是 public list；后台 Vue CRUD UI 不在本切片。
@@ -210,10 +251,10 @@ canvas_prompts
 canvas_assets
 ```
 
-Canvas RBAC seed in `20260531_canvas_front_next_integration.sql`:
+Canvas RBAC seed in `20260531_canvas_front_next_integration.sql` plus `20260601_canvas_profile_wallet_recharge_menu.sql`:
 
 ```text
-PAGE: canvas_page, canvas_image_page, canvas_video_page, canvas_prompts_page, canvas_assets_page, canvas_profile_page, canvas_wallet_page
+PAGE: canvas_page, canvas_image_page, canvas_video_page, canvas_prompts_page, canvas_assets_page, canvas_profile_page, canvas_wallet_page, canvas_recharge_page
 BUTTON: canvas_access, canvas_prompt_read, canvas_asset_read, canvas_ai_image_generate, canvas_ai_video_generate, canvas_wallet_read, canvas_recharge_add, canvas_recharge_pay
 ```
 
@@ -1532,7 +1573,7 @@ Vue -> admin_go REST/WebSocket only; Vue never calls an AI provider directly.
 Provider API keys stay server-side, encrypted at write boundary and masked in DTOs.
 internal/module/* does not import provider SDKs/clients; provider calls go through internal/infra/ai boundaries.
 admin_go owns users, RBAC, menus, operation logs, REST contracts, WebSocket envelopes, local conversations, messages, runs, agent metadata, local knowledge bases, and knowledge retrieval audit rows.
-The first provider-config driver is exactly openai.
+The first provider-config `engine_type` is exactly `openai`.
 No iframe console embedding, no browser SSE/EventSource provider stream.
 ```
 
@@ -1560,16 +1601,17 @@ DELETE /api/admin/v1/ai-providers/:id
 Rules:
 
 - tables: `ai_providers`, `ai_provider_models`
-- `engine_type` / `driver` first slice supports only `openai`
+- `engine_type` is the canonical provider type field; first slice supports only `openai`
+- `driver` / `driver_name` are not accepted or returned as `engine_type` aliases
 - empty `base_url` means `https://api.openai.com/v1`
 - model discovery calls `GET {effective_base_url}/models` with `Authorization: Bearer <api_key>`
-- create/edit preview `POST /model-options` uses the request API key; edit preview `POST /:id/model-options` uses the saved encrypted API key and does not write sync/health state
+- create/edit preview `POST /model-options` requires `engine_type` and uses the request API key; edit preview `POST /:id/model-options` uses the saved encrypted API key and does not write sync/health state
 - provider models are persisted in `ai_provider_models`; selected model ids, display names, and model status are first-class columns, not JSON blobs
 - `ai_provider_models` is a current selectable model snapshot table, not history; replace writes hard-delete the provider's old snapshot rows and insert the current list
 - `ai_provider_models` must not store `raw_json`, `source`, `is_del`, `created_by`, or `updated_by`
 - `ai_providers` must not store provider-specific dumping-ground `config_json`, `created_by`, or `updated_by`; provider-specific knobs need an explicit future contract
 - provider config has no default model concept; 智能体配置 owns concrete model selection
-- create requires provider name, `openai` driver, API key, and at least one model
+- create requires provider name, `engine_type=openai`, API key, and at least one model
 - update with empty `api_key` keeps the existing encrypted key; non-empty `api_key` rewrites `api_key_enc` and `api_key_hint`
 - plaintext API key is write-only; responses, OperationLog payloads, smoke output, and frontend storage must never expose plaintext or encrypted secret blobs, remote raw model payloads, source markers, or provider config JSON blobs
 - health and model-sync status values are `unknown`, `ok`, and `failed`
@@ -2420,6 +2462,8 @@ interface MailPageInitDict {
 }
 ```
 
+`default_ttl_minutes` is only the unconfigured admin form seed. Runtime email verification-code TTL requires an active `mail_configs` row; missing mail config returns an explicit error instead of silently using the page-init default.
+
 ### Config
 
 ```text
@@ -2635,6 +2679,8 @@ interface SmsPageInitDict {
   default_ttl_minutes: number
 }
 ```
+
+`default_ttl_minutes` is only the unconfigured admin form seed. Runtime SMS/phone verification-code TTL requires an active `sms_configs` row; missing SMS config returns an explicit error instead of silently using the page-init default.
 
 ### Config
 
@@ -3219,6 +3265,7 @@ APP_SECRET 缺失、默认值或长度不足时 API/worker 启动失败；secret
 ```text
 upload config CRUD accepts only Tencent COS in V1.
 `driver` accepts only `cos`.
+Read DTOs and setting dicts fail closed if a stored active driver is not `cos`; they do not turn unknown drivers into blank labels or bucket-name labels.
 `bucket_domain` is an optional bare host such as `cos.example.com`; clients must not send `http://` or `https://`.
 Default in-repo backend/frontend dependencies include COS runtime only.
 OSS is not an active runtime and is not selectable in V1; do not silently fallback to COS, legacy runtime, or fake success.

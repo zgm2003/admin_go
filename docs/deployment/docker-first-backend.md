@@ -129,7 +129,7 @@ CORS_ALLOW_ORIGINS=https://<frontend-domain>
 
 验证码：
 
-手机号验证码固定 `123456`，不接真实短信发送，不受 env 控制；邮箱验证码走腾讯云 SES。真实用户上线如果不开放手机号登录，在 `auth_platforms.login_types` 关闭 `phone`。验证码有效期不是 env：邮件渠道来自 `mail_configs.verify_code_ttl_minutes`，短信/手机号渠道来自 `sms_configs.verify_code_ttl_minutes`，默认 5 分钟，可分别在 `/system/mail` 和 `/system/sms` 修改。Redis namespace `auth:verify_code:` 由代码内置，不通过 env 配置。验证码模板变量必须且只能包含 `code` / `ttl_minutes`。
+手机号验证码固定 `123456`，不接真实短信发送，不受 env 控制；邮箱验证码走腾讯云 SES。真实用户上线如果不开放手机号登录，在 `auth_platforms.login_types` 关闭 `phone`。验证码有效期不是 env：邮件渠道来自 active `mail_configs.verify_code_ttl_minutes`，短信/手机号渠道来自 active `sms_configs.verify_code_ttl_minutes`；缺少对应配置行时运行时显式失败，不用隐藏默认值继续发送。页面初始化里的 5 分钟只是不配置时的表单种子，可分别在 `/system/mail` 和 `/system/sms` 修改。Redis namespace `auth:verify_code:` 由代码内置，不通过 env 配置。验证码模板变量必须且只能包含 `code` / `ttl_minutes`。
 
 上传运行时：
 

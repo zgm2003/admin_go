@@ -340,6 +340,8 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
     fixed `123456` for phone without SMS/env switches, requires mail templates to expose exactly `code` /
     `ttl_minutes`, and reads email verification-code TTL from `mail_configs.verify_code_ttl_minutes`, while Redis
     namespace `auth:verify_code:` is code-owned
+  - page-init exposes `default_ttl_minutes` only as an unconfigured form seed; runtime email verification-code TTL
+    requires an active mail config row and fails explicitly when it is missing
 - Frontend:
   - adapted: `/system/mail` page with config/template/log tabs, typed REST client, no encrypted secret fields or
     template payload exposure, channel-specific verify-code TTL field saved through `mail_configs`, and log tab
@@ -366,6 +368,8 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
     channel-specific `sms_configs.verify_code_ttl_minutes`, code-owned Redis namespace `auth:verify_code:`, and only
     `code` / `ttl_minutes` template variables
   - `auth/send-code` phone remains fixed `123456` and is not wired to SMS, but its Redis TTL comes from SMS config
+  - page-init exposes `default_ttl_minutes` only as an unconfigured form seed; runtime phone/SMS verification-code TTL
+    requires an active SMS config row and fails explicitly when it is missing
 - Frontend:
   - adapted: `/system/sms` page with config/template/log tabs, typed REST client, constrained `ap-guangzhou` region,
     no encrypted secret fields, no SMS body/template params/raw payload exposure, and standard
@@ -541,6 +545,8 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
 - Backend:
   - implemented: REST upload-drivers/upload-rules/upload-settings, APP_SECRET-derived secretbox, enum/dict/validate,
     setting exclusive enable transaction, route permission + operation log metadata
+  - active driver DTOs and setting dicts fail closed on non-COS stored drivers instead of returning blank labels or
+    bucket-name fallback labels
 - Frontend: adapted to Go REST typed API/components
 - Tests:
   - `internal/module/uploadconfig`, `internal/infra/secretbox`, `internal/shared/enum`, `internal/shared/dict`,
@@ -697,8 +703,10 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
     `ai_providers` + `ai_provider_models` as the live provider tables
   - tracked schema files in this repo are not treated as the source for table count. Active provider-config backend
     is `internal/module/ai/provider` plus `internal/infra/ai/provider`
-  - first driver is exactly `openai`
+  - first provider `engine_type` is exactly `openai`; `driver`/`driver_name` aliases are not part of the active API
   - API key is encrypted server-side and never returned. Provider config has no default-model concept
+  - list DTO fails closed on invalid stored `engine_type`, health/model-sync status, provider status, or provider-model
+    status instead of inventing `unknown` or blank labels
   - agent config owns concrete model selection. MCP live columns confirm `ai_provider_models` has no `raw_json` /
     `source` / soft-delete history / fake auditors and `ai_providers` has no provider dumping-ground `config_json`.
 - Frontend:
@@ -709,11 +717,12 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
     response fields.
 - Tests:
   - `internal/infra/ai/provider`, `internal/module/ai/provider`, route/meta/router tests
+  - fallback hardening covers canonical `engine_type` only and invalid stored provider/model status fail-closed behavior
   - frontend AI provider API Vitest + `npm run build:check`
 - Smoke:
   - basic/full smoke users/init gate requires providers/agents/knowledge/tools/runs/chat order and rejects retired
     goods/cine/model/agent/prompt entries
-  - full smoke provider read gate requires driver `openai`, health/model-sync statuses `unknown/ok/failed`, and no
+  - full smoke provider read gate requires `engine_type=openai`, health/model-sync statuses `unknown/ok/failed`, and no
     plaintext/encrypted key/raw/source/config leaks
 - Docs: OpenAI provider config spec/plan + admin API contract + smoke matrix
 - Risk:
@@ -932,23 +941,24 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
 ### canvas_front_next / canvas platform API
 
 - Backend:
-  - implemented: `auth_platforms.canvas` seed and canvas capability permissions, `/api/canvas/v1/auth/*`, `/api/canvas/v1/users/me`, current-user wallet summary/transactions, current-user recharge page-init/list/create/pay, public settings/prompts/assets, and AI text/image/video generation routes.
-  - route ownership: auth has dedicated `transport/admin`, `transport/app`, and `transport/canvas`; user app owns `/api/app/v1/users/me`, user canvas owns `/api/canvas/v1/users/me`, while profile app owns `/api/app/v1/profile`; payment admin owns management routes while payment canvas owns current-user recharge routes; payment/wallet admin owns admin/current-admin wallet surfaces while payment/wallet canvas owns canvas wallet summary/transactions.
+  - implemented: `auth_platforms.canvas` seed and canvas capability permissions, `/api/canvas/v1/auth/*`, `/api/canvas/v1/users/me`, `/api/canvas/v1/profile`, current-user wallet summary/transactions, current-user recharge page-init/list/create/pay, public settings/prompts/assets, and AI text/image/video generation routes.
+  - route ownership: auth has dedicated `transport/admin`, `transport/app`, and `transport/canvas`; user app owns `/api/app/v1/users/me`, user canvas owns `/api/canvas/v1/users/me`; profile app owns `/api/app/v1/profile`, profile canvas owns `/api/canvas/v1/profile`; payment admin owns management routes while payment canvas owns current-user recharge routes; payment/wallet admin owns admin/current-admin wallet surfaces while payment/wallet canvas owns canvas wallet summary/transactions.
   - implemented: `permissions/page-init` default platform dictionary includes `admin/app/canvas`; canvas RBAC gates live in `permissions.platform='canvas'` and are not copied into an admin menu tree.
-  - implemented: `20260531_canvas_front_next_integration.sql` seeds Canvas PAGE rows (`canvas_page`, `canvas_image_page`, `canvas_video_page`, `canvas_prompts_page`, `canvas_assets_page`, `canvas_profile_page`, `canvas_wallet_page`) and BUTTON rows (`canvas_access`, `canvas_prompt_read`, `canvas_asset_read`, `canvas_ai_image_generate`, `canvas_ai_video_generate`, `canvas_wallet_read`, `canvas_recharge_add`, `canvas_recharge_pay`); canvas auth login `data.user` and `/api/canvas/v1/users/me` return the canonical users/me payload (`user_id`, `username`, `avatar`, `role_name`, `permissions`, `router`, `buttonCodes`) instead of permission alias fields.
+  - implemented: `20260531_canvas_front_next_integration.sql` seeds Canvas PAGE rows (`canvas_page`, `canvas_image_page`, `canvas_video_page`, `canvas_prompts_page`, `canvas_assets_page`, `canvas_profile_page`, `canvas_wallet_page`) and BUTTON rows (`canvas_access`, `canvas_prompt_read`, `canvas_asset_read`, `canvas_ai_image_generate`, `canvas_ai_video_generate`, `canvas_wallet_read`, `canvas_recharge_add`, `canvas_recharge_pay`); `20260601_canvas_profile_wallet_recharge_menu.sql` adds `canvas_recharge_page` and reparents recharge buttons under that PAGE; canvas auth login `data.user` and `/api/canvas/v1/users/me` return the canonical users/me payload (`user_id`, `username`, `avatar`, `role_name`, `permissions`, `router`, `buttonCodes`) instead of permission alias fields.
   - implemented: `/api/*/auth/login-config` returns `allow_register`; Canvas uses it with login types and slide captcha, and no `/api/canvas/v1/auth/register` route is exposed.
   - implemented: text/image/video generation use backend-managed provider config; canvas text and video charge `ai_billing_records(platform=canvas)` before provider calls; video binds upstream task id to `ai_billing_records.provider_task_id` and reads status/content by billing record ownership (`id + user_id + platform + scene`).
   - not implemented in this slice: `admin_front_ts` Canvas prompt/asset CRUD UI and cloud-synced `canvas_projects`.
 - Frontend:
   - implemented: `canvas_front_next` is an independent Next.js repo on `master`; source comes from `infinite-canvas/web` but old admin UI and local/custom API-key channel mode are removed.
-  - implemented: auth/settings/prompts/assets/wallet/text/image/video clients call `/api/canvas/v1/*`; no user-entered provider API key/base URL is used for generation.
+  - implemented: auth/settings/prompts/assets/profile/wallet/recharge/text/image/video clients call `/api/canvas/v1/*`; no user-entered provider API key/base URL is used for generation.
   - implemented: Canvas login page reads `/api/canvas/v1/auth/login-config`, renders the configured email/phone/password login-type tabs, uses `/api/canvas/v1/auth/send-code` for email/phone code login and `allow_register` auto-open-account semantics, opens slide captcha only after password-login submit, removes standalone register UI/API, and protects `(user)` pages with an auth guard; 401 redirects to login and 403 renders an explicit no-permission state.
-  - implemented: Canvas frontend RBAC registry keeps local route labels/icons while route authorization comes from backend `router` paths; session store keeps `routePaths` separate from BUTTON-only `buttonCodes`; `can(code)` reads only `buttonCodes`; top/mobile navigation and route guard use `routePaths`; prompts/assets/settings protected API calls require ready token plus matching BUTTON permission before firing; profile and wallet account pages are exposed from the account menu.
+  - implemented: Canvas frontend RBAC registry keeps local route labels/icons while route authorization comes from backend `router` paths; session store keeps `routePaths` separate from BUTTON-only `buttonCodes`; `can(code)` reads only `buttonCodes`; top/mobile navigation and route guard use `routePaths`; prompts/assets/settings protected API calls require ready token plus matching BUTTON permission before firing; profile, wallet, and recharge account pages are exposed from the account menu. `/profile` reads/saves through profile service; `/wallet` imports the split wallet API; `/recharge` uses page-init/create/pay.
 - Tests:
   - backend focused gates cover architecture migration guards, auth/platform, permission, wallet/recharge route wiring, canvas service/transport, OpenAI-compatible video adapter, and bootstrap wiring.
   - frontend gates cover canvas API boundary, auth/RBAC shell behavior, API service behavior, typecheck, and Next build.
 - Smoke:
-  - live DB migration/query, backend full tests, Next test/typecheck/build, full-admin-smoke, and root governance gates passed on 2026-05-31 for this slice.
+  - live DB migration/query, backend full tests, Next test/typecheck/build, full-admin-smoke, and root governance gates passed on 2026-05-31 for the baseline slice.
+  - 2026-06-01 parity verification rebuilt Docker backend, checked `/health` and `/ready`, confirmed protected `/api/canvas/v1/profile` and `/api/canvas/v1/payment/recharges/page-init` return 401 instead of 404, and passed Next targeted tests/typecheck/build.
 - Docs:
   - canvas spec/plan, current-status, module matrix, admin API contract, and smoke matrix.
 - Risk:
