@@ -114,7 +114,7 @@ func TestPageInitIncludesCanvasAgentScenes(t *testing.T) {
 	}
 	expected := map[string]string{
 		"chat":                  "对话",
-		"agent_generate":        "智能体生成",
+		"agent_generate":        "工具生成",
 		"image_generate":        "图片生成",
 		"canvas_text_generate":  "无限画布-文本",
 		"canvas_video_generate": "无限画布-视频",

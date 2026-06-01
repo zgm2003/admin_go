@@ -746,7 +746,7 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
 - Frontend:
   - adapted: `src/api/ai/agents.ts` uses Go REST only, page route is `/ai/agents`, search supports
     name/scene/provider/status, form uses name input, model cascader, scene `el-select-v2` multiple default `chat`
-    and includes `智能体生成` / `图片生成`, status select, system prompt textarea, `UpMedia` avatar, tool configuration, and
+    and includes `工具生成` / `图片生成`, status select, system prompt textarea, `UpMedia` avatar, tool configuration, and
     knowledge-base binding dialog
 - Tests:
   - `internal/module/ai/agent`, `internal/bootstrap`, `internal/server`
