@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 把 Canvas 文本/图片/视频生成改成免费运行时，并把可用模型来源收敛到智能体上的三个 Canvas 专属场景。
+**Goal:** 把 Canvas 对话/图片/视频生成改成免费运行时，并把可用模型来源收敛到智能体上的三个 Canvas 专属场景。
 
 **Architecture:** 删除 AI billing 主动运行链路和活跃表；`ai_agents.scenes_json` 新增 `canvas_text_generate` / `canvas_video_generate` / `canvas_image_generate`；Canvas settings 只从这些场景取 agent；视频使用新的 `canvas_video_tasks` 保存异步任务事实。支付/钱包基础域保留，但 Canvas 前端不再展示收费入口。
 

@@ -9,7 +9,7 @@
 
 【需求判断】
 
-是真问题。当前 Canvas 已经走后端托管 provider，但仍把 AI 生成和 `ai_billing_rules` / `ai_billing_records` / 钱包扣费绑在一起；同时 Canvas 文本、图片、视频可选模型来自通用场景或计费场景，而不是来自智能体上的 Canvas 专属场景。用户已明确确认要全局删除旧 AI billing；本切片不是保留计费兼容层，而是把运行时模型选择和旧收费体系彻底拆开。
+是真问题。当前 Canvas 已经走后端托管 provider，但仍把 AI 生成和 `ai_billing_rules` / `ai_billing_records` / 钱包扣费绑在一起；同时 Canvas 对话、图片、视频可选模型来自通用场景或计费场景，而不是来自智能体上的 Canvas 专属场景。用户已明确确认要全局删除旧 AI billing；本切片不是保留计费兼容层，而是把运行时模型选择和旧收费体系彻底拆开。
 
 【核心问题】
 
@@ -17,7 +17,7 @@
    - `canvas_text_generate`：无限画布-文本
    - `canvas_video_generate`：无限画布-视频
    - `canvas_image_generate`：无限画布-图片
-2. Canvas text/image/video 只从对应 `ai_agents.scenes_json` 场景取 agent、model、provider。
+2. Canvas chat/image/video 只从对应 `ai_agents.scenes_json` 场景取 agent、model、provider。
 3. AI 生成免费：不扣费、不退款、不查余额、不展示单价/余额/充值/算力点。
 4. 删除当前 AI billing 活跃运行链路和活跃表。
 
@@ -57,7 +57,7 @@
 
 | 内部值 | 展示名 | 用途 |
 | --- | --- | --- |
-| `canvas_text_generate` | 无限画布-文本 | Canvas 文本生成 |
+| `canvas_text_generate` | 无限画布-文本 | Canvas 对话生成 |
 | `canvas_video_generate` | 无限画布-视频 | Canvas 视频生成 |
 | `canvas_image_generate` | 无限画布-图片 | Canvas 图片生成 |
 
@@ -111,7 +111,7 @@ CREATE TABLE IF NOT EXISTS `canvas_video_tasks` (
 
 运行时保持三条简单路径：
 
-- Text：校验 `canvas_text_generate` 智能体 -> 调 provider -> 返回文本
+- 对话：校验 `canvas_text_generate` 智能体 -> 调 provider -> 返回文本
 - Image：校验 `canvas_image_generate` 智能体 -> 创建 `ai_image_tasks` -> worker 生成
 - Video：校验 `canvas_video_generate` 智能体 -> 创建 `canvas_video_tasks` -> 调 provider -> status/content 查任务表
 
