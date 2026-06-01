@@ -198,6 +198,8 @@ canvas 不暴露 `/api/canvas/v1/auth/register`；前端不得臆造注册页或
 canvas email/phone 登录必须调用 `/api/canvas/v1/auth/send-code` 后以 `login_type=email|phone` + `code` 登录；未注册账号是否自动开户由 `allow_register` 决定。
 canvas password 登录必须按 login-config + captcha 完成 slide 验证后再提交。
 canvas bearer 请求默认 platform=canvas。
+canvas login 的 `data.user` 与 `/api/canvas/v1/users/me` 的 `data` 使用 users/init 同形 contract：`user_id`、`username`、`avatar`、`role_name`、`permissions`、`router`、`buttonCodes`、`quick_entry`。稳定字段名不加兜底别名；不得返回 `id`、`nickname`、`display_name`、`avatar_url`、`permissionCodes`、`permission_codes`、`button_codes` 这类 Canvas 自造 alias。
+Canvas PAGE 授权只通过 `permissions` + `router` 表达，供前端菜单/路由过滤；BUTTON 授权只通过 `buttonCodes` 表达，供按钮和动作 `can(code)` 判断。前端不得把 PAGE code 塞进 `buttonCodes`，也不得用 `permissionCodes` 合并 PAGE/BUTTON。
 wallet/recharge 只暴露 current-user 路径；不暴露 admin ledger/wallet management、manual consume、sync 或 close routes。
 prompts/assets 是 public list；后台 Vue CRUD UI 不在本切片。
 AI text/image/video 统一使用后端托管 provider；扣费审计写 ai_billing_records(platform=canvas)，钱包流水写 wallet_transactions。
@@ -209,6 +211,13 @@ AI text/image/video 统一使用后端托管 provider；扣费审计写 ai_billi
 ```text
 canvas_prompts
 canvas_assets
+```
+
+Canvas RBAC seed in `20260531_canvas_front_next_integration.sql`:
+
+```text
+PAGE: canvas_page, canvas_image_page, canvas_video_page, canvas_prompts_page, canvas_assets_page, canvas_profile_page, canvas_wallet_page
+BUTTON: canvas_access, canvas_prompt_read, canvas_asset_read, canvas_ai_image_generate, canvas_ai_video_generate, canvas_wallet_read, canvas_recharge_add, canvas_recharge_pay
 ```
 
 明确不新增：`canvas_users`、`canvas_credit_logs`、`canvas_settings`、`canvas_model_channels`、`canvas_projects`、`canvas_wallets`。
