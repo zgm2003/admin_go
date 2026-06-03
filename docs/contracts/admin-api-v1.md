@@ -166,6 +166,7 @@ GET  /api/canvas/v1/auth/login-config
 GET  /api/canvas/v1/auth/captcha
 POST /api/canvas/v1/auth/send-code
 POST /api/canvas/v1/auth/login
+POST /api/canvas/v1/auth/refresh
 POST /api/canvas/v1/auth/logout
 GET  /api/canvas/v1/users/me
 GET  /api/canvas/v1/profile
@@ -181,6 +182,20 @@ POST /api/canvas/v1/ai/images/edits
 POST /api/canvas/v1/ai/videos
 GET  /api/canvas/v1/ai/videos/:id
 GET  /api/canvas/v1/ai/videos/:id/content
+```
+
+Canvas auth keeps the browser session through refresh tokens. `login` returns user bootstrap data plus token metadata; `refresh` returns token metadata only and keeps the Canvas field name `token` instead of the admin-side `access_token`.
+
+```ts
+interface CanvasTokenResponse {
+  token: string
+  refresh_token: string
+  expires_in: number
+  refresh_expires_in: number
+}
+
+type CanvasLoginResponse = CanvasTokenResponse & { user: CanvasUser }
+type CanvasRefreshResponse = CanvasTokenResponse
 ```
 
 Canvas settings response exposes runtime agent selection only; old billing metadata is retired:
@@ -203,6 +218,45 @@ interface CanvasAgentOption {
   model_id: string
   model_display_name: string
   scene: 'canvas_text_generate' | 'canvas_image_generate' | 'canvas_video_generate'
+}
+```
+
+Canvas prompt list accepts the same filters emitted by `canvas_front_next`:
+
+```ts
+interface CanvasPromptListQuery {
+  current_page?: number
+  page_size?: number
+  keyword?: string
+  category?: string
+  tag?: string[] // repeated query param, AND-matched against canvas_prompts.tags_json
+}
+```
+
+Canvas image generation and edits are backend-managed async tasks. The browser submits only an `agent_id` and user content; provider/model secrets stay server-side.
+
+```ts
+interface CanvasImageGenerationJSONBody {
+  agent_id: number
+  prompt: string
+  n?: number
+  size?: string
+  quality?: 'low' | 'medium' | 'high'
+}
+
+// multipart/form-data for POST /api/canvas/v1/ai/images/edits
+interface CanvasImageEditMultipartBody extends CanvasImageGenerationJSONBody {
+  image: File[] // form field name is "image"; at least one reference image
+}
+
+interface CanvasImageCreateResponse {
+  task_id: number
+  status: 'pending' | 'running' | 'success' | 'failed'
+}
+
+interface CanvasImageTaskResponse {
+  task: { id: number; status: string; error_message?: string }
+  outputs: Array<{ storage_url?: string; url?: string; b64_json?: string }>
 }
 ```
 
