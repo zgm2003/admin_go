@@ -2,16 +2,16 @@
 
 ## Linus 三问
 
-1. **真问题还是假问题？**  
+1. **真问题还是假问题？**
    真问题。`canvas` 现在同时承担 Canvas 专属资源、Canvas 平台 HTTP 壳、AI chat/image/video 路由聚合和部分 AI runtime。它能跑，但边界不干净；继续加功能会让 `canvas` 变成新一代垃圾桶。
 
-2. **有更简单的做法吗？**  
+2. **有更简单的做法吗？**
    有。不要改外部 URL，不要重写前端，不要一次性重构所有 AI。先把已经有独立 capability 的 `ai/image` 接管 Canvas 图片 HTTP transport；再按同样规则迁 chat/video。
 
-3. **会破坏已有前端、接口、登录和权限吗？**  
+3. **会破坏已有前端、接口、登录和权限吗？**
    不应该破坏。`/api/canvas/v1/ai/*` 外部路径、request/response envelope、鉴权方式、任务状态和前端轮询契约必须保持不变。变更只发生在后端 route owner 和内部依赖注入。
 
-4. **为什么这个状态会出现？**  
+4. **为什么这个状态会出现？**
    为了快速闭合 Canvas 前端，把 Canvas 当成一个产品壳层做了聚合。图片业务后来已经沉到 `internal/module/ai/image`，但 HTTP owner 还留在 `internal/module/canvas/transport/canvas`；文本和视频 runtime 也仍在 `canvas` 里。这是交付顺序留下的架构债，不是功能 bug。
 
 ## 需求判断
