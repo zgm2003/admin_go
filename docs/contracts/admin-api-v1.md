@@ -157,7 +157,7 @@ interface AppSendCodeBody {
 
 状态：implemented and verified in Go backend + `canvas_front_next`; live DB/full smoke baseline passed on 2026-05-31. Old Canvas wallet/recharge UI and old AI billing are retired from the active Canvas contract.
 
-Route ownership：`/api/canvas/v1/auth/*` -> `internal/module/auth/transport/canvas`；`/api/canvas/v1/users/me` -> `internal/module/user/transport/canvas`；`/api/canvas/v1/profile` -> `internal/module/profile/transport/canvas`；`/api/canvas/v1/prompts|assets|settings` -> `internal/module/canvas/transport/canvas`。
+Route ownership：`/api/canvas/v1/auth/*` -> `internal/module/auth/transport/canvas`；`/api/canvas/v1/users/me` -> `internal/module/user/transport/canvas`；`/api/canvas/v1/profile` -> `internal/module/profile/transport/canvas`；`/api/canvas/v1/prompts|assets|settings` -> `internal/module/canvas/transport/canvas`；`/api/canvas/v1/ai/images/*` -> `internal/module/ai/image/transport/canvas`。Canvas chat/video 仍处于后续迁移范围，当前 URL 保持不变。
 
 `canvas_front_next` 是独立 Next.js 前端，所有安全、provider 和公共库数据都通过 Go 后端 `/api/canvas/v1/*`。Next 前端不保存 provider API key/base_url，不调用旧 `infinite-canvas` 后端。旧 AI billing 已从 Canvas 生成链路退休；payment/wallet 基础充值域保留给非本切片能力，但 AI 生成不扣余额。
 
@@ -179,6 +179,7 @@ GET  /api/canvas/v1/assets
 POST /api/canvas/v1/ai/chat/completions
 POST /api/canvas/v1/ai/images/generations
 POST /api/canvas/v1/ai/images/edits
+GET  /api/canvas/v1/ai/images/:id
 POST /api/canvas/v1/ai/videos
 GET  /api/canvas/v1/ai/videos/:id
 GET  /api/canvas/v1/ai/videos/:id/content
