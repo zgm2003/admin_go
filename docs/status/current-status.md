@@ -47,6 +47,7 @@ docs/status/archive/2026-05-runtime-change-log.md     # 历史证据：2026-05 v
 详细变更记录看 `docs/status/archive/2026-05-runtime-change-log.md`。近期关键批次：
 
 ```text
+2026-06-04 Canvas AI video transport ownership: `/api/canvas/v1/ai/videos*` external URLs unchanged, runtime/model/repository ownership moved from `internal/module/canvas` to `internal/module/ai/video`, and `canvas_video_tasks` physical table name remains unchanged
 2026-06-01 Canvas free generation / old AI billing retirement active slice: /api/canvas/v1/settings exposes agents.text/image/video from `canvas_text_generate` / `canvas_image_generate` / `canvas_video_generate`, Canvas generation is free, old `/api/admin/v1/ai-billing-rules*` and `ai_billing_*` active contract are retired, and payment/wallet基础域只保留给非本切片能力
 2026-06-01 backend fallback hardening: AI provider canonical engine_type and stored-status fail-closed behavior, upload config non-COS read fail-closed behavior, and mail/SMS runtime VerifyCodeTTL missing-config fail-closed behavior verified with backend full tests
 2026-05-31 Canvas Front Next integration baseline verified: canvas auth platform/routes, public prompts/assets/settings, backend-managed text/image/video AI generation, Next frontend boundary/type/build gates, live DB migration/query, full-admin-smoke, and root governance gates passed; the temporary wallet/recharge thin routes from that baseline are retired by the 2026-06-01 free-generation slice
