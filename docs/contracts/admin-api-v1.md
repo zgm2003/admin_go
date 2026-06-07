@@ -1687,7 +1687,7 @@ AI chat is a separate AI module and remains active under `admin_front_ts/src/vie
 
 ## AI Core Provider Config / Local Runtime Surface
 
-状态：provider config slice、智能体配置 MVP、AI 对话 WebSocket MVP、运行监控 token-only MVP、AI tool runtime MVP、AI Knowledge Base RAG MVP are implemented for OpenAI-first local runtime.
+状态：provider config slice、智能体配置 MVP、AI 对话 WebSocket MVP、AI run unified provider-attempt monitor、AI tool runtime MVP、AI Knowledge Base RAG MVP are implemented for OpenAI-first local runtime.
 
 本节替代旧 AI 配置契约。旧模型/提示词/知识库产品面、旧工具映射概念和 legacy app 命名已经不是 active provider/agent/tool contract；`ai_agents` 是当前智能体配置事实源，`ai_tools` 是当前工具定义事实源。当前产品方向是 admin_go 自有页面 + 服务端 provider boundary，不嵌入第三方控制台，不把外部 key 暴露给浏览器。
 
@@ -1899,7 +1899,7 @@ Runtime rules:
 
 ## AI Runs Monitor
 
-状态：implemented token-only MVP.
+状态：implemented unified provider-attempt monitor for chat/text/image/video.
 
 ```text
 GET /api/admin/v1/ai-runs/page-init
@@ -1915,12 +1915,13 @@ Rules:
 
 - lifecycle tables: `ai_runs`, `ai_run_events`; there is no daily aggregate table in this MVP
 - tool execution audit is owned by `ai_tool_calls` and appears only on run detail as `tool_calls`; lifecycle events stay in `ai_run_events`
-- one `ai_runs` row represents one assistant reply attempt for one persisted user message
-- run source is conversation/agent/provider centric: `ai_runs.conversation_id`, `ai_runs.user_message_id`, `ai_runs.assistant_message_id`, `ai_runs.agent_id`, `ai_runs.provider_id`, `ai_runs.model_id`, and `ai_runs.model_display_name`
+- one `ai_runs` row represents one provider attempt across Admin chat, Canvas text, Admin/Canvas image, or Canvas video
+- run source is explicit: `platform`, `modality`, `source_type`, `source_id`, and `input_snapshot` identify the domain source; chat rows may also link `conversation_id`, `user_message_id`, and `assistant_message_id`
 - status is string-based runtime state: `running`, `success`, `failed`, `canceled`, `timeout`; there is no fake `pending` state
+- provider usage evidence is string-based: `pending` while running, then `reported` only when provider usage was parsed, or `unavailable` when the terminal provider path did not provide usage
 - event types are lifecycle-only: `start`, `completed`, `failed`, `canceled`, `timeout`; WebSocket delta is not persisted as events
 - stats aggregate only `ai_runs` token and duration fields: total runs, success rate, failed terminal count, prompt/completion/total tokens, and average duration
-- token-only means no billing amount, no provider task ids, no input/output snapshots, no raw usage dumps, and no execution-step timeline
+- no billing amount, provider raw usage dump, provider secrets, image bytes, or execution-step timeline is persisted; Canvas free-generation still does not write `ai_billing_records`
 - these read routes are bearer-token protected and must not expose prompt secrets, encrypted API keys, raw provider credentials, or hidden provider payloads
 
 `GET /api/admin/v1/ai-runs/page-init` returns:
@@ -1929,6 +1930,10 @@ Rules:
 interface AiRunInitResponse {
   dict: {
     status_arr: Array<{ label: string; value: 'running' | 'success' | 'failed' | 'canceled' | 'timeout' }>
+    platform_arr: Array<{ label: string; value: 'admin' | 'app' | 'canvas' }>
+    modality_arr: Array<{ label: string; value: 'chat' | 'text' | 'image' | 'video' }>
+    source_type_arr: Array<{ label: string; value: 'ai_chat_message' | 'ai_text_task' | 'ai_image_task' | 'canvas_video_task' }>
+    usage_status_arr: Array<{ label: string; value: 'pending' | 'reported' | 'unavailable' }>
     agentArr: Array<{ label: string; value: number }>
     providerArr: Array<{ label: string; value: number }>
   }
@@ -1941,6 +1946,10 @@ interface AiRunInitResponse {
 interface AiRunListQuery {
   current_page?: number
   page_size?: number
+  platform?: 'admin' | 'app' | 'canvas'
+  modality?: 'chat' | 'text' | 'image' | 'video'
+  source_type?: 'ai_chat_message' | 'ai_text_task' | 'ai_image_task' | 'canvas_video_task'
+  usage_status?: 'pending' | 'reported' | 'unavailable'
   status?: 'running' | 'success' | 'failed' | 'canceled' | 'timeout'
   user_id?: number
   request_id?: string
@@ -1962,7 +1971,13 @@ interface AiRunItem {
   agent_name: string
   provider_id: number
   provider_name: string
-  conversation_id: number
+  platform: 'admin' | 'app' | 'canvas'
+  modality: 'chat' | 'text' | 'image' | 'video'
+  source_type: 'ai_chat_message' | 'ai_text_task' | 'ai_image_task' | 'canvas_video_task'
+  source_id: number
+  input_snapshot: string
+  usage_status: 'pending' | 'reported' | 'unavailable'
+  conversation_id: number | null
   conversation_title: string
   status: 'running' | 'success' | 'failed' | 'canceled' | 'timeout'
   status_name: string
@@ -2055,7 +2070,11 @@ interface AiRunDetailResponse extends AiRunItem {
 }
 ```
 
+Non-chat rows return `user_message: null` and `assistant_message: null` by design. The UI must render `source_type/source_id/input_snapshot/usage_status` instead of inventing fake chat messages.
+
 Stats summary:
+
+Stats endpoints accept the same date/agent/provider/user filters as the list plus `platform`, `modality`, and `source_type`. They intentionally do not expose billing cost or raw provider usage aggregation.
 
 ```ts
 interface AiRunStatsSummary {
