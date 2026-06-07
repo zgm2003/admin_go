@@ -18,6 +18,7 @@ docs/knowledge/db-schema-ownership-map-2026-06-07.md
 docs/knowledge/full-stack-module-map-2026-06-07.md
 docs/knowledge/backend-capability-manifest-2026-06-07.md
 docs/knowledge/admin-front-source-quality-inventory-2026-06-07.md
+docs/architecture/09-codex-first-quality-runway.md
 docs/knowledge/admin-front-direct-external-helper-review-2026-06-07.md
 docs/knowledge/admin-front-header-breadcrumb-source-quality-review-2026-06-07.md
 docs/knowledge/admin-front-forgot-password-error-source-quality-review-2026-06-07.md
@@ -29,6 +30,7 @@ docs/knowledge/admin-front-dev-test-download-source-quality-review-2026-06-07.md
 docs/knowledge/admin-front-validator-source-quality-review-2026-06-07.md
 docs/knowledge/admin-front-upload-demo-source-quality-review-2026-06-07.md
 docs/knowledge/admin-front-demo-any-source-quality-review-2026-06-07.md
+docs/knowledge/admin-front-ai-image-payload-source-quality-review-2026-06-07.md
 docs/knowledge/canvas-ai-request-contract-review-2026-06-07.md
 docs/knowledge/canvas-rbac-permission-contract-review-2026-06-07.md
 docs/knowledge/canvas-asset-route-contract-review-2026-06-07.md
@@ -36,6 +38,10 @@ docs/knowledge/canvas-auth-logout-contract-review-2026-06-07.md
 docs/knowledge/admin-user-status-contract-review-2026-06-07.md
 docs/knowledge/admin-ai-agent-test-contract-review-2026-06-07.md
 ```
+
+## Codex-first quality runway
+
+`docs/architecture/09-codex-first-quality-runway.md` ties this source map to the next hardening order: Admin Vue fallback review, Go capability hardening, Canvas Next performance/contract review, and live DB/schema ownership. It is a navigation rule, not a completion claim.
 
 ## Backend source map
 
@@ -120,14 +126,18 @@ docs/knowledge/admin-ai-agent-test-contract-review-2026-06-07.md
 ### Known frontend hardening gaps
 
 
+
+`ADMIN-FRONT-HARDENING-014` is resolved for `src/api/ai/images.ts` create-task optional payload normalization. The source guard is `tests/shared/ai/ai-image-api.test.ts`, and the current source-quality inventory now reports `555` fallback candidates. `docs/knowledge/admin-front-ai-image-payload-source-quality-review-2026-06-07.md` records the decision.
+
 `ADMIN-FRONT-HARDENING-013` is resolved for remaining tracked demo any rows: `form/index.vue`, `display/index.vue`, and `ParticleBackground.vue` are guarded by form/display/effect source-quality tests. Current source-quality inventory now reports `0` `any` candidates; fallback rows remain review inventory. `docs/knowledge/admin-front-demo-any-source-quality-review-2026-06-07.md` records the decision.
 Source-quality inventory:
 
 ```text
 docs/knowledge/admin-front-source-quality-inventory-2026-06-07.md
+docs/architecture/09-codex-first-quality-runway.md
 ```
 
-Current inventory facts: `280` Admin Vue source files scanned, `0` `any` candidates, `0` `as any` candidates, `0` `catch(error: any)` candidates, `559` fallback candidates, and `0` direct external HTTP candidates. This is regex review evidence, not type-aware proof and not permission to sweep-replace code.
+Current inventory facts: `280` Admin Vue source files scanned, `0` `any` candidates, `0` `as any` candidates, `0` `catch(error: any)` candidates, `555` fallback candidates, and `0` direct external HTTP candidates. This is regex review evidence, not type-aware proof and not permission to sweep-replace code.
 
 `ADMIN-FRONT-HARDENING-012` is resolved for upload demo media-list typing: `upload/index.vue` now uses `ref<UploadMediaItem[]>([])`, and `UpMediaList.vue` shares that model through `components/media.ts`; `tests/shared/upload/upload-demo-source-quality.test.ts` guards the slice. `docs/knowledge/admin-front-upload-demo-source-quality-review-2026-06-07.md` records the decision.
 
@@ -244,6 +254,7 @@ docs/knowledge/db-schema-ownership-map-2026-06-07.md
 docs/knowledge/full-stack-module-map-2026-06-07.md
 docs/knowledge/backend-capability-manifest-2026-06-07.md
 docs/knowledge/admin-front-source-quality-inventory-2026-06-07.md
+docs/architecture/09-codex-first-quality-runway.md
 docs/knowledge/admin-front-direct-external-helper-review-2026-06-07.md
 docs/knowledge/admin-front-header-breadcrumb-source-quality-review-2026-06-07.md
 docs/knowledge/admin-front-forgot-password-error-source-quality-review-2026-06-07.md

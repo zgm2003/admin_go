@@ -238,7 +238,8 @@ try {
         'admin_front_ts/src/views/Main/component/upload/index.vue',
         'admin_front_ts/src/views/Main/component/form/index.vue',
         'admin_front_ts/src/views/Main/component/display/index.vue',
-        'admin_front_ts/src/views/Main/component/effect/components/ParticleBackground.vue'
+        'admin_front_ts/src/views/Main/component/effect/components/ParticleBackground.vue',
+        'admin_front_ts/src/api/ai/images.ts'
     )
 
     $topFiles = @($findings |

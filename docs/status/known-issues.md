@@ -6,9 +6,29 @@
 
 ## Current open issues
 
-No current open issue is tracked in this file after the 2026-06-07 Admin demo any cleanup. Do not treat this as “all quality debt closed”; `any/as any/catch(error: any)/direct external HTTP` candidates are currently zero, while the remaining `559` fallback rows stay in `docs/knowledge/admin-front-source-quality-inventory-2026-06-07.md` as review inventory.
+No current open issue is tracked in this file after the 2026-06-07 Admin demo any cleanup. Do not treat this as “all quality debt closed”; `any/as any/catch(error: any)/direct external HTTP` candidates are currently zero, while the remaining `555` fallback rows stay in `docs/knowledge/admin-front-source-quality-inventory-2026-06-07.md` as review inventory.
 
 ## Recently resolved
+
+### ADMIN-FRONT-HARDENING-014 AI image payload source-quality debt
+
+Status: resolved on 2026-06-07 as an AI image create-task optional payload fallback cleanup.
+
+Evidence:
+
+```text
+admin_front_ts/src/api/ai/images.ts defines optionalImageEnum(...) and optionalPositiveID(...).
+admin_front_ts/src/api/ai/images.ts no longer contains payload.size || undefined, payload.quality || undefined, payload.output_format || undefined, payload.moderation || undefined, if (payload.mask_asset_id), or if (payload.mask_target_asset_id).
+admin_front_ts/tests/shared/ai/ai-image-api.test.ts guards the source shape.
+docs/knowledge/admin-front-ai-image-payload-source-quality-review-2026-06-07.md records the source decision and inventory result.
+docs/knowledge/admin-front-source-quality-inventory-2026-06-07.md now reports fallback candidates = 555 and images.ts with only the positiveID validation predicate logical-or row.
+```
+
+Boundary:
+
+```text
+This closes only AI image create-task optional payload fallback debt. It does not close the remaining Admin Vue fallback inventory.
+```
 
 ### ADMIN-FRONT-HARDENING-013 Demo any source-quality debt
 
@@ -24,7 +44,7 @@ admin_front_ts/tests/shared/form/form-demo-source-quality.test.ts guards the for
 admin_front_ts/tests/shared/display/display-demo-source-quality.test.ts guards the display demo source shape.
 admin_front_ts/tests/shared/effect/particle-background-source-quality.test.ts guards the ParticleBackground source shape.
 docs/knowledge/admin-front-demo-any-source-quality-review-2026-06-07.md records the source decision and inventory result.
-docs/knowledge/admin-front-source-quality-inventory-2026-06-07.md now reports source files scanned = 280, any candidates = 0, as any candidates = 0, catch(error: any) candidates = 0, fallback candidates = 559, and direct external HTTP candidates = 0.
+docs/knowledge/admin-front-source-quality-inventory-2026-06-07.md now reports source files scanned = 280, any candidates = 0, as any candidates = 0, catch(error: any) candidates = 0, fallback candidates = 555, and direct external HTTP candidates = 0.
 ```
 
 Boundary:

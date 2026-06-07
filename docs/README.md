@@ -37,15 +37,16 @@
 16. docs/architecture/06-realtime-and-distributed-boundary.md
 17. docs/architecture/07-documentation-governance.md
 18. docs/architecture/08-codex-hooks.md
-19. docs/contracts/admin-api-v1.md
-20. docs/contracts/admin-realtime-v1.md
-21. docs/testing/test-strategy.md
-22. docs/testing/pre-push-gates.md
-23. docs/testing/smoke-matrix.md
-24. docs/deployment/local.md
-25. docs/deployment/production.md
-26. docs/deployment/distributed-readiness.md
-27. docs/deployment/frontend-github-actions-scp.md
+19. docs/architecture/09-codex-first-quality-runway.md
+20. docs/contracts/admin-api-v1.md
+21. docs/contracts/admin-realtime-v1.md
+22. docs/testing/test-strategy.md
+23. docs/testing/pre-push-gates.md
+24. docs/testing/smoke-matrix.md
+25. docs/deployment/local.md
+26. docs/deployment/production.md
+27. docs/deployment/distributed-readiness.md
+28. docs/deployment/frontend-github-actions-scp.md
 ```
 
 按任务再读：

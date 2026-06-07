@@ -28,7 +28,7 @@ source files scanned = 280
 any candidates = 0
 as any candidates = 0
 catch(error: any) candidates = 0
-fallback candidates = 559
+fallback candidates = 555
 direct external HTTP candidates = 0
 Demo any priority evidence = form/index.vue and display/index.vue have no configured source-quality finding; ParticleBackground has only the pointer null-state logical-or guard
 ```

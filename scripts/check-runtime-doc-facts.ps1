@@ -600,6 +600,7 @@ try {
     $knowledgePath = 'docs/knowledge/current-runtime-knowledge.md'
     $sourceMapPath = 'docs/knowledge/runtime-source-map.md'
     $statusPath = 'docs/status/current-status.md'
+    $qualityRunwayPath = 'docs/architecture/09-codex-first-quality-runway.md'
     $agentFrameworkPath = 'docs/architecture/02-agent-framework.md'
     $agentsApiContractPath = 'agents/api-contract.md'
     $schemaArtifact = Get-LatestSchemaArtifact
@@ -690,6 +691,7 @@ try {
         'docs/README.md',
         $knowledgePath,
         $sourceMapPath,
+        $qualityRunwayPath,
         'docs/knowledge/README.md',
         'docs/knowledge/codex-first-agent-operating-model.md',
         $statusPath,
@@ -739,7 +741,8 @@ try {
         $adminFrontDownloadManagerReviewPath,
         $adminFrontDevTestDownloadReviewPath,
         $adminFrontValidatorReviewPath,
-        $adminFrontUploadDemoReviewPath
+        $adminFrontUploadDemoReviewPath,
+        'docs/knowledge/admin-front-ai-image-payload-source-quality-review-2026-06-07.md'
     )) {
         if (-not (Test-Path -LiteralPath $path)) {
             Add-Failure $failures "required runtime/doc fact file missing: $path"
@@ -897,6 +900,14 @@ try {
         Assert-Contains $failures 'AGENTS.md' 'admin / app / canvas / openapi / merchant' 'AGENTS platform list drift'
         Assert-Contains $failures 'docs/architecture/00-platform-and-module-rules.md' 'admin / app / canvas / openapi / merchant / miniapp' 'architecture platform list drift'
         Assert-Contains $failures 'docs/README.md' '/api/canvas/v1' 'docs README API scope drift'
+        Assert-Contains $failures 'docs/README.md' $qualityRunwayPath 'docs README quality runway cold-start entry drift'
+        Assert-Contains $failures $knowledgePath $qualityRunwayPath 'current runtime knowledge quality runway reference drift'
+        Assert-Contains $failures $sourceMapPath $qualityRunwayPath 'runtime source map quality runway reference drift'
+        Assert-Contains $failures $statusPath $qualityRunwayPath 'status quality runway reference drift'
+        Assert-Contains $failures $qualityRunwayPath 'Admin Vue source quality | `280` source files，`0` any，`0` as-any，`0` catch-any，`555` fallback，`0` direct external HTTP' 'quality runway Admin Vue baseline drift'
+        Assert-Contains $failures $qualityRunwayPath 'Go backend routes | `280` route registrations' 'quality runway Go route baseline drift'
+        Assert-Contains $failures $qualityRunwayPath 'Live MySQL | live base tables = `56`' 'quality runway live schema baseline drift'
+        Assert-Contains $failures $qualityRunwayPath 'Admin Vue fallback = 555 尚未逐条审查' 'quality runway must not claim fallback completion'
         Assert-Contains $failures $agentFrameworkPath 'docs/knowledge/current-runtime-knowledge.md' 'agent framework knowledge entry drift'
         Assert-Contains $failures $agentFrameworkPath 'docs/knowledge/runtime-source-map.md' 'agent framework source-map entry drift'
         Assert-Contains $failures $agentFrameworkPath 'docs/db/mysql-live-schema-YYYY-MM-DD.md' 'agent framework schema snapshot rule drift'
@@ -1394,9 +1405,9 @@ try {
         if ($adminFrontDirectExternalCandidates -ne 0) {
             Add-Failure $failures "Admin front source quality inventory direct external HTTP count changed from expected 0 to $adminFrontDirectExternalCandidates"
         }
-        Assert-Contains $failures $knowledgePath 'Current counts are `280` source files scanned, `0` `any` candidates, `0` `as any` candidates, `0` `catch(error: any)` candidates, `559` fallback candidates, and `0` direct external HTTP candidates.' 'current runtime knowledge Admin front source-quality count drift'
-        Assert-Contains $failures $sourceMapPath 'Current inventory facts: `280` Admin Vue source files scanned, `0` `any` candidates, `0` `as any` candidates, `0` `catch(error: any)` candidates, `559` fallback candidates, and `0` direct external HTTP candidates.' 'runtime source map Admin front source-quality count drift'
-        Assert-Contains $failures $statusPath 'current inventory records 0 `any` candidates, 0 `as any` candidates, 0 `Record<string, any>` candidates, 0 `catch(...: any)` candidates, 559 fallback candidates, and 0 direct external HTTP candidates' 'status Admin front source-quality count drift'
+        Assert-Contains $failures $knowledgePath 'Current counts are `280` source files scanned, `0` `any` candidates, `0` `as any` candidates, `0` `catch(error: any)` candidates, `555` fallback candidates, and `0` direct external HTTP candidates.' 'current runtime knowledge Admin front source-quality count drift'
+        Assert-Contains $failures $sourceMapPath 'Current inventory facts: `280` Admin Vue source files scanned, `0` `any` candidates, `0` `as any` candidates, `0` `catch(error: any)` candidates, `555` fallback candidates, and `0` direct external HTTP candidates.' 'runtime source map Admin front source-quality count drift'
+        Assert-Contains $failures $statusPath 'current inventory records 0 `any` candidates, 0 `as any` candidates, 0 `Record<string, any>` candidates, 0 `catch(...: any)` candidates, 555 fallback candidates, and 0 direct external HTTP candidates' 'status Admin front source-quality count drift'
         Assert-Contains $failures $adminFrontSourceQualityPath 'This is a regex source inventory, not type-aware semantic proof.' 'Admin front source quality inventory scope disclaimer drift'
         foreach ($priorityPath in @(
             'admin_front_ts/src/views/Layout/components/Header/index.vue',
@@ -1648,7 +1659,7 @@ try {
         Assert-Contains $failures $sourceMapPath 'docs/knowledge/admin-front-demo-any-source-quality-review-2026-06-07.md' 'runtime source map Admin demo any review drift'
         Assert-Contains $failures $statusPath 'docs/knowledge/admin-front-demo-any-source-quality-review-2026-06-07.md' 'status Admin demo any review drift'
         Assert-Contains $failures 'docs/knowledge/admin-front-demo-any-source-quality-review-2026-06-07.md' 'any candidates = 0' 'Admin demo any review any count drift'
-        Assert-Contains $failures 'docs/knowledge/admin-front-demo-any-source-quality-review-2026-06-07.md' 'fallback candidates = 559' 'Admin demo any review fallback count drift'
+        Assert-Contains $failures 'docs/knowledge/admin-front-demo-any-source-quality-review-2026-06-07.md' 'fallback candidates = 555' 'Admin demo any review fallback count drift'
         Assert-Contains $failures 'docs/knowledge/admin-front-demo-any-source-quality-review-2026-06-07.md' 'Demo any priority evidence = form/index.vue and display/index.vue have no configured source-quality finding; ParticleBackground has only the pointer null-state logical-or guard' 'Admin demo any review inventory evidence drift'
         Assert-Contains $failures 'admin_front_ts/tests/shared/form/form-demo-source-quality.test.ts' 'does not hide demo form, icon ref, or remote params behind any' 'Admin form demo source guard missing'
         Assert-Contains $failures 'admin_front_ts/tests/shared/display/display-demo-source-quality.test.ts' 'does not document passthrough table column props as any' 'Admin display demo source guard missing'
@@ -1677,6 +1688,28 @@ try {
         Assert-Contains $failures $adminFrontSourceQualityPath 'admin_front_ts/src/views/Main/component/effect/components/ParticleBackground.vue` | L102 `logical-or-fallback`' 'Admin ParticleBackground inventory evidence drift'
         Assert-Contains $failures 'docs/status/known-issues.md' 'Status: resolved on 2026-06-07 as a form/display/ParticleBackground demo any cleanup.' 'ADMIN-FRONT-HARDENING-013 resolved status drift'
         [void]$evidence.Add('admin_front_demo_any_source_quality=covered')
+
+
+        Assert-Contains $failures 'docs/knowledge/README.md' 'docs/knowledge/admin-front-ai-image-payload-source-quality-review-2026-06-07.md' 'Admin AI image payload review knowledge index drift'
+        Assert-Contains $failures $knowledgePath 'docs/knowledge/admin-front-ai-image-payload-source-quality-review-2026-06-07.md' 'current runtime knowledge Admin AI image payload review drift'
+        Assert-Contains $failures $sourceMapPath 'docs/knowledge/admin-front-ai-image-payload-source-quality-review-2026-06-07.md' 'runtime source map Admin AI image payload review drift'
+        Assert-Contains $failures $statusPath 'docs/knowledge/admin-front-ai-image-payload-source-quality-review-2026-06-07.md' 'status Admin AI image payload review drift'
+        Assert-Contains $failures 'docs/knowledge/admin-front-ai-image-payload-source-quality-review-2026-06-07.md' 'fallback candidates = 555' 'Admin AI image payload review fallback count drift'
+        Assert-Contains $failures 'docs/knowledge/admin-front-ai-image-payload-source-quality-review-2026-06-07.md' 'optionalImageEnum(...) treats only `undefined` and explicit empty string' 'Admin AI image payload review enum decision drift'
+        Assert-Contains $failures 'admin_front_ts/tests/shared/ai/ai-image-api.test.ts' 'normalizes optional create-task payload fields without logical-or fallbacks' 'Admin AI image payload source guard missing'
+        Assert-Contains $failures 'admin_front_ts/src/api/ai/images.ts' 'function optionalImageEnum<T extends string>(value: T |' 'Admin AI image optional enum helper missing'
+        Assert-Contains $failures 'admin_front_ts/src/api/ai/images.ts' 'function optionalPositiveID(value: number | undefined, label: string): number | undefined' 'Admin AI image optional ID helper missing'
+        Assert-Contains $failures 'admin_front_ts/src/api/ai/images.ts' 'size: optionalImageEnum(payload.size),' 'Admin AI image size normalization drift'
+        Assert-Contains $failures 'admin_front_ts/src/api/ai/images.ts' "mask_asset_id: optionalPositiveID(payload.mask_asset_id, 'AI image mask asset id')," 'Admin AI image mask ID normalization drift'
+        Assert-NotContains $failures 'admin_front_ts/src/api/ai/images.ts' 'payload.size || undefined' 'Admin AI image reintroduced size fallback'
+        Assert-NotContains $failures 'admin_front_ts/src/api/ai/images.ts' 'payload.quality || undefined' 'Admin AI image reintroduced quality fallback'
+        Assert-NotContains $failures 'admin_front_ts/src/api/ai/images.ts' 'payload.output_format || undefined' 'Admin AI image reintroduced output format fallback'
+        Assert-NotContains $failures 'admin_front_ts/src/api/ai/images.ts' 'payload.moderation || undefined' 'Admin AI image reintroduced moderation fallback'
+        Assert-NotContains $failures 'admin_front_ts/src/api/ai/images.ts' 'if (payload.mask_asset_id)' 'Admin AI image reintroduced truthy mask ID guard'
+        Assert-NotContains $failures 'admin_front_ts/src/api/ai/images.ts' 'if (payload.mask_target_asset_id)' 'Admin AI image reintroduced truthy mask target ID guard'
+        Assert-Contains $failures $adminFrontSourceQualityPath 'admin_front_ts/src/api/ai/images.ts` | L129 `logical-or-fallback`' 'Admin AI image inventory evidence drift'
+        Assert-Contains $failures 'docs/status/known-issues.md' 'Status: resolved on 2026-06-07 as an AI image create-task optional payload fallback cleanup.' 'ADMIN-FRONT-HARDENING-014 resolved status drift'
+        [void]$evidence.Add('admin_front_ai_image_payload_source_quality=covered')
 
         if ($LiveSchema) {
             $checkDir = '.tmp/runtime-doc-facts'
@@ -1735,42 +1768,6 @@ try {
 
     if ($failures.Count -eq 0) {
         [void]$verification.Add('runtime documentation facts match current manifests, source routes, and tracked schema snapshot')
-
-
-        Assert-Contains $failures 'docs/knowledge/README.md' 'docs/knowledge/admin-front-demo-any-source-quality-review-2026-06-07.md' 'Admin demo any review knowledge index drift'
-        Assert-Contains $failures $knowledgePath 'docs/knowledge/admin-front-demo-any-source-quality-review-2026-06-07.md' 'current runtime knowledge Admin demo any review drift'
-        Assert-Contains $failures $sourceMapPath 'docs/knowledge/admin-front-demo-any-source-quality-review-2026-06-07.md' 'runtime source map Admin demo any review drift'
-        Assert-Contains $failures $statusPath 'docs/knowledge/admin-front-demo-any-source-quality-review-2026-06-07.md' 'status Admin demo any review drift'
-        Assert-Contains $failures 'docs/knowledge/admin-front-demo-any-source-quality-review-2026-06-07.md' 'any candidates = 0' 'Admin demo any review any count drift'
-        Assert-Contains $failures 'docs/knowledge/admin-front-demo-any-source-quality-review-2026-06-07.md' 'fallback candidates = 559' 'Admin demo any review fallback count drift'
-        Assert-Contains $failures 'docs/knowledge/admin-front-demo-any-source-quality-review-2026-06-07.md' 'Demo any priority evidence = form/index.vue and display/index.vue have no configured source-quality finding; ParticleBackground has only the pointer null-state logical-or guard' 'Admin demo any review inventory evidence drift'
-        Assert-Contains $failures 'admin_front_ts/tests/shared/form/form-demo-source-quality.test.ts' 'does not hide demo form, icon ref, or remote params behind any' 'Admin form demo source guard missing'
-        Assert-Contains $failures 'admin_front_ts/tests/shared/display/display-demo-source-quality.test.ts' 'does not document passthrough table column props as any' 'Admin display demo source guard missing'
-        Assert-Contains $failures 'admin_front_ts/tests/shared/effect/particle-background-source-quality.test.ts' 'does not hide particle and pointer state behind any or logical-or fallbacks' 'Admin ParticleBackground source guard missing'
-        Assert-Contains $failures 'admin_front_ts/src/views/Main/component/form/index.vue' "import type { SearchFormModel } from '@/components/Search/types'" 'Admin form demo SearchFormModel import missing'
-        Assert-Contains $failures 'admin_front_ts/src/views/Main/component/form/index.vue' 'const iconSelectRef = ref<IconSelectExpose | null>(null)' 'Admin form demo typed icon ref missing'
-        Assert-Contains $failures 'admin_front_ts/src/views/Main/component/form/index.vue' 'const mockFetch: RemoteListFetchMethod<MockRemoteSelectOption, MockRemoteSelectParams> = async (params) => {' 'Admin form demo typed mock fetch missing'
-        Assert-NotContains $failures 'admin_front_ts/src/views/Main/component/form/index.vue' '(form: any)' 'Admin form demo reintroduced form any'
-        Assert-NotContains $failures 'admin_front_ts/src/views/Main/component/form/index.vue' 'ref<any>' 'Admin form demo reintroduced ref any'
-        Assert-NotContains $failures 'admin_front_ts/src/views/Main/component/form/index.vue' '(params: any)' 'Admin form demo reintroduced params any'
-        Assert-NotContains $failures 'admin_front_ts/src/views/Main/component/form/index.vue' "type: 'any'" 'Admin form demo reintroduced documented any'
-        Assert-Contains $failures 'admin_front_ts/src/views/Main/component/display/index.vue' "type: 'Record<string, unknown>'" 'Admin display demo passthrough type drift'
-        Assert-NotContains $failures 'admin_front_ts/src/views/Main/component/display/index.vue' "type: 'any'" 'Admin display demo reintroduced documented any'
-        Assert-Contains $failures 'admin_front_ts/src/views/Main/component/effect/components/ParticleBackground.vue' 'interface Particle {' 'Admin ParticleBackground Particle type missing'
-        Assert-Contains $failures 'admin_front_ts/src/views/Main/component/effect/components/ParticleBackground.vue' 'interface PointerPosition {' 'Admin ParticleBackground PointerPosition type missing'
-        Assert-Contains $failures 'admin_front_ts/src/views/Main/component/effect/components/ParticleBackground.vue' 'let particles: Particle[] = []' 'Admin ParticleBackground particles type drift'
-        Assert-Contains $failures 'admin_front_ts/src/views/Main/component/effect/components/ParticleBackground.vue' 'let mouse: PointerPosition = { x: null, y: null }' 'Admin ParticleBackground pointer type drift'
-        Assert-Contains $failures 'admin_front_ts/src/views/Main/component/effect/components/ParticleBackground.vue' 'function requireParticleContext(): CanvasRenderingContext2D' 'Admin ParticleBackground context invariant missing'
-        Assert-Contains $failures 'admin_front_ts/src/views/Main/component/effect/components/ParticleBackground.vue' 'function positiveDistance(distance: number): number' 'Admin ParticleBackground distance invariant missing'
-        Assert-NotContains $failures 'admin_front_ts/src/views/Main/component/effect/components/ParticleBackground.vue' 'particles: any[]' 'Admin ParticleBackground reintroduced particles any'
-        Assert-NotContains $failures 'admin_front_ts/src/views/Main/component/effect/components/ParticleBackground.vue' 'mouse: any' 'Admin ParticleBackground reintroduced mouse any'
-        Assert-NotContains $failures 'admin_front_ts/src/views/Main/component/effect/components/ParticleBackground.vue' 'window.devicePixelRatio || 1' 'Admin ParticleBackground reintroduced DPR fallback'
-        Assert-NotContains $failures 'admin_front_ts/src/views/Main/component/effect/components/ParticleBackground.vue' 'Math.sqrt(dx*dx + dy*dy) || 1' 'Admin ParticleBackground reintroduced distance fallback'
-        Assert-Contains $failures $adminFrontSourceQualityPath 'admin_front_ts/src/views/Main/component/form/index.vue` | no regex finding in configured categories' 'Admin form demo inventory evidence drift'
-        Assert-Contains $failures $adminFrontSourceQualityPath 'admin_front_ts/src/views/Main/component/display/index.vue` | no regex finding in configured categories' 'Admin display demo inventory evidence drift'
-        Assert-Contains $failures $adminFrontSourceQualityPath 'admin_front_ts/src/views/Main/component/effect/components/ParticleBackground.vue` | L102 `logical-or-fallback`' 'Admin ParticleBackground inventory evidence drift'
-        Assert-Contains $failures 'docs/status/known-issues.md' 'Status: resolved on 2026-06-07 as a form/display/ParticleBackground demo any cleanup.' 'ADMIN-FRONT-HARDENING-013 resolved status drift'
-        [void]$evidence.Add('admin_front_demo_any_source_quality=covered')
 
         if ($LiveSchema) {
             [void]$verification.Add('live MySQL schema table count matches tracked schema snapshot')

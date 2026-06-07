@@ -37,6 +37,7 @@
 | `docs/knowledge/admin-front-validator-source-quality-review-2026-06-07.md` | Admin Vue useValidator validator input any / message fallback 清理口径 | 当前 useValidator source + Vitest source guard + source-quality inventory |
 | `docs/knowledge/admin-front-upload-demo-source-quality-review-2026-06-07.md` | Admin Vue upload demo media-list any 清理口径 | 当前 upload demo source + Vitest source guard + source-quality inventory |
 | `docs/knowledge/admin-front-demo-any-source-quality-review-2026-06-07.md` | Admin Vue demo any 清零口径（form/display/ParticleBackground） | 当前 demo source + Vitest source guard + source-quality inventory |
+| `docs/knowledge/admin-front-ai-image-payload-source-quality-review-2026-06-07.md` | Admin Vue AI image create-task payload fallback 清理口径 | 当前 AI image API source + Vitest source guard + source-quality inventory |
 | `docs/knowledge/canvas-ai-request-contract-review-2026-06-07.md` | Canvas AI `agent_id` 请求契约和 provider/model 覆盖拒绝证据 | 当前 Canvas frontend service/tests + Go Canvas AI transports/tests |
 | `docs/knowledge/canvas-rbac-permission-contract-review-2026-06-07.md` | Canvas RBAC `buttonCodes` 权限码口径；确认 `canvas_ai_text_generate` 是死前端类型漂移 | 当前 Canvas frontend RBAC registry/tests + Go migration/route metadata + live MySQL permissions rows |
 | `docs/knowledge/canvas-asset-route-contract-review-2026-06-07.md` | Canvas 资产页路由口径；确认 `/assets` 是唯一顶层资产页，`/asset-library` 是死页 | 当前 Canvas frontend route registry/tests + generated inventory + live MySQL permissions rows |

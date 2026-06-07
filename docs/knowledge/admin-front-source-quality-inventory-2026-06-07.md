@@ -1,6 +1,6 @@
 # Admin Front Source Quality Inventory Snapshot
 
-Generated at: 2026-06-07 09:52:01 +08:00
+Generated at: 2026-06-07 10:04:35 +08:00
 
 This is a regex source inventory, not type-aware semantic proof. It is meant to expose current Admin Vue quality debt shape before narrow refactors; it is not a claim that every row is a bug.
 
@@ -9,15 +9,15 @@ This is a regex source inventory, not type-aware semantic proof. It is meant to 
 | Fact | Count |
 | --- | --- |
 | Source files scanned | `280` |
-| Findings found | `559` |
+| Findings found | `555` |
 | any candidates | `0` |
 | as any candidates | `0` |
 | Record<string, any> candidates | `0` |
 | catch(error: any) candidates | `0` |
-| logical-or fallback candidates | `340` |
+| logical-or fallback candidates | `336` |
 | nullish-coalescing fallback candidates | `144` |
 | optional-chain fallback candidates | `75` |
-| fallback candidates | `559` |
+| fallback candidates | `555` |
 | direct external HTTP candidates | `0` |
 
 ## Priority evidence
@@ -38,6 +38,7 @@ This is a regex source inventory, not type-aware semantic proof. It is meant to 
 | `admin_front_ts/src/views/Main/component/form/index.vue` | no regex finding in configured categories; keep only if another generated inventory owns this evidence |
 | `admin_front_ts/src/views/Main/component/display/index.vue` | no regex finding in configured categories; keep only if another generated inventory owns this evidence |
 | `admin_front_ts/src/views/Main/component/effect/components/ParticleBackground.vue` | L102 `logical-or-fallback` `if (mouse.x === null \|\| mouse.y === null) {` |
+| `admin_front_ts/src/api/ai/images.ts` | L129 `logical-or-fallback` `if (!Number.isInteger(id) \|\| id <= 0) throw new Error(`${label} must be a positive integer`)` |
 
 ## Top files by finding count
 
@@ -68,7 +69,7 @@ This is a regex source inventory, not type-aware semantic proof. It is meant to 
 
 | Kind | Count |
 | --- | ---: |
-| `logical-or-fallback` | `340` |
+| `logical-or-fallback` | `336` |
 | `nullish-fallback` | `144` |
 | `optional-chain-fallback` | `75` |
 
@@ -82,10 +83,6 @@ This is a regex source inventory, not type-aware semantic proof. It is meant to 
 | `logical-or-fallback` | `admin_front_ts/src/api/ai/chat.ts` | `23` | `if (!Number.isInteger(value) \|\| value <= 0) throw new Error(`${label} must be a positive integer`)` |
 | `logical-or-fallback` | `admin_front_ts/src/api/ai/conversations.ts` | `61` | `if (!Number.isInteger(id) \|\| id <= 0) throw new Error('AI conversation id must be a positive integer')` |
 | `logical-or-fallback` | `admin_front_ts/src/api/ai/images.ts` | `129` | `if (!Number.isInteger(id) \|\| id <= 0) throw new Error(`${label} must be a positive integer`)` |
-| `logical-or-fallback` | `admin_front_ts/src/api/ai/images.ts` | `147` | `size: payload.size \|\| undefined,` |
-| `logical-or-fallback` | `admin_front_ts/src/api/ai/images.ts` | `148` | `quality: payload.quality \|\| undefined,` |
-| `logical-or-fallback` | `admin_front_ts/src/api/ai/images.ts` | `149` | `output_format: payload.output_format \|\| undefined,` |
-| `logical-or-fallback` | `admin_front_ts/src/api/ai/images.ts` | `151` | `moderation: payload.moderation \|\| undefined,` |
 | `logical-or-fallback` | `admin_front_ts/src/api/ai/knowledge.ts` | `202` | `if (!Number.isInteger(id) \|\| id <= 0) throw new Error(`${label} must be a positive integer`)` |
 | `nullish-fallback` | `admin_front_ts/src/api/ai/knowledge.ts` | `264` | `const id = positiveID(params.id ?? 0, 'AI knowledge base id')` |
 | `nullish-fallback` | `admin_front_ts/src/api/ai/knowledge.ts` | `272` | `const createDocument = (params: AiKnowledgeDocumentMutationParams) => request.post<AiKnowledgeCreateResponse, AiKnowledgeDocumentMutationBody>(`${ADMIN_API_PREFIX}/ai-knowledge-bases/${positiveID(params.knowledge_base_id ?? 0, 'AI knowledge base id')}/documents`, documentBody(params))` |
