@@ -33,11 +33,11 @@ scripts/check-runtime-doc-facts.ps1
 
 | 面 | 当前事实 | 证据 |
 | --- | --- | --- |
-| Go backend routes | `280` route registrations，contract drift 当前无 undocumented/source-docs-only 阻断 | `docs/knowledge/backend-route-inventory-2026-06-07.md`, `docs/knowledge/backend-route-contract-drift-2026-06-07.md` |
-| Frontend/backend API drift | `258` exact frontend backend calls compared，`258` route-match，owner-decision-required = `0` | `docs/knowledge/frontend-backend-api-drift-2026-06-07.md`, `docs/knowledge/api-source-only-route-review-2026-06-07.md` |
-| Live MySQL | live base tables = `56`，schema artifact 来自 MySQL live 查验 | `docs/db/mysql-live-schema-2026-06-07.md`, `docs/db/mysql-live-schema-2026-06-07.sql` |
-| DB ownership | `56` live tables reviewed，`55` go-model，`1` live-schema-only backup table | `docs/knowledge/db-schema-ownership-map-2026-06-07.md` |
-| Admin Vue source quality | `280` source files，`0` any，`0` as-any，`0` catch-any，`555` fallback，`0` direct external HTTP | `docs/knowledge/admin-front-source-quality-inventory-2026-06-07.md` |
+| Go backend routes | `298` route registrations，contract drift 当前无 undocumented/source-docs-only 阻断 | `docs/knowledge/backend-route-inventory-2026-06-07.md`, `docs/knowledge/backend-route-contract-drift-2026-06-07.md` |
+| Frontend/backend API drift | `277` exact frontend backend calls compared，`277` route-match，owner-decision-required = `0` | `docs/knowledge/frontend-backend-api-drift-2026-06-07.md`, `docs/knowledge/api-source-only-route-review-2026-06-07.md` |
+| Live MySQL | live base tables = `57`，schema artifact 来自 MySQL live 查验 | `docs/db/mysql-live-schema-2026-06-07.md`, `docs/db/mysql-live-schema-2026-06-07.sql` |
+| DB ownership | `57` live tables reviewed，`55` go-model，`2` live-schema-only tables (`canvas_assets`, `canvas_prompts`) | `docs/knowledge/db-schema-ownership-map-2026-06-07.md` |
+| Admin Vue source quality | `280` source files，`0` any，`0` as-any，`0` catch-any，`542` fallback，`0` direct external HTTP | `docs/knowledge/admin-front-source-quality-inventory-2026-06-07.md` |
 | Canvas Next route/RBAC facts | `/assets` 是唯一资产页；`canvas_ai_text_generate` 是 soft-deleted orphan；logout 先 revoke backend | `docs/knowledge/canvas-asset-route-contract-review-2026-06-07.md`, `docs/knowledge/canvas-rbac-permission-contract-review-2026-06-07.md`, `docs/knowledge/canvas-auth-logout-contract-review-2026-06-07.md` |
 
 ## 递进规则
@@ -175,7 +175,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-runtime-doc-facts.ps1 -
 下面这些只能写成 next runway，不能写成已完成：
 
 ```text
-Admin Vue fallback = 555 尚未逐条审查
+Admin Vue fallback = 542 尚未逐条审查
 Canvas Next 全量 performance hardening 尚未完成
 Go 每个 capability 的 service/repository/context/error hardening 尚未逐一完成
 live MySQL schema 已有 2026-06-07 snapshot，但未来 schema 变更必须重新查 live
