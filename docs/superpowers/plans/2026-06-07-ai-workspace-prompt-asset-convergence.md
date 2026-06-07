@@ -61,7 +61,7 @@ Canvas frontend:
 **Files:**
 - Create: `admin_back_go/internal/architecture/ai_prompt_asset_convergence_test.go`
 
-- [ ] **Step 1: Write failing architecture test**
+- [x] **Step 1: Write failing architecture test**
 
 Create tests that assert:
 
@@ -90,7 +90,7 @@ internal/module/canvas/*.go does not contain:
 - PublicAssets(
 ```
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 Run:
 
@@ -101,7 +101,7 @@ go test ./internal/architecture -run TestAIPromptAsset -count=1
 
 Expected: FAIL because migration and AI prompt/asset modules do not exist.
 
-- [ ] **Step 3: Do not commit RED**
+- [x] **Step 3: Do not commit RED**
 
 Keep `internal/architecture/ai_prompt_asset_convergence_test.go` as working-tree RED evidence for Tasks 2-3, or recreate it at Task 3 before the GREEN run. Do not commit this file while the test fails.
 
@@ -123,7 +123,7 @@ Keep `internal/architecture/ai_prompt_asset_convergence_test.go` as working-tree
 - Modify: `admin_back_go/internal/server/{router.go,routes_canvas.go}`
 - Modify: `admin_back_go/internal/bootstrap/app.go`
 
-- [ ] **Step 1: Write failing service tests**
+- [x] **Step 1: Write failing service tests**
 
 `service_test.go` must verify:
 
@@ -133,7 +133,7 @@ Create() rejects empty slug/title/prompt with CodeBadRequest.
 Repository errors surface as CodeInternal.
 ```
 
-- [ ] **Step 2: Write failing Canvas handler test**
+- [x] **Step 2: Write failing Canvas handler test**
 
 `handler_test.go` must verify:
 
@@ -147,7 +147,7 @@ calls prompt service PublicList with:
 - PageSize = 5
 ```
 
-- [ ] **Step 3: Verify RED**
+- [x] **Step 3: Verify RED**
 
 ```powershell
 cd E:\admin_go\admin_back_go
@@ -156,7 +156,7 @@ go test ./internal/module/ai/prompt/... -count=1
 
 Expected: FAIL because `ai/prompt` package is missing.
 
-- [ ] **Step 4: Implement non-destructive migration**
+- [x] **Step 4: Implement non-destructive migration**
 
 Migration must create both target tables before any route is switched:
 
@@ -169,7 +169,7 @@ INSERT IGNORE INTO `ai_assets` SELECT from `canvas_assets`
 
 Do not include `DROP TABLE canvas_prompts` or `DROP TABLE canvas_assets` in this migration. If duplicate slug data appears in live DB, stop and report the exact duplicate rows; do not add slug fallback logic in Go.
 
-- [ ] **Step 5: Implement prompt model**
+- [x] **Step 5: Implement prompt model**
 
 Use current `canvas.Prompt` fields exactly, but change table ownership:
 
@@ -179,7 +179,7 @@ func (Prompt) TableName() string { return "ai_prompts" }
 
 Copy current Canvas prompt query/list/create logic into `internal/module/ai/prompt`, renaming package to `prompt`.
 
-- [ ] **Step 6: Wire Canvas prompt route from AI module**
+- [x] **Step 6: Wire Canvas prompt route from AI module**
 
 `routes_canvas.go` must register:
 
@@ -189,7 +189,7 @@ aipromptcanvas.RegisterRoutes(router, deps.AiPromptService)
 
 `internal/module/canvas/transport/canvas` must stop owning `/api/canvas/v1/prompts` in this task. It may still own `/api/canvas/v1/assets` until Task 3 moves assets; do not create a commit where `/api/canvas/v1/assets` is unregistered.
 
-- [ ] **Step 7: Verify GREEN**
+- [x] **Step 7: Verify GREEN**
 
 ```powershell
 cd E:\admin_go\admin_back_go
@@ -200,7 +200,7 @@ go test ./internal/server -run "TestRouter.*Canvas.*Prompt" -count=1
 
 Expected: PASS.
 
-- [ ] **Step 8: Commit GREEN prompt slice**
+- [x] **Step 8: Commit GREEN prompt slice**
 
 ```powershell
 git add database/migrations/20260607_ai_prompt_asset_convergence.sql internal/module/ai/prompt internal/module/canvas internal/server internal/bootstrap
@@ -226,7 +226,7 @@ git commit -m "feat: move canvas prompts to AI prompt capability"
 - Modify: `admin_back_go/internal/server/{router.go,routes_canvas.go}`
 - Modify: `admin_back_go/internal/bootstrap/app.go`
 
-- [ ] **Step 1: Write failing asset tests**
+- [x] **Step 1: Write failing asset tests**
 
 Tests must verify:
 
@@ -240,7 +240,7 @@ PUT /api/canvas/v1/assets/:id updates backend asset.
 DELETE /api/canvas/v1/assets/:id soft-deletes backend asset.
 ```
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 ```powershell
 cd E:\admin_go\admin_back_go
@@ -249,7 +249,7 @@ go test ./internal/module/ai/asset/... -count=1
 
 Expected: FAIL because package is missing.
 
-- [ ] **Step 3: Implement asset model**
+- [x] **Step 3: Implement asset model**
 
 Use current `canvas.Asset` fields, add video as a valid type, and change table ownership:
 
@@ -263,7 +263,7 @@ const (
 func (Asset) TableName() string { return "ai_assets" }
 ```
 
-- [ ] **Step 4: Verify migration remains non-destructive**
+- [x] **Step 4: Verify migration remains non-destructive**
 
 Migration must already contain the table creation and data copy from Task 2:
 
@@ -283,7 +283,7 @@ DROP TABLE IF EXISTS `canvas_assets`
 
 Old table retirement is a later migration after route/source/live-schema guards prove no runtime dependency remains.
 
-- [ ] **Step 5: Wire Canvas asset route**
+- [x] **Step 5: Wire Canvas asset route**
 
 `routes_canvas.go` must register:
 
@@ -291,7 +291,7 @@ Old table retirement is a later migration after route/source/live-schema guards 
 aiassetcanvas.RegisterRoutes(router, deps.AiAssetService)
 ```
 
-- [ ] **Step 6: Verify GREEN**
+- [x] **Step 6: Verify GREEN**
 
 ```powershell
 cd E:\admin_go\admin_back_go
@@ -304,7 +304,7 @@ go test ./internal/server -run "TestRouter.*Canvas.*(Prompt|Asset)" -count=1
 
 Expected: PASS.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```powershell
 git add database/migrations/20260607_ai_prompt_asset_convergence.sql internal/module/ai/asset internal/module/ai/prompt internal/module/canvas internal/server internal/bootstrap internal/architecture
@@ -327,11 +327,11 @@ git commit -m "feat: move canvas assets to AI asset capability"
 - Create: `admin_back_go/internal/shared/i18n/locales/zh-CN/aiasset.yaml`
 - Create: `admin_back_go/internal/shared/i18n/locales/en-US/aiasset.yaml`
 
-- [ ] **Step 1: Update API contract before code**
+- [x] **Step 1: Update API contract before code**
 
 Add `AI Prompts` and `AI Assets` sections to `docs/contracts/admin-api-v1.md` before implementation. The contract must list method/path, auth requirement, request shape, response shape, and permission codes for the Admin mutation routes. Do not document `/add`, `/edit`, `/del`, or `/init` aliases.
 
-- [ ] **Step 2: Write failing Admin transport tests**
+- [x] **Step 2: Write failing Admin transport tests**
 
 Tests must verify these REST paths:
 
@@ -354,7 +354,7 @@ DELETE /api/admin/v1/ai-assets/:id
 DELETE /api/admin/v1/ai-assets
 ```
 
-- [ ] **Step 3: Verify RED**
+- [x] **Step 3: Verify RED**
 
 ```powershell
 cd E:\admin_go\admin_back_go
@@ -364,7 +364,7 @@ go test ./internal/module/ai/asset/transport/admin -count=1
 
 Expected: FAIL because Admin transports are missing.
 
-- [ ] **Step 4: Implement Admin routes**
+- [x] **Step 4: Implement Admin routes**
 
 Use standard method names:
 
@@ -374,7 +374,7 @@ pageInit/list/detail/create/update/changeStatus/deleteOne/deleteBatch
 
 Do not add `add/edit/del/init` aliases.
 
-- [ ] **Step 5: Add permission rules and i18n catalogs**
+- [x] **Step 5: Add permission rules and i18n catalogs**
 
 Add route metadata for mutation routes:
 
@@ -397,7 +397,7 @@ ai_image_task_audit
 
 All new response messages must use `apperror.*Key` / `response.OKWithMessageKey` keys backed by `aiprompt.yaml` and `aiasset.yaml` in both `zh-CN` and `en-US`. Do not ship Chinese-only fallbacks as the only source of truth.
 
-- [ ] **Step 6: Verify GREEN**
+- [x] **Step 6: Verify GREEN**
 
 ```powershell
 cd E:\admin_go\admin_back_go
@@ -410,7 +410,7 @@ go test ./internal/server -run "TestRouter.*AI.*(Prompt|Asset)" -count=1
 
 Expected: PASS.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```powershell
 git add internal/module/ai/prompt internal/module/ai/asset internal/server internal/bootstrap internal/shared/i18n/locales database/migrations/20260607_ai_prompt_asset_convergence.sql
@@ -429,7 +429,7 @@ The root contract edit in `docs/contracts/admin-api-v1.md` is committed from the
 - Modify: `admin_back_go/internal/module/ai/image/transport/canvas/{handler.go,handler_test.go}`
 - Modify: `admin_back_go/internal/bootstrap/route_meta_test.go`
 
-- [ ] **Step 1: Write failing source guard**
+- [x] **Step 1: Write failing source guard**
 
 Add a test in `model_split_test.go` asserting these tokens are absent from Admin image public API files:
 
@@ -443,7 +443,7 @@ FavoriteArr
 
 The same guard must assert that Canvas image transport interfaces do not keep a dead `Favorite` method after `Service.Favorite` is removed.
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 ```powershell
 cd E:\admin_go\admin_back_go
@@ -452,7 +452,7 @@ go test ./internal/module/ai/image -run TestAdminImageWorkspaceDoesNotExposeFavo
 
 Expected: FAIL because favorite route/request/DTO still exists.
 
-- [ ] **Step 3: Remove public favorite API**
+- [x] **Step 3: Remove public favorite API**
 
 Remove:
 
@@ -469,7 +469,7 @@ Favorite from admin/canvas HTTP service interfaces and nil/fake service stubs
 
 Keep DB column until live schema migration is verified. Do not hide it with a default.
 
-- [ ] **Step 4: Verify GREEN**
+- [x] **Step 4: Verify GREEN**
 
 ```powershell
 cd E:\admin_go\admin_back_go
@@ -479,7 +479,7 @@ go test ./internal/bootstrap -run TestRouteMeta -count=1
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add internal/module/ai/image internal/bootstrap
@@ -500,7 +500,7 @@ git commit -m "refactor: retire admin image favorite surface"
 - Modify: `admin_front_ts/src/i18n/locales/en-US.ts`
 - No Admin route registry file should be modified for these pages: `admin_front_ts/src/router/view-registry.ts` resolves pages by `view_key` to `../views/Main/<view_key>/index.vue`. Backend permission/menu seed must use view keys that match the created page paths.
 
-- [ ] **Step 1: Write failing API/source guard**
+- [x] **Step 1: Write failing API/source guard**
 
 Test must assert:
 
@@ -516,7 +516,7 @@ prompt/assets pages do not contain raw <el-table or <el-dialog
 router/view-registry.ts is not modified just to special-case these pages
 ```
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 ```powershell
 cd E:\admin_go\admin_front_ts
@@ -525,11 +525,11 @@ npm test -- tests/shared/ai/ai-prompt-asset-api.test.ts
 
 Expected: FAIL because files are missing.
 
-- [ ] **Step 3: Implement typed API clients**
+- [x] **Step 3: Implement typed API clients**
 
 Use explicit DTO interfaces. Do not use `any`, `as any`, or browser storage fallback.
 
-- [ ] **Step 4: Implement CRUD pages**
+- [x] **Step 4: Implement CRUD pages**
 
 Use:
 
@@ -539,7 +539,7 @@ Search + AppTable + AppDialog + useCrudTable
 
 Add all visible labels to `zh-CN.ts` and `en-US.ts`.
 
-- [ ] **Step 5: Verify GREEN**
+- [x] **Step 5: Verify GREEN**
 
 ```powershell
 cd E:\admin_go\admin_front_ts
@@ -549,7 +549,7 @@ npm run typecheck
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```powershell
 git add src/api/ai/prompts.ts src/api/ai/assets.ts src/views/Main/ai/prompts src/views/Main/ai/assets src/i18n/locales tests/shared/ai/ai-prompt-asset-api.test.ts
@@ -573,7 +573,7 @@ git commit -m "feat: add admin AI prompt asset pages"
 - Modify: `admin_front_ts/src/i18n/locales/zh-CN.ts`
 - Modify: `admin_front_ts/src/i18n/locales/en-US.ts`
 
-- [ ] **Step 1: Write failing workspace guard**
+- [x] **Step 1: Write failing workspace guard**
 
 Guard must assert:
 
@@ -600,7 +600,7 @@ image workspace sources contain:
 - pending result i18n key
 ```
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 ```powershell
 cd E:\admin_go\admin_front_ts
@@ -609,7 +609,7 @@ npm test -- tests/shared/ai/ai-workspace-convergence.test.ts
 
 Expected: FAIL because current workspace still exposes favorite/moderation and lacks Canvas-style result actions.
 
-- [ ] **Step 3: Refactor history panel**
+- [x] **Step 3: Refactor history panel**
 
 History panel must support:
 
@@ -623,7 +623,7 @@ pagination
 
 No favorite/status filter UI.
 
-- [ ] **Step 4: Refactor composer**
+- [x] **Step 4: Refactor composer**
 
 Composer must support:
 
@@ -639,7 +639,7 @@ start generation
 
 No visible moderation/output format/output compression controls.
 
-- [ ] **Step 5: Refactor result panel**
+- [x] **Step 5: Refactor result panel**
 
 Result panel card states:
 
@@ -652,7 +652,7 @@ empty: 还没有生成图片
 
 Delete task detail card and favorite action row.
 
-- [ ] **Step 6: Verify GREEN**
+- [x] **Step 6: Verify GREEN**
 
 ```powershell
 cd E:\admin_go\admin_front_ts
@@ -662,7 +662,7 @@ npm run typecheck
 
 Expected: PASS.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```powershell
 git add src/api/ai/images.ts src/views/Main/ai/image-playground src/i18n/locales tests/shared/ai/ai-workspace-convergence.test.ts
@@ -687,7 +687,7 @@ git commit -m "refactor: align admin image workspace with canvas"
 - Create: `canvas_front_next/tests/shared/ai-asset-backend-persistence.test.ts`
 - Create: `canvas_front_next/tests/shared/canvas-image-403.test.ts`
 
-- [ ] **Step 1: Write failing asset persistence guard**
+- [x] **Step 1: Write failing asset persistence guard**
 
 Guard must assert:
 
@@ -701,7 +701,7 @@ image/page.tsx, video/page.tsx, prompts/page.tsx, canvas/[id]/canvas-client-page
 services/api/assets.ts exposes GET/POST/PUT/DELETE for /api/canvas/v1/assets
 ```
 
-- [ ] **Step 2: Write failing 403 guard**
+- [x] **Step 2: Write failing 403 guard**
 
 Guard must assert:
 
@@ -713,7 +713,7 @@ request.ts still dispatches auth/RBAC errors to CanvasAuthGuard
 isAuthPermissionError decides from structured status/code only; it must not string-match provider messages
 ```
 
-- [ ] **Step 3: Verify RED**
+- [x] **Step 3: Verify RED**
 
 ```powershell
 cd E:\admin_go\canvas_front_next
@@ -722,7 +722,7 @@ npm run test -- tests/shared/ai-asset-backend-persistence.test.ts tests/shared/c
 
 Expected: FAIL.
 
-- [ ] **Step 4: Implement Canvas asset API/store**
+- [x] **Step 4: Implement Canvas asset API/store**
 
 Extend existing `services/api/assets.ts` for both public library reads and my-assets CRUD:
 
@@ -742,15 +742,15 @@ Preferred: preserve addAsset/updateAsset/removeAsset as async compatibility faca
 Allowed: replace every existing addAsset/updateAsset/removeAsset consumer in this task with createAsset/updateAsset/deleteAsset and prove no old consumer remains.
 ```
 
-- [ ] **Step 5: Update Canvas pages**
+- [x] **Step 5: Update Canvas pages**
 
 `assets/page.tsx`, `image/page.tsx`, `video/page.tsx`, `prompts/page.tsx`, `canvas/[id]/canvas-client-page.tsx`, and `asset-picker-modal.tsx` must use backend-backed asset state. Import/export can stay only if imported assets are persisted through backend `POST /api/canvas/v1/assets`; export may serialize current backend-loaded assets, but it must not become the primary persistence layer.
 
-- [ ] **Step 6: Split 403 behavior**
+- [x] **Step 6: Split 403 behavior**
 
 `image.ts` must only call `notifyAuthError` when `isAuthPermissionError(status, code)` is true. Provider/business 403 remains a local image workflow error. If backend currently cannot distinguish provider/business 403 from auth/RBAC with structured status/code, stop and add a backend contract/test first; do not add frontend string matching.
 
-- [ ] **Step 7: Verify GREEN**
+- [x] **Step 7: Verify GREEN**
 
 ```powershell
 cd E:\admin_go\canvas_front_next
@@ -760,12 +760,16 @@ npm run typecheck
 
 Expected: PASS.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```powershell
 git add src/services/api/assets.ts src/stores/use-asset-store.ts "src/app/(user)/assets/page.tsx" "src/app/(user)/image/page.tsx" "src/app/(user)/video/page.tsx" "src/app/(user)/prompts/page.tsx" "src/app/(user)/canvas/[id]/canvas-client-page.tsx" "src/app/(user)/canvas/components/asset-picker-modal.tsx" src/services/api/image.ts src/services/api/request.ts tests/shared/ai-asset-backend-persistence.test.ts tests/shared/canvas-image-403.test.ts
 git commit -m "feat: persist canvas assets through AI asset API"
 ```
+
+### Task 1-8 tracking note (2026-06-08 current-state audit)
+
+Task 1-8 checkboxes are marked complete from current-state evidence: child repo GREEN commits, guard/test files, and Task 9 full gates. The original RED command outputs were transient and are not re-stated as freshly rerun evidence here.
 
 ---
 
