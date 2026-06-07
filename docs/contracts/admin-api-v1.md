@@ -1799,7 +1799,6 @@ Payment/wallet/recharge 基础域仍保留，用于支付宝充值、钱包余�
 GET    /api/admin/v1/ai-images/page-init
 GET    /api/admin/v1/ai-images
 GET    /api/admin/v1/ai-images/:id
-POST   /api/admin/v1/ai-images/assets
 POST   /api/admin/v1/ai-images
 PATCH  /api/admin/v1/ai-images/:id/favorite
 DELETE /api/admin/v1/ai-images/:id
@@ -1807,14 +1806,15 @@ DELETE /api/admin/v1/ai-images/:id
 
 Rules:
 
-- tables: `ai_image_tasks`, `ai_image_assets`, `ai_image_task_assets`
+- tables: `ai_image_tasks`, `ai_image_files`; Admin and Canvas are separated by `platform`, not by duplicated task/file tables
 - runtime selector is only `agent_id`; frontend must not ask for provider id, model id, API key, or a separate model selector
 - selected agent must be enabled, include `image_generate`, use an enabled OpenAI-compatible provider, and have `model_id = gpt-image-2`
-- `POST /ai-images` is async: it writes a pending task, links registered input/mask assets, enqueues `ai:image-generate:v1`, and returns immediately
-- worker claims `pending -> running`, calls the image adapter, persists generated assets, then finalizes `success` or `failed`
-- `POST /ai-images/assets` registers already-uploaded COS image assets; frontend uploads through the existing upload-token/COS runtime first
+- `POST /ai-images` is async: it writes a pending AI image task and task-owned `input` / `mask` file rows, enqueues the AI image generation task, and returns immediately
+- worker claims `pending -> running`, calls the image adapter, persists generated `output` file rows, then finalizes `success` or `failed`
+- there is no standalone Admin image asset registration route; frontend uploads through the existing upload-token/COS runtime and sends `input_files` / `mask_file` metadata with the task create request
+- old split/global image tables are retired by the convergence migration; do not reintroduce `admin_ai_image_*`, `canvas_image_*`, or standalone image asset registration tables
 - prompt text, image URLs, base64 payloads, and provider raw response are not captured by OperationLog; image mutation route metadata uses `SkipRequestPayload` and `SkipResponsePayload`
-- `raw_response_json` stays server-side only; API list/detail return task facts and grouped assets, not raw provider payloads
+- `raw_response_json` stays server-side only; API list/detail return task facts and grouped task files, not raw provider payloads
 
 ## AI Conversations
 

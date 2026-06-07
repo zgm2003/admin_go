@@ -4,29 +4,30 @@
 
 ## Outcome
 
-Admin Vue AI image create-task payload fallback debt is closed for optional enum fields and mask IDs.
+Admin Vue AI image create-task payload fallback debt is closed for optional enum fields, and the old global asset registration payload is retired.
 
-`src/api/ai/images.ts` no longer uses `payload.size || undefined`, `payload.quality || undefined`, `payload.output_format || undefined`, `payload.moderation || undefined`, or truthy mask ID checks that silently skip `0`.
+`src/api/ai/images.ts` no longer uses `payload.size || undefined`, `payload.quality || undefined`, `payload.output_format || undefined`, `payload.moderation || undefined`, truthy mask ID checks, `/api/admin/v1/ai-images/assets`, or `input_asset_ids` / `mask_asset_id` / `mask_target_asset_id`.
 
 ## Evidence
 
 ```text
 source file = admin_front_ts/src/api/ai/images.ts
-guard test = admin_front_ts/tests/shared/ai/ai-image-api.test.ts
+guard tests = admin_front_ts/tests/shared/ai/ai-image-api.test.ts, admin_front_ts/tests/shared/ai/ai-image-complete-split.test.ts
 inventory = docs/knowledge/admin-front-source-quality-inventory-2026-06-07.md
 source files scanned = 280
 any candidates = 0
 as any candidates = 0
 catch(error: any) candidates = 0
-fallback candidates = 555
+fallback candidates = 542
 direct external HTTP candidates = 0
-AI image priority evidence = images.ts now only has positiveID predicate logical-or; optional payload fallbacks are gone
+AI image priority evidence = images.ts sends task-owned input_files/mask_file and has no global asset registration wrapper
 ```
 
 Key source facts:
 
 - optionalImageEnum(...) treats only `undefined` and explicit empty string `''` as omitted optional enum values.
-- `optionalPositiveID(...)` treats only `undefined` as omitted optional ID; `0` now reaches `positiveID(...)` and fails closed.
+- `input_files` carries uploaded reference image metadata with the create-task request.
+- `mask_file.related_sort_order` points at the task-owned input file order; no pre-registered mask asset ID is sent.
 - The API route and payload shape stay the same: `POST /api/admin/v1/ai-images` through `AiImageApi.createTask(...)`.
 
 ## Compatibility
@@ -37,13 +38,14 @@ Preserved:
 AiImageTaskCreatePayload public type
 AiImageApi.createTask wrapper
 blank form enum values omitted from request body
-existing route/API contract
+existing task route/API contract
 ```
 
 Changed deliberately:
 
 ```text
-mask_asset_id = 0 and mask_target_asset_id = 0 are no longer silently ignored by truthy checks
+POST /api/admin/v1/ai-images/assets is removed
+input_asset_ids / mask_asset_id / mask_target_asset_id are replaced by input_files / mask_file
 optional enum omission is explicit instead of logical-or fallback
 ```
 
@@ -51,7 +53,7 @@ optional enum omission is explicit instead of logical-or fallback
 
 ```powershell
 cd E:\admin_go\admin_front_ts
-npm run test -- tests/shared/ai/ai-image-api.test.ts
+npm run test -- tests/shared/ai/ai-image-api.test.ts tests/shared/ai/ai-image-complete-split.test.ts
 npm run typecheck
 
 cd E:\admin_go
@@ -64,7 +66,7 @@ Observed inventory after refresh:
 source_files_scanned=280
 any_candidates=0
 as_any_candidates=0
-fallback_candidates=555
+fallback_candidates=542
 direct_external_http_candidates=0
 ```
 

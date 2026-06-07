@@ -1,6 +1,6 @@
 # Backend Route Contract Drift Snapshot
 
-Generated at: 2026-06-07 01:27:08 +08:00
+Generated at: 2026-06-07 19:25:16 +08:00
 
 Route source inventory: `docs/knowledge/backend-route-inventory-2026-06-07.md`
 
@@ -13,8 +13,8 @@ Classification rules: `contract-exact` means a docs/contracts file contains the 
 | Fact | Value |
 | --- | --- |
 | Route inventory artifact | `docs/knowledge/backend-route-inventory-2026-06-07.md` |
-| Route registrations compared | `280` |
-| contract-exact | `280` |
+| Route registrations compared | `281` |
+| contract-exact | `281` |
 | contract-prefix-only | `0` |
 | source-docs-only | `0` |
 | undocumented-exact | `0` |
@@ -24,10 +24,10 @@ Classification rules: `contract-exact` means a docs/contracts file contains the 
 
 | Surface | contract-exact | contract-prefix-only | source-docs-only | undocumented-exact |
 | --- | ---: | ---: | ---: | ---: |
-| `admin` | `245` | `0` | `0` | `0` |
+| `admin` | `244` | `0` | `0` | `0` |
 | `app` | `9` | `0` | `0` | `0` |
 | `callback` | `1` | `0` | `0` | `0` |
-| `canvas` | `25` | `0` | `0` | `0` |
+| `canvas` | `27` | `0` | `0` | `0` |
 
 ## Routes without exact contract hit
 

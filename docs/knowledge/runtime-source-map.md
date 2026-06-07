@@ -64,7 +64,7 @@ docs/knowledge/admin-ai-agent-test-contract-review-2026-06-07.md
 
 | Capability | Current HTTP surfaces |
 | --- | --- |
-| `ai` | `agent/transport/admin`, `chat/transport/admin`, `chat/transport/canvas`, `conversation/transport/admin`, `image/transport/admin`, `image/transport/canvas`, `knowledge/transport/admin`, `message/transport/admin`, `provider/transport/admin`, `run/transport/admin`, `tool/transport/admin`, `video/transport/canvas` |
+| `ai` | `image/transport/admin`, `image/transport/canvas`, `agent/transport/admin`, `chat/transport/admin`, `chat/transport/canvas`, `conversation/transport/admin`, `knowledge/transport/admin`, `message/transport/admin`, `provider/transport/admin`, `run/transport/admin`, `tool/transport/admin`, `video/transport/canvas` |
 | `auth` | `transport/admin`, `transport/app`, `transport/canvas` |
 | `auth_platform` | `transport/admin` |
 | `canvas` | `transport/canvas` |

@@ -1,6 +1,6 @@
 # Admin Front Source Quality Inventory Snapshot
 
-Generated at: 2026-06-07 10:04:35 +08:00
+Generated at: 2026-06-07 19:25:37 +08:00
 
 This is a regex source inventory, not type-aware semantic proof. It is meant to expose current Admin Vue quality debt shape before narrow refactors; it is not a claim that every row is a bug.
 
@@ -9,15 +9,15 @@ This is a regex source inventory, not type-aware semantic proof. It is meant to 
 | Fact | Count |
 | --- | --- |
 | Source files scanned | `280` |
-| Findings found | `555` |
+| Findings found | `542` |
 | any candidates | `0` |
 | as any candidates | `0` |
 | Record<string, any> candidates | `0` |
 | catch(error: any) candidates | `0` |
 | logical-or fallback candidates | `336` |
-| nullish-coalescing fallback candidates | `144` |
-| optional-chain fallback candidates | `75` |
-| fallback candidates | `555` |
+| nullish-coalescing fallback candidates | `135` |
+| optional-chain fallback candidates | `71` |
+| fallback candidates | `542` |
 | direct external HTTP candidates | `0` |
 
 ## Priority evidence
@@ -38,7 +38,7 @@ This is a regex source inventory, not type-aware semantic proof. It is meant to 
 | `admin_front_ts/src/views/Main/component/form/index.vue` | no regex finding in configured categories; keep only if another generated inventory owns this evidence |
 | `admin_front_ts/src/views/Main/component/display/index.vue` | no regex finding in configured categories; keep only if another generated inventory owns this evidence |
 | `admin_front_ts/src/views/Main/component/effect/components/ParticleBackground.vue` | L102 `logical-or-fallback` `if (mouse.x === null \|\| mouse.y === null) {` |
-| `admin_front_ts/src/api/ai/images.ts` | L129 `logical-or-fallback` `if (!Number.isInteger(id) \|\| id <= 0) throw new Error(`${label} must be a positive integer`)` |
+| `admin_front_ts/src/api/ai/images.ts` | L130 `logical-or-fallback` `if (!Number.isInteger(id) \|\| id <= 0) throw new Error(`${label} must be a positive integer`)` |
 
 ## Top files by finding count
 
@@ -46,15 +46,13 @@ This is a regex source inventory, not type-aware semantic proof. It is meant to 
 | --- | ---: |
 | `admin_front_ts/src/views/Main/ai/chat/index.vue` | `38` |
 | `admin_front_ts/src/views/Main/ai/agents/components/AgentKnowledgeDialog/index.vue` | `15` |
-| `admin_front_ts/src/views/Main/ai/runs/components/RunList/index.vue` | `15` |
 | `admin_front_ts/src/views/Main/system/mail/components/MailLogPanel.vue` | `14` |
 | `admin_front_ts/src/views/Main/ai/chat/components/MessageInput/index.vue` | `13` |
-| `admin_front_ts/src/views/Main/ai/image-playground/components/ImageTaskDetailDialog/index.vue` | `13` |
+| `admin_front_ts/src/views/Main/ai/image-playground/components/ImageResultPanel/index.vue` | `13` |
 | `admin_front_ts/src/views/Main/system/sms/components/SmsLogPanel.vue` | `13` |
 | `admin_front_ts/src/views/Main/ai/providers/index.vue` | `12` |
 | `admin_front_ts/src/views/Main/ai/agents/index.vue` | `11` |
 | `admin_front_ts/src/components/DownloadManager/src/index.vue` | `10` |
-| `admin_front_ts/src/views/Main/ai/image-playground/index.vue` | `10` |
 | `admin_front_ts/src/views/Main/ai/knowledge/components/RetrievalTestDialog/index.vue` | `10` |
 | `admin_front_ts/src/views/Main/personal/components/Security/index.vue` | `10` |
 | `admin_front_ts/src/views/Main/system/mail/components/MailConfigPanel.vue` | `10` |
@@ -64,14 +62,16 @@ This is a regex source inventory, not type-aware semantic proof. It is meant to 
 | `admin_front_ts/src/views/Main/ai/chat/composables/useConversationSessions.ts` | `9` |
 | `admin_front_ts/src/views/Main/permission/role/role-matrix.ts` | `8` |
 | `admin_front_ts/src/views/Main/system/mail/components/MailTemplatePanel.vue` | `8` |
+| `admin_front_ts/src/views/Main/system/sms/components/SmsTemplatePanel.vue` | `8` |
+| `admin_front_ts/src/components/RemoteSelect/src/index.vue` | `7` |
 
 ## Findings by kind
 
 | Kind | Count |
 | --- | ---: |
 | `logical-or-fallback` | `336` |
-| `nullish-fallback` | `144` |
-| `optional-chain-fallback` | `75` |
+| `nullish-fallback` | `135` |
+| `optional-chain-fallback` | `71` |
 
 ## Full findings
 
@@ -82,7 +82,7 @@ This is a regex source inventory, not type-aware semantic proof. It is meant to 
 | `nullish-fallback` | `admin_front_ts/src/api/ai/agents.ts` | `242` | `const id = positiveID(params.id ?? 0, 'AI agent id')` |
 | `logical-or-fallback` | `admin_front_ts/src/api/ai/chat.ts` | `23` | `if (!Number.isInteger(value) \|\| value <= 0) throw new Error(`${label} must be a positive integer`)` |
 | `logical-or-fallback` | `admin_front_ts/src/api/ai/conversations.ts` | `61` | `if (!Number.isInteger(id) \|\| id <= 0) throw new Error('AI conversation id must be a positive integer')` |
-| `logical-or-fallback` | `admin_front_ts/src/api/ai/images.ts` | `129` | `if (!Number.isInteger(id) \|\| id <= 0) throw new Error(`${label} must be a positive integer`)` |
+| `logical-or-fallback` | `admin_front_ts/src/api/ai/images.ts` | `130` | `if (!Number.isInteger(id) \|\| id <= 0) throw new Error(`${label} must be a positive integer`)` |
 | `logical-or-fallback` | `admin_front_ts/src/api/ai/knowledge.ts` | `202` | `if (!Number.isInteger(id) \|\| id <= 0) throw new Error(`${label} must be a positive integer`)` |
 | `nullish-fallback` | `admin_front_ts/src/api/ai/knowledge.ts` | `264` | `const id = positiveID(params.id ?? 0, 'AI knowledge base id')` |
 | `nullish-fallback` | `admin_front_ts/src/api/ai/knowledge.ts` | `272` | `const createDocument = (params: AiKnowledgeDocumentMutationParams) => request.post<AiKnowledgeCreateResponse, AiKnowledgeDocumentMutationBody>(`${ADMIN_API_PREFIX}/ai-knowledge-bases/${positiveID(params.knowledge_base_id ?? 0, 'AI knowledge base id')}/documents`, documentBody(params))` |
@@ -94,7 +94,11 @@ This is a regex source inventory, not type-aware semantic proof. It is meant to 
 | `nullish-fallback` | `admin_front_ts/src/api/ai/providers.ts` | `176` | `const driver = params.driver ?? params.engine_type ?? 'openai'` |
 | `nullish-fallback` | `admin_front_ts/src/api/ai/providers.ts` | `180` | `base_url: params.base_url ?? '',` |
 | `nullish-fallback` | `admin_front_ts/src/api/ai/providers.ts` | `200` | `const id = positiveID(params.id ?? 0, 'AI provider id')` |
-| `logical-or-fallback` | `admin_front_ts/src/api/ai/runs.ts` | `237` | `if (!Number.isInteger(id) \|\| id <= 0) throw new Error('AI run id must be a positive integer')` |
+| `logical-or-fallback` | `admin_front_ts/src/api/ai/runs.ts` | `271` | `if (!Number.isInteger(id) \|\| id <= 0) throw new Error('AI run id must be a positive integer')` |
+| `logical-or-fallback` | `admin_front_ts/src/api/ai/runs.ts` | `316` | `return value === 'admin' \|\| value === 'app' \|\| value === 'canvas'` |
+| `logical-or-fallback` | `admin_front_ts/src/api/ai/runs.ts` | `320` | `return value === 'chat' \|\| value === 'text' \|\| value === 'image' \|\| value === 'video'` |
+| `logical-or-fallback` | `admin_front_ts/src/api/ai/runs.ts` | `324` | `return value === 'ai_chat_message' \|\| value === 'ai_text_task' \|\| value === 'ai_image_task' \|\| value === 'canvas_video_task'` |
+| `logical-or-fallback` | `admin_front_ts/src/api/ai/runs.ts` | `336` | `if (!response.dict \|\| typeof response.dict !== 'object') {` |
 | `logical-or-fallback` | `admin_front_ts/src/api/ai/tools.ts` | `118` | `if (!Number.isInteger(id) \|\| id <= 0) throw new Error(`${label} must be a positive integer`)` |
 | `nullish-fallback` | `admin_front_ts/src/api/ai/tools.ts` | `150` | `code_hint: params.code_hint ?? '',` |
 | `nullish-fallback` | `admin_front_ts/src/api/ai/tools.ts` | `162` | `const id = positiveID(params.id ?? 0, 'AI tool id')` |
@@ -355,41 +359,35 @@ This is a regex source inventory, not type-aware semantic proof. It is meant to 
 | `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/chat/index.vue` | `370` | `<p class="welcome-tip">{{ selectedAgent?.description \|\| t('aiChat.welcomeTip') }}</p>` |
 | `optional-chain-fallback` | `admin_front_ts/src/views/Main/ai/chat/index.vue` | `370` | `<p class="welcome-tip">{{ selectedAgent?.description \|\| t('aiChat.welcomeTip') }}</p>` |
 | `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/chat/index.vue` | `392` | `v-if="messages.length > 0 \|\| messagesLoading"` |
-| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/components/ImageAssetList/index.vue` | `25` | `if (!props.mask \|\| !props.maskTargetId) return ''` |
-| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/components/ImageAssetList/index.vue` | `53` | `<span>{{ t('aiImages.maskTarget') }} {{ maskTargetName \|\| '-' }}</span>` |
+| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/components/ImageAssetList/index.vue` | `25` | `if (!props.maskFile \|\| !props.maskTargetSortOrder) return ''` |
 | `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/components/ImageComposer/index.vue` | `32` | `return props.submitting \|\| !props.canCreateTask \|\| !form.value.agent_id \|\| form.value.prompt.trim() === ''` |
-| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/components/ImageComposer/index.vue` | `36` | `if (!props.canAddAsset \|\| !canUploadMore.value) return false` |
-| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/components/ImageComposer/index.vue` | `72` | `:disabled="uploading \|\| !canAddAsset \|\| !canUploadMore"` |
-| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/components/ImageComposer/index.vue` | `81` | `:disabled="!canAddAsset \|\| !canUploadMore"` |
-| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/components/ImageComposer/index.vue` | `147` | `<div v-if="form.input_assets.length > 0 \|\| form.mask_asset \|\| agentOptions.length === 0" class="dock-bottom">` |
-| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/components/ImageComposer/index.vue` | `148` | `<div v-if="form.input_assets.length > 0 \|\| form.mask_asset" class="dock-assets">` |
-| `nullish-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/components/ImageHistoryGrid/index.vue` | `39` | `return statusLabelMap.value.get(value) ?? value` |
-| `nullish-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/components/ImageMaskDialog/index.vue` | `27` | `targetAssetId.value = props.assets[0]?.id ?? ''` |
-| `optional-chain-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/components/ImageMaskDialog/index.vue` | `27` | `targetAssetId.value = props.assets[0]?.id ?? ''` |
-| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/components/ImageMaskDialog/index.vue` | `68` | `<el-upload accept="image/*" :show-file-list="false" :disabled="uploading \|\| !targetAssetId" :before-upload="beforeMaskUpload">` |
-| `nullish-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/components/ImageTaskDetailDialog/index.vue` | `28` | `const task = computed(() => props.detail?.task ?? null)` |
-| `optional-chain-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/components/ImageTaskDetailDialog/index.vue` | `28` | `const task = computed(() => props.detail?.task ?? null)` |
-| `nullish-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/components/ImageTaskDetailDialog/index.vue` | `29` | `const outputAssets = computed(() => props.detail?.outputs ?? [])` |
-| `optional-chain-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/components/ImageTaskDetailDialog/index.vue` | `29` | `const outputAssets = computed(() => props.detail?.outputs ?? [])` |
-| `nullish-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/components/ImageTaskDetailDialog/index.vue` | `30` | `const inputAssets = computed(() => props.detail?.inputs ?? [])` |
-| `optional-chain-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/components/ImageTaskDetailDialog/index.vue` | `30` | `const inputAssets = computed(() => props.detail?.inputs ?? [])` |
-| `nullish-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/components/ImageTaskDetailDialog/index.vue` | `31` | `const maskAsset = computed(() => props.detail?.mask ?? null)` |
-| `optional-chain-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/components/ImageTaskDetailDialog/index.vue` | `31` | `const maskAsset = computed(() => props.detail?.mask ?? null)` |
-| `nullish-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/components/ImageTaskDetailDialog/index.vue` | `32` | `const maskTargetId = computed(() => props.detail?.mask?.related_asset_id ?? '')` |
-| `optional-chain-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/components/ImageTaskDetailDialog/index.vue` | `32` | `const maskTargetId = computed(() => props.detail?.mask?.related_asset_id ?? '')` |
-| `nullish-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/components/ImageTaskDetailDialog/index.vue` | `47` | `return statusLabelMap.value.get(value) ?? value` |
-| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/components/ImageTaskDetailDialog/index.vue` | `71` | `<el-empty v-if="!detail \|\| !task" :description="t('aiImages.emptyDetail')" />` |
-| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/components/ImageTaskDetailDialog/index.vue` | `90` | `<el-descriptions-item :label="t('aiImages.finishedAt')">{{ task.finished_at \|\| '-' }}</el-descriptions-item>` |
-| `nullish-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/index.vue` | `118` | `page.total_page = data.page.total_page ?? 0` |
-| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/index.vue` | `154` | `mime_type: request.file.type \|\| 'image/png',` |
-| `nullish-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/index.vue` | `162` | `composer.value.mask_target_asset_id = request.mask_target_asset_id ?? ''` |
-| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/index.vue` | `197` | `mask_target_asset_id: composer.value.mask_target_asset_id \|\| undefined,` |
-| `nullish-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/index.vue` | `243` | `output_compression: source.task.output_compression ?? null,` |
-| `nullish-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/index.vue` | `247` | `mask_asset: source.mask ?? null,` |
-| `nullish-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/index.vue` | `248` | `mask_target_asset_id: source.mask?.related_asset_id ?? '',` |
-| `optional-chain-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/index.vue` | `248` | `mask_target_asset_id: source.mask?.related_asset_id ?? '',` |
-| `nullish-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/index.vue` | `313` | `label: labels[String(item.value)] ?? item.label,` |
-| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/index.vue` | `354` | `return error === 'cancel' \|\| error === 'close'` |
+| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/components/ImageComposer/index.vue` | `37` | `if (!props.canUploadFile \|\| !canUploadMore.value) return false` |
+| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/components/ImageComposer/index.vue` | `80` | `:disabled="uploading \|\| !canUploadFile \|\| !canUploadMore"` |
+| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/components/ImageComposer/index.vue` | `83` | `<el-button :icon="Upload" plain :loading="uploading" :disabled="!canUploadFile \|\| !canUploadMore">` |
+| `nullish-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/components/ImageHistoryGrid/index.vue` | `41` | `return statusLabelMap.value.get(value) ?? value` |
+| `nullish-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/components/ImageMaskDialog/index.vue` | `26` | `targetSortOrder.value = props.files[0]?.sort_order ?? ''` |
+| `optional-chain-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/components/ImageMaskDialog/index.vue` | `26` | `targetSortOrder.value = props.files[0]?.sort_order ?? ''` |
+| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/components/ImageMaskDialog/index.vue` | `67` | `<el-upload accept="image/*" :show-file-list="false" :disabled="uploading \|\| !targetSortOrder" :before-upload="beforeMaskUpload">` |
+| `nullish-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/components/ImageResultPanel/index.vue` | `26` | `const task = computed(() => props.detail?.task ?? null)` |
+| `optional-chain-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/components/ImageResultPanel/index.vue` | `26` | `const task = computed(() => props.detail?.task ?? null)` |
+| `nullish-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/components/ImageResultPanel/index.vue` | `27` | `const outputFiles = computed(() => props.detail?.outputs ?? [])` |
+| `optional-chain-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/components/ImageResultPanel/index.vue` | `27` | `const outputFiles = computed(() => props.detail?.outputs ?? [])` |
+| `nullish-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/components/ImageResultPanel/index.vue` | `28` | `const inputFiles = computed(() => props.detail?.inputs ?? [])` |
+| `optional-chain-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/components/ImageResultPanel/index.vue` | `28` | `const inputFiles = computed(() => props.detail?.inputs ?? [])` |
+| `nullish-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/components/ImageResultPanel/index.vue` | `29` | `const maskFile = computed(() => props.detail?.mask ?? null)` |
+| `optional-chain-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/components/ImageResultPanel/index.vue` | `29` | `const maskFile = computed(() => props.detail?.mask ?? null)` |
+| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/components/ImageResultPanel/index.vue` | `33` | `if (mask === null \|\| mask === undefined) return ''` |
+| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/components/ImageResultPanel/index.vue` | `34` | `if (mask.related_file_id === null \|\| mask.related_file_id === undefined) {` |
+| `nullish-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/components/ImageResultPanel/index.vue` | `55` | `return statusLabelMap.value.get(value) ?? value` |
+| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/components/ImageResultPanel/index.vue` | `59` | `if (value === undefined \|\| value === '') return '-'` |
+| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/components/ImageResultPanel/index.vue` | `83` | `<el-empty v-if="!detail \|\| !task" class="result-empty" :description="t('aiImages.emptyResultPanel')" />` |
+| `nullish-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/index.vue` | `121` | `page.total_page = data.page.total_page ?? 0` |
+| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/index.vue` | `248` | `const maskFile = source.mask === null \|\| source.mask === undefined ? null : toComposerMaskFile(source.mask, inputFiles)` |
+| `nullish-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/index.vue` | `255` | `output_compression: source.task.output_compression ?? null,` |
+| `nullish-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/index.vue` | `335` | `label: labels[String(item.value)] ?? item.label,` |
+| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/index.vue` | `388` | `if (mask.related_file_id === null \|\| mask.related_file_id === undefined) {` |
+| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/index.vue` | `412` | `if (mimeType === '' \|\| !mimeType.startsWith('image/')) {` |
+| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/image-playground/index.vue` | `439` | `return error === 'cancel' \|\| error === 'close'` |
 | `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/knowledge/components/KnowledgeBaseCard/index.vue` | `56` | `{{ row.status_name \|\| row.status }}` |
 | `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/knowledge/components/KnowledgeBaseCard/index.vue` | `61` | `{{ row.description \|\| t('aiKnowledge.nav.noDescription') }}` |
 | `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/knowledge/components/KnowledgeBaseList/index.vue` | `59` | `const hasFilters = computed(() => Boolean(searchForm.value.name \|\| searchForm.value.status))` |
@@ -432,25 +430,14 @@ This is a regex source inventory, not type-aware semantic proof. It is meant to 
 | `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/providers/index.vue` | `170` | `<el-tag :type="stateTagType(row.last_model_sync_status)">{{ row.last_model_sync_status \|\| 'unknown' }}</el-tag>` |
 | `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/providers/index.vue` | `172` | `<el-tag v-else :type="stateTagType(row.last_model_sync_status)">{{ row.last_model_sync_status \|\| 'unknown' }}</el-tag>` |
 | `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/providers/index.vue` | `175` | `<el-tag :type="row.status === 1 ? 'success' : 'danger'">{{ row.status_name \|\| row.status }}</el-tag>` |
-| `nullish-fallback` | `admin_front_ts/src/views/Main/ai/runs/components/RunList/index.vue` | `46` | `return {...rest, date_start: date_start ?? '', date_end: date_end ?? ''}` |
-| `nullish-fallback` | `admin_front_ts/src/views/Main/ai/runs/components/RunList/index.vue` | `171` | `detail.user_message?.meta_json?.attachments?.map((attachment) => attachment.url) ?? []` |
-| `optional-chain-fallback` | `admin_front_ts/src/views/Main/ai/runs/components/RunList/index.vue` | `171` | `detail.user_message?.meta_json?.attachments?.map((attachment) => attachment.url) ?? []` |
-| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/runs/components/RunList/index.vue` | `174` | `Boolean(meta?.run_request_id \|\| meta?.provider_request_id)` |
-| `optional-chain-fallback` | `admin_front_ts/src/views/Main/ai/runs/components/RunList/index.vue` | `174` | `Boolean(meta?.run_request_id \|\| meta?.provider_request_id)` |
-| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/runs/components/RunList/index.vue` | `181` | `if (value === null \|\| value === undefined) return '-'` |
-| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/runs/components/RunList/index.vue` | `299` | `<el-descriptions-item :label="t('aiRuns.detail.model')">{{ detailData.model_display_name \|\| detailData.model_id }}</el-descriptions-item>` |
-| `nullish-fallback` | `admin_front_ts/src/views/Main/ai/runs/components/RunList/index.vue` | `301` | `detailData.prompt_tokens ?? '-'` |
-| `nullish-fallback` | `admin_front_ts/src/views/Main/ai/runs/components/RunList/index.vue` | `305` | `detailData.completion_tokens ?? '-'` |
-| `nullish-fallback` | `admin_front_ts/src/views/Main/ai/runs/components/RunList/index.vue` | `309` | `detailData.total_tokens ?? '-'` |
-| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/runs/components/RunList/index.vue` | `313` | `<el-descriptions-item :label="t('aiRuns.detail.startedAt')">{{ detailData.started_at \|\| '-' }}</el-descriptions-item>` |
-| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/runs/components/RunList/index.vue` | `314` | `<el-descriptions-item :label="t('aiRuns.detail.finishedAt')">{{ detailData.finished_at \|\| '-' }}</el-descriptions-item>` |
-| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/runs/components/RunList/index.vue` | `340` | `<el-tag size="small" :type="eventTagType(detailData.status)">{{ event.event_type_name \|\| event.event_type }}</el-tag>` |
-| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/runs/components/RunList/index.vue` | `366` | `<el-tag size="small" :type="knowledgeRetrievalTagType(retrieval.status)">{{ retrieval.status_name \|\| retrieval.status }}</el-tag>` |
-| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/runs/components/RunList/index.vue` | `405` | `<span class="tool-call-name">{{ call.tool_name \|\| call.tool_code }}</span>` |
-| `nullish-fallback` | `admin_front_ts/src/views/Main/ai/runs/components/RunStats/index.vue` | `63` | `date_start: date_start ?? '',` |
-| `nullish-fallback` | `admin_front_ts/src/views/Main/ai/runs/components/RunStats/index.vue` | `64` | `date_end: date_end ?? '',` |
-| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/runs/components/RunStats/index.vue` | `251` | `<div class="stats-section" v-if="dateLoader.state.value.data.length \|\| dateLoader.state.value.loading">` |
-| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/runs/components/RunStats/index.vue` | `260` | `<div class="stats-section" v-if="agentLoader.state.value.data.length \|\| agentLoader.state.value.loading">` |
+| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/runs/components/RunList/index.vue` | `76` | `if (!(error instanceof Error) \|\| error.message.trim() === '') {` |
+| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/runs/components/RunList/index.vue` | `243` | `Boolean(meta.run_request_id \|\| meta.provider_request_id)` |
+| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/runs/components/RunList/index.vue` | `250` | `if (value === null \|\| value === undefined) return '-'` |
+| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/runs/components/RunList/index.vue` | `428` | `<el-tag size="small" :type="eventTagType(detailData.status)">{{ event.event_type_name \|\| event.event_type }}</el-tag>` |
+| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/runs/components/RunList/index.vue` | `454` | `<el-tag size="small" :type="knowledgeRetrievalTagType(retrieval.status)">{{ retrieval.status_name \|\| retrieval.status }}</el-tag>` |
+| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/runs/components/RunList/index.vue` | `493` | `<span class="tool-call-name">{{ call.tool_name \|\| call.tool_code }}</span>` |
+| `nullish-fallback` | `admin_front_ts/src/views/Main/ai/runs/components/RunStats/index.vue` | `67` | `date_start: date_start ?? '',` |
+| `nullish-fallback` | `admin_front_ts/src/views/Main/ai/runs/components/RunStats/index.vue` | `68` | `date_end: date_end ?? '',` |
 | `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/tools/components/ToolFormDialog/index.vue` | `87` | `if (!parsed \|\| typeof parsed !== 'object' \|\| Array.isArray(parsed)) {` |
 | `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/tools/components/ToolList/index.vue` | `109` | `<el-tag :type="riskTagType(row.risk_level)">{{ row.risk_level_name \|\| row.risk_level }}</el-tag>` |
 | `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/tools/components/ToolList/index.vue` | `115` | `<el-tag :type="row.status === CommonEnum.YES ? 'success' : 'danger'">{{ row.status_name \|\| row.status }}</el-tag>` |

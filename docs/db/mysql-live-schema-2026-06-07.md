@@ -1,6 +1,6 @@
 # MySQL Live Schema Snapshot
 
-Verified at: 2026-06-07 00:30:27 +08:00
+Verified at: 2026-06-07 19:24:51 +08:00
 
 Truth source: live MySQL `DATABASE() = admin` on `127.0.0.1:3307`. Passwords and secrets are intentionally not recorded here.
 
@@ -11,7 +11,7 @@ This snapshot is generated from `information_schema`, per-table `COUNT(*)`, and 
 | Item | Value |
 | --- | --- |
 | Database | `admin` |
-| Base tables | 56 |
+| Base tables | 55 |
 | Full DDL artifact | `docs/db/mysql-live-schema-2026-06-07.sql` |
 
 ## Table inventory
@@ -22,44 +22,43 @@ This snapshot is generated from `information_schema`, per-table `COUNT(*)`, and 
 | `ai_agent_knowledge_bases` | 1 | InnoDB | utf8mb4_0900_ai_ci | AI智能体知识库绑定 |
 | `ai_agent_tools` | 2 | InnoDB | utf8mb4_0900_ai_ci | AI智能体工具绑定 |
 | `ai_agents` | 7 | InnoDB | utf8mb4_0900_ai_ci | AI agent mappings |
-| `ai_conversations` | 4 | InnoDB | utf8mb4_0900_ai_ci | AI会话 |
-| `ai_image_assets` | 15 | InnoDB | utf8mb4_0900_ai_ci | AI图片资产 |
-| `ai_image_task_assets` | 15 | InnoDB | utf8mb4_0900_ai_ci | AI图片任务资产关系 |
-| `ai_image_tasks` | 25 | InnoDB | utf8mb4_0900_ai_ci | AI图片生成任务 |
+| `ai_conversations` | 0 | InnoDB | utf8mb4_0900_ai_ci | AI会话 |
+| `ai_image_files` | 0 | InnoDB | utf8mb4_unicode_ci |  |
+| `ai_image_tasks` | 0 | InnoDB | utf8mb4_unicode_ci |  |
 | `ai_knowledge_bases` | 1 | InnoDB | utf8mb4_0900_ai_ci | AI知识库 |
 | `ai_knowledge_chunks` | 6 | InnoDB | utf8mb4_0900_ai_ci | AI知识库分块 |
 | `ai_knowledge_documents` | 6 | InnoDB | utf8mb4_0900_ai_ci | AI知识库文档 |
-| `ai_knowledge_retrieval_hits` | 24 | InnoDB | utf8mb4_0900_ai_ci | AI知识库检索命中 |
-| `ai_knowledge_retrievals` | 4 | InnoDB | utf8mb4_0900_ai_ci | AI知识库检索记录 |
-| `ai_messages` | 53 | InnoDB | utf8mb4_0900_ai_ci | AI消息 |
+| `ai_knowledge_retrieval_hits` | 0 | InnoDB | utf8mb4_0900_ai_ci | AI知识库检索命中 |
+| `ai_knowledge_retrievals` | 0 | InnoDB | utf8mb4_0900_ai_ci | AI知识库检索记录 |
+| `ai_messages` | 0 | InnoDB | utf8mb4_0900_ai_ci | AI消息 |
 | `ai_provider_models` | 4 | InnoDB | utf8mb4_0900_ai_ci | AI provider enabled model catalog |
 | `ai_providers` | 2 | InnoDB | utf8mb4_0900_ai_ci | AI engine connection configs |
-| `ai_run_events` | 38 | InnoDB | utf8mb4_0900_ai_ci | AI运行监控事件 |
-| `ai_runs` | 19 | InnoDB | utf8mb4_0900_ai_ci | AI运行监控记录 |
-| `ai_tool_calls` | 1 | InnoDB | utf8mb4_0900_ai_ci | AI工具调用记录 |
+| `ai_run_events` | 0 | InnoDB | utf8mb4_0900_ai_ci | AI运行监控事件 |
+| `ai_runs` | 0 | InnoDB | utf8mb4_0900_ai_ci | AI运行监控记录 |
+| `ai_text_tasks` | 0 | InnoDB | utf8mb4_0900_ai_ci | AI文本生成任务 |
+| `ai_tool_calls` | 0 | InnoDB | utf8mb4_0900_ai_ci | AI工具调用记录 |
 | `ai_tools` | 1 | InnoDB | utf8mb4_0900_ai_ci | AI工具定义 |
 | `auth_platforms` | 3 | InnoDB | utf8mb4_0900_ai_ci | 认证平台管理 |
 | `canvas_assets` | 0 | InnoDB | utf8mb4_unicode_ci | 无限画布素材公共库 |
 | `canvas_prompts` | 1356 | InnoDB | utf8mb4_unicode_ci | 无限画布提示词公共库 |
-| `canvas_prompts_backup_20260601_before_infinite_import` | 0 | InnoDB | utf8mb4_0900_ai_ci |  |
 | `canvas_video_tasks` | 0 | InnoDB | utf8mb4_unicode_ci | 无限画布视频生成任务 |
 | `client_versions` | 8 | InnoDB | utf8mb4_0900_ai_ci | 客户端版本管理 |
 | `cron_task` | 11 | InnoDB | utf8mb4_0900_ai_ci | 定时任务配置表 |
-| `cron_task_log` | 89547 | InnoDB | utf8mb4_0900_ai_ci | 定时任务执行日志表 |
+| `cron_task_log` | 92585 | InnoDB | utf8mb4_0900_ai_ci | 定时任务执行日志表 |
 | `export_tasks` | 120 | InnoDB | utf8mb4_0900_ai_ci | 导出任务记录 |
 | `mail_configs` | 1 | InnoDB | utf8mb4_0900_ai_ci |  |
 | `mail_logs` | 6 | InnoDB | utf8mb4_0900_ai_ci |  |
 | `mail_templates` | 4 | InnoDB | utf8mb4_0900_ai_ci |  |
 | `notification_task` | 19 | InnoDB | utf8mb4_0900_ai_ci |  |
 | `notifications` | 3085 | InnoDB | utf8mb4_0900_ai_ci | 用户通知表 |
-| `operation_logs` | 2410 | InnoDB | utf8mb4_0900_ai_ci | 操作日志表 |
+| `operation_logs` | 2418 | InnoDB | utf8mb4_0900_ai_ci | 操作日志表 |
 | `payment_callback_events` | 0 | InnoDB | utf8mb4_unicode_ci |  |
 | `payment_configs` | 1 | InnoDB | utf8mb4_unicode_ci |  |
 | `payment_orders` | 19 | InnoDB | utf8mb4_unicode_ci |  |
 | `payment_recharge_packages` | 8 | InnoDB | utf8mb4_unicode_ci |  |
 | `payment_recharges` | 19 | InnoDB | utf8mb4_unicode_ci |  |
-| `permissions` | 315 | InnoDB | utf8mb4_0900_ai_ci | 菜单权限表 |
-| `role_permissions` | 390 | InnoDB | utf8mb4_0900_ai_ci | role permission pivot |
+| `permissions` | 314 | InnoDB | utf8mb4_0900_ai_ci | 菜单权限表 |
+| `role_permissions` | 409 | InnoDB | utf8mb4_0900_ai_ci | role permission pivot |
 | `roles` | 2 | InnoDB | utf8mb4_0900_ai_ci | 角色 |
 | `sms_configs` | 1 | InnoDB | utf8mb4_0900_ai_ci |  |
 | `sms_logs` | 0 | InnoDB | utf8mb4_0900_ai_ci |  |
@@ -69,10 +68,10 @@ This snapshot is generated from `information_schema`, per-table `COUNT(*)`, and 
 | `upload_rule` | 50 | InnoDB | utf8mb4_0900_ai_ci |  |
 | `upload_setting` | 52 | InnoDB | utf8mb4_0900_ai_ci | 上传设置：驱动+规则组合与启用状态 |
 | `user_profiles` | 4 | InnoDB | utf8mb4_0900_ai_ci | 用户资料表 |
-| `user_sessions` | 215 | InnoDB | utf8mb4_0900_ai_ci | 用户会话表 |
+| `user_sessions` | 230 | InnoDB | utf8mb4_0900_ai_ci | 用户会话表 |
 | `user_wallets` | 2 | InnoDB | utf8mb4_unicode_ci |  |
 | `users` | 4 | InnoDB | utf8mb4_0900_ai_ci | 用户表 |
-| `users_login_log` | 294 | InnoDB | utf8mb4_0900_ai_ci | 登录日志 |
+| `users_login_log` | 309 | InnoDB | utf8mb4_0900_ai_ci | 登录日志 |
 | `wallet_transactions` | 3 | InnoDB | utf8mb4_unicode_ci |  |
 
 ## Foreign keys observed
@@ -81,8 +80,6 @@ This snapshot is generated from `information_schema`, per-table `COUNT(*)`, and 
 | --- | --- | --- | --- |
 | `ai_agent_tools` | `fk_ai_agent_tools_agent` | `agent_id` | `ai_agents.id` |
 | `ai_agent_tools` | `fk_ai_agent_tools_tool` | `tool_id` | `ai_tools.id` |
-| `ai_image_task_assets` | `fk_ai_image_task_assets_asset` | `asset_id` | `ai_image_assets.id` |
-| `ai_image_task_assets` | `fk_ai_image_task_assets_task` | `task_id` | `ai_image_tasks.id` |
 | `ai_messages` | `fk_ai_messages_conversation` | `conversation_id` | `ai_conversations.id` |
 | `ai_run_events` | `fk_ai_run_events_run` | `run_id` | `ai_runs.id` |
 | `ai_runs` | `fk_ai_runs_assistant_message` | `assistant_message_id` | `ai_messages.id` |
@@ -189,87 +186,64 @@ Indexes:
 - `idx_ai_conversations_user_agent_del_last_message` (non-unique, BTREE): `user_id`, `agent_id`, `is_del`, `last_message_at`, `id`
 - `PRIMARY` (unique, BTREE): `id`
 
-### `ai_image_assets`
+### `ai_image_files`
 
 | # | Column | Type | Null | Key | Default | Extra | Comment |
 | ---: | --- | --- | --- | --- | --- | --- | --- |
-| 1 | `id` | `bigint unsigned` | NO | PRI | NULL | auto_increment | 图片资产ID |
-| 2 | `user_id` | `bigint unsigned` | NO | MUL | NULL |  | 归属用户ID |
-| 3 | `storage_provider` | `varchar(32)` | NO | MUL | NULL |  | cos/remote_url |
-| 4 | `storage_key` | `varchar(512)` | NO |  |  |  | 对象存储key |
-| 5 | `storage_url` | `varchar(1000)` | NO |  |  |  | 可访问URL |
-| 6 | `mime_type` | `varchar(64)` | NO |  |  |  | MIME类型 |
-| 7 | `width` | `int unsigned` | NO |  | 0 |  | 图片宽度 |
-| 8 | `height` | `int unsigned` | NO |  | 0 |  | 图片高度 |
-| 9 | `size_bytes` | `bigint unsigned` | NO |  | 0 |  | 文件字节数 |
-| 10 | `source_type` | `varchar(16)` | NO |  | NULL |  | upload/mask/generated |
-| 11 | `is_del` | `tinyint unsigned` | NO |  | 2 |  | 1删除2正常 |
-| 12 | `created_at` | `datetime` | NO |  | CURRENT_TIMESTAMP | DEFAULT_GENERATED | 创建时间 |
-| 13 | `updated_at` | `datetime` | NO |  | CURRENT_TIMESTAMP | DEFAULT_GENERATED on update CURRENT_TIMESTAMP | 更新时间 |
+| 1 | `id` | `bigint unsigned` | NO | PRI | NULL | auto_increment |  |
+| 2 | `task_id` | `bigint unsigned` | NO | MUL | NULL |  |  |
+| 3 | `role` | `varchar(16)` | NO |  | NULL |  | input/mask/output |
+| 4 | `sort_order` | `int` | NO |  | 0 |  |  |
+| 5 | `storage_provider` | `varchar(32)` | NO |  |  |  |  |
+| 6 | `storage_key` | `varchar(512)` | NO |  |  |  |  |
+| 7 | `storage_url` | `varchar(1000)` | NO |  |  |  |  |
+| 8 | `mime_type` | `varchar(64)` | NO |  |  |  |  |
+| 9 | `width` | `int` | NO |  | 0 |  |  |
+| 10 | `height` | `int` | NO |  | 0 |  |  |
+| 11 | `size_bytes` | `bigint` | NO |  | 0 |  |  |
+| 12 | `related_file_id` | `bigint unsigned` | YES | MUL | NULL |  |  |
+| 13 | `revised_prompt` | `text` | YES |  | NULL |  |  |
+| 14 | `created_at` | `datetime` | NO |  | CURRENT_TIMESTAMP | DEFAULT_GENERATED |  |
 
 Indexes:
-- `idx_ai_image_assets_storage` (non-unique, BTREE): `storage_provider`, `storage_key`
-- `idx_ai_image_assets_user_created` (non-unique, BTREE): `user_id`, `is_del`, `created_at`, `id`
-- `PRIMARY` (unique, BTREE): `id`
-
-### `ai_image_task_assets`
-
-| # | Column | Type | Null | Key | Default | Extra | Comment |
-| ---: | --- | --- | --- | --- | --- | --- | --- |
-| 1 | `id` | `bigint unsigned` | NO | PRI | NULL | auto_increment | 任务资产关系ID |
-| 2 | `task_id` | `bigint unsigned` | NO | MUL | NULL |  | ai_image_tasks.id |
-| 3 | `asset_id` | `bigint unsigned` | NO | MUL | NULL |  | ai_image_assets.id |
-| 4 | `role` | `varchar(16)` | NO |  | NULL |  | input/mask/output |
-| 5 | `sort_order` | `int unsigned` | NO |  | 0 |  | 排序 |
-| 6 | `related_asset_id` | `bigint unsigned` | YES | MUL | NULL |  | mask 对应的被编辑资产 |
-| 7 | `actual_params_json` | `json` | YES |  | NULL |  | 单图实际参数摘要 |
-| 8 | `revised_prompt` | `text` | YES |  | NULL |  | provider 返回的修订提示词 |
-| 9 | `is_del` | `tinyint unsigned` | NO |  | 2 |  | 1删除2正常 |
-| 10 | `created_at` | `datetime` | NO |  | CURRENT_TIMESTAMP | DEFAULT_GENERATED | 创建时间 |
-| 11 | `updated_at` | `datetime` | NO |  | CURRENT_TIMESTAMP | DEFAULT_GENERATED on update CURRENT_TIMESTAMP | 更新时间 |
-
-Indexes:
-- `idx_ai_image_task_assets_asset` (non-unique, BTREE): `asset_id`, `is_del`
-- `idx_ai_image_task_assets_related` (non-unique, BTREE): `related_asset_id`
-- `idx_ai_image_task_assets_task_role` (non-unique, BTREE): `task_id`, `role`, `sort_order`, `id`
+- `idx_ai_image_files_related` (non-unique, BTREE): `related_file_id`
+- `idx_ai_image_files_task_role_sort` (non-unique, BTREE): `task_id`, `role`, `sort_order`
 - `PRIMARY` (unique, BTREE): `id`
 
 ### `ai_image_tasks`
 
 | # | Column | Type | Null | Key | Default | Extra | Comment |
 | ---: | --- | --- | --- | --- | --- | --- | --- |
-| 1 | `id` | `bigint unsigned` | NO | PRI | NULL | auto_increment | 图片任务ID |
-| 2 | `user_id` | `bigint unsigned` | NO | MUL | NULL |  | 发起用户ID |
-| 3 | `agent_id` | `bigint unsigned` | NO | MUL | NULL |  | ai_agents.id |
-| 4 | `agent_name_snapshot` | `varchar(128)` | NO |  | NULL |  | 任务创建时智能体名称 |
-| 5 | `provider_id_snapshot` | `bigint unsigned` | NO |  | NULL |  | 任务创建时供应商ID |
-| 6 | `provider_name_snapshot` | `varchar(128)` | NO |  | NULL |  | 任务创建时供应商名称 |
-| 7 | `model_id_snapshot` | `varchar(191)` | NO |  | NULL |  | 任务创建时模型ID |
-| 8 | `model_display_name_snapshot` | `varchar(191)` | NO |  |  |  | 任务创建时模型展示名 |
-| 9 | `prompt` | `text` | NO |  | NULL |  | 图片提示词 |
-| 10 | `size` | `varchar(32)` | NO |  | NULL |  | 图片尺寸 |
-| 11 | `quality` | `varchar(16)` | NO |  | NULL |  | 质量参数 |
-| 12 | `output_format` | `varchar(16)` | NO |  | NULL |  | 输出格式 |
-| 13 | `output_compression` | `int unsigned` | YES |  | NULL |  | 输出压缩率，仅部分格式有效 |
-| 14 | `moderation` | `varchar(16)` | NO |  | NULL |  | 安全审核参数 |
-| 15 | `n` | `int unsigned` | NO |  | 1 |  | 输出张数 |
-| 16 | `status` | `varchar(16)` | NO | MUL | NULL |  | pending/running/success/failed |
-| 17 | `error_message` | `varchar(1000)` | NO |  |  |  | 失败原因 |
-| 18 | `actual_params_json` | `json` | YES |  | NULL |  | provider 实际参数摘要 |
-| 19 | `raw_response_json` | `json` | YES |  | NULL |  | provider 原始响应摘要，不保存图片bytes |
-| 20 | `is_favorite` | `tinyint unsigned` | NO |  | 2 |  | 1是2否 |
-| 21 | `finished_at` | `datetime` | YES |  | NULL |  | 完成时间 |
-| 22 | `elapsed_ms` | `int unsigned` | NO |  | 0 |  | 耗时毫秒 |
-| 23 | `is_del` | `tinyint unsigned` | NO |  | 2 |  | 1删除2正常 |
-| 24 | `created_at` | `datetime` | NO |  | CURRENT_TIMESTAMP | DEFAULT_GENERATED | 创建时间 |
-| 25 | `updated_at` | `datetime` | NO |  | CURRENT_TIMESTAMP | DEFAULT_GENERATED on update CURRENT_TIMESTAMP | 更新时间 |
+| 1 | `id` | `bigint unsigned` | NO | PRI | NULL | auto_increment |  |
+| 2 | `platform` | `varchar(32)` | NO | MUL | NULL |  |  |
+| 3 | `user_id` | `bigint unsigned` | NO |  | NULL |  |  |
+| 4 | `agent_id` | `bigint unsigned` | NO | MUL | NULL |  |  |
+| 5 | `agent_name_snapshot` | `varchar(128)` | NO |  |  |  |  |
+| 6 | `provider_id_snapshot` | `bigint unsigned` | NO |  | 0 |  |  |
+| 7 | `provider_name_snapshot` | `varchar(128)` | NO |  |  |  |  |
+| 8 | `model_id_snapshot` | `varchar(128)` | NO |  |  |  |  |
+| 9 | `model_display_name_snapshot` | `varchar(128)` | NO |  |  |  |  |
+| 10 | `prompt` | `text` | NO |  | NULL |  |  |
+| 11 | `size` | `varchar(32)` | NO |  | 1024x1024 |  |  |
+| 12 | `quality` | `varchar(16)` | NO |  | auto |  |  |
+| 13 | `output_format` | `varchar(16)` | NO |  | png |  |  |
+| 14 | `output_compression` | `int` | YES |  | NULL |  |  |
+| 15 | `moderation` | `varchar(16)` | NO |  | auto |  |  |
+| 16 | `n` | `int` | NO |  | 1 |  |  |
+| 17 | `status` | `varchar(16)` | NO |  | pending |  |  |
+| 18 | `error_message` | `varchar(1000)` | NO |  |  |  |  |
+| 19 | `actual_params_json` | `json` | YES |  | NULL |  |  |
+| 20 | `raw_response_json` | `json` | YES |  | NULL |  |  |
+| 21 | `is_favorite` | `tinyint` | NO |  | 2 |  |  |
+| 22 | `finished_at` | `datetime` | YES |  | NULL |  |  |
+| 23 | `elapsed_ms` | `int` | NO |  | 0 |  |  |
+| 24 | `created_at` | `datetime` | NO |  | CURRENT_TIMESTAMP | DEFAULT_GENERATED |  |
+| 25 | `updated_at` | `datetime` | NO |  | CURRENT_TIMESTAMP | DEFAULT_GENERATED on update CURRENT_TIMESTAMP |  |
 
 Indexes:
-- `idx_ai_image_tasks_agent_created` (non-unique, BTREE): `agent_id`, `created_at`, `id`
-- `idx_ai_image_tasks_status_created` (non-unique, BTREE): `status`, `created_at`, `id`
-- `idx_ai_image_tasks_user_created` (non-unique, BTREE): `user_id`, `is_del`, `created_at`, `id`
-- `idx_ai_image_tasks_user_favorite` (non-unique, BTREE): `user_id`, `is_favorite`, `is_del`, `created_at`, `id`
-- `idx_ai_image_tasks_user_status` (non-unique, BTREE): `user_id`, `status`, `is_del`, `created_at`, `id`
+- `idx_ai_image_tasks_agent_created` (non-unique, BTREE): `agent_id`, `created_at`
+- `idx_ai_image_tasks_platform_status_created` (non-unique, BTREE): `platform`, `status`, `created_at`
+- `idx_ai_image_tasks_platform_user_created` (non-unique, BTREE): `platform`, `user_id`, `created_at`
 - `PRIMARY` (unique, BTREE): `id`
 
 ### `ai_knowledge_bases`
@@ -471,37 +445,71 @@ Indexes:
 | # | Column | Type | Null | Key | Default | Extra | Comment |
 | ---: | --- | --- | --- | --- | --- | --- | --- |
 | 1 | `id` | `bigint unsigned` | NO | PRI | NULL | auto_increment | 运行ID |
-| 2 | `conversation_id` | `int unsigned` | NO | MUL | NULL |  | ai_conversations.id |
-| 3 | `request_id` | `varchar(64)` | NO |  | NULL |  | 客户端本轮请求ID |
-| 4 | `user_message_id` | `bigint unsigned` | NO | UNI | NULL |  | 本轮用户消息ID |
-| 5 | `assistant_message_id` | `bigint unsigned` | YES | MUL | NULL |  | 完成后写入的助手消息ID |
-| 6 | `user_id` | `int unsigned` | NO | MUL | NULL |  | 发起用户ID |
-| 7 | `agent_id` | `bigint unsigned` | NO | MUL | NULL |  | ai_agents.id |
-| 8 | `provider_id` | `bigint unsigned` | NO | MUL | NULL |  | ai_providers.id |
-| 9 | `model_id` | `varchar(191)` | NO |  | NULL |  | 实际调用模型ID |
-| 10 | `model_display_name` | `varchar(191)` | NO |  |  |  | 实际调用模型展示名 |
-| 11 | `status` | `varchar(16)` | NO | MUL | NULL |  | queued/running/success/failed/canceled/timeout |
-| 12 | `prompt_tokens` | `int unsigned` | NO |  | 0 |  | 输入token |
-| 13 | `completion_tokens` | `int unsigned` | NO |  | 0 |  | 输出token |
-| 14 | `total_tokens` | `int unsigned` | NO |  | 0 |  | 总token |
-| 15 | `duration_ms` | `int unsigned` | YES |  | NULL |  | 运行耗时毫秒，终态后写入 |
-| 16 | `error_message` | `varchar(1024)` | NO |  |  |  | 失败/取消/超时原因 |
-| 17 | `started_at` | `datetime` | YES |  | NULL |  | 开始调用模型时间 |
-| 18 | `finished_at` | `datetime` | YES |  | NULL |  | 进入终态时间 |
-| 19 | `created_at` | `datetime` | NO | MUL | CURRENT_TIMESTAMP | DEFAULT_GENERATED | 创建时间 |
-| 20 | `updated_at` | `datetime` | NO |  | CURRENT_TIMESTAMP | DEFAULT_GENERATED on update CURRENT_TIMESTAMP | 更新时间 |
+| 2 | `platform` | `varchar(32)` | NO | MUL | NULL |  |  |
+| 3 | `modality` | `varchar(32)` | NO |  | NULL |  |  |
+| 4 | `source_type` | `varchar(64)` | NO | MUL | NULL |  |  |
+| 5 | `source_id` | `bigint unsigned` | NO |  | NULL |  |  |
+| 6 | `conversation_id` | `int unsigned` | YES | MUL | NULL |  | ai_conversations.id; chat rows only |
+| 7 | `request_id` | `varchar(64)` | NO |  | NULL |  | 客户端本轮请求ID |
+| 8 | `user_message_id` | `bigint unsigned` | YES | UNI | NULL |  | 本轮用户消息ID; chat rows only |
+| 9 | `assistant_message_id` | `bigint unsigned` | YES | MUL | NULL |  | 完成后写入的助手消息ID; chat rows only |
+| 10 | `user_id` | `int unsigned` | NO | MUL | NULL |  | 发起用户ID |
+| 11 | `agent_id` | `bigint unsigned` | NO | MUL | NULL |  | ai_agents.id |
+| 12 | `provider_id` | `bigint unsigned` | NO | MUL | NULL |  | ai_providers.id |
+| 13 | `model_id` | `varchar(191)` | NO |  | NULL |  | 实际调用模型ID |
+| 14 | `model_display_name` | `varchar(191)` | NO |  |  |  | 实际调用模型展示名 |
+| 15 | `input_snapshot` | `mediumtext` | NO |  | NULL |  |  |
+| 16 | `status` | `varchar(16)` | NO | MUL | NULL |  | queued/running/success/failed/canceled/timeout |
+| 17 | `prompt_tokens` | `int unsigned` | NO |  | 0 |  | 输入token |
+| 18 | `completion_tokens` | `int unsigned` | NO |  | 0 |  | 输出token |
+| 19 | `total_tokens` | `int unsigned` | NO |  | 0 |  | 总token |
+| 20 | `usage_status` | `varchar(16)` | NO |  | NULL |  |  |
+| 21 | `duration_ms` | `int unsigned` | YES |  | NULL |  | 运行耗时毫秒，终态后写入 |
+| 22 | `error_message` | `varchar(1024)` | NO |  |  |  | 失败/取消/超时原因 |
+| 23 | `started_at` | `datetime` | YES |  | NULL |  | 开始调用模型时间 |
+| 24 | `finished_at` | `datetime` | YES |  | NULL |  | 进入终态时间 |
+| 25 | `created_at` | `datetime` | NO | MUL | CURRENT_TIMESTAMP | DEFAULT_GENERATED | 创建时间 |
+| 26 | `updated_at` | `datetime` | NO |  | CURRENT_TIMESTAMP | DEFAULT_GENERATED on update CURRENT_TIMESTAMP | 更新时间 |
 
 Indexes:
 - `fk_ai_runs_assistant_message` (non-unique, BTREE): `assistant_message_id`
 - `idx_ai_runs_agent_created` (non-unique, BTREE): `agent_id`, `created_at`, `id`
 - `idx_ai_runs_conversation_created` (non-unique, BTREE): `conversation_id`, `created_at`, `id`
 - `idx_ai_runs_created` (non-unique, BTREE): `created_at`, `id`
+- `idx_ai_runs_platform_modality_created` (non-unique, BTREE): `platform`, `modality`, `created_at`, `id`
 - `idx_ai_runs_provider_created` (non-unique, BTREE): `provider_id`, `created_at`, `id`
+- `idx_ai_runs_source` (non-unique, BTREE): `source_type`, `source_id`, `created_at`, `id`
 - `idx_ai_runs_status_created` (non-unique, BTREE): `status`, `created_at`, `id`
 - `idx_ai_runs_user_created` (non-unique, BTREE): `user_id`, `created_at`, `id`
 - `PRIMARY` (unique, BTREE): `id`
 - `uk_ai_runs_conversation_request` (unique, BTREE): `conversation_id`, `request_id`
+- `uk_ai_runs_source_request` (unique, BTREE): `source_type`, `source_id`, `request_id`
 - `uk_ai_runs_user_message` (unique, BTREE): `user_message_id`
+
+### `ai_text_tasks`
+
+| # | Column | Type | Null | Key | Default | Extra | Comment |
+| ---: | --- | --- | --- | --- | --- | --- | --- |
+| 1 | `id` | `bigint unsigned` | NO | PRI | NULL | auto_increment |  |
+| 2 | `platform` | `varchar(32)` | NO |  | NULL |  |  |
+| 3 | `user_id` | `bigint unsigned` | NO | MUL | NULL |  |  |
+| 4 | `agent_id` | `bigint unsigned` | NO |  | NULL |  |  |
+| 5 | `provider_id` | `bigint unsigned` | NO |  | NULL |  |  |
+| 6 | `model_id` | `varchar(191)` | NO |  | NULL |  |  |
+| 7 | `prompt` | `mediumtext` | NO |  | NULL |  |  |
+| 8 | `answer` | `mediumtext` | YES |  | NULL |  |  |
+| 9 | `status` | `varchar(16)` | NO | MUL | NULL |  |  |
+| 10 | `error_message` | `varchar(1024)` | YES |  | NULL |  |  |
+| 11 | `started_at` | `datetime` | YES |  | NULL |  |  |
+| 12 | `finished_at` | `datetime` | YES |  | NULL |  |  |
+| 13 | `elapsed_ms` | `int unsigned` | NO |  | NULL |  |  |
+| 14 | `created_at` | `datetime` | NO |  | NULL |  |  |
+| 15 | `updated_at` | `datetime` | NO |  | NULL |  |  |
+
+Indexes:
+- `idx_ai_text_tasks_status_created` (non-unique, BTREE): `status`, `created_at`, `id`
+- `idx_ai_text_tasks_user_created` (non-unique, BTREE): `user_id`, `created_at`, `id`
+- `PRIMARY` (unique, BTREE): `id`
 
 ### `ai_tool_calls`
 
@@ -627,24 +635,6 @@ Indexes:
 - `idx_canvas_prompts_status_updated` (non-unique, BTREE): `status`, `is_del`, `updated_at`, `id`
 - `PRIMARY` (unique, BTREE): `id`
 - `uk_canvas_prompts_slug` (unique, BTREE): `slug`
-
-### `canvas_prompts_backup_20260601_before_infinite_import`
-
-| # | Column | Type | Null | Key | Default | Extra | Comment |
-| ---: | --- | --- | --- | --- | --- | --- | --- |
-| 1 | `id` | `bigint unsigned` | NO |  | 0 |  |  |
-| 2 | `slug` | `varchar(191)` | NO |  | NULL |  |  |
-| 3 | `category` | `varchar(191)` | NO |  |  |  |  |
-| 4 | `title` | `varchar(191)` | NO |  | NULL |  |  |
-| 5 | `cover_url` | `varchar(1024)` | NO |  |  |  |  |
-| 6 | `prompt` | `text` | NO |  | NULL |  |  |
-| 7 | `preview` | `varchar(512)` | NO |  |  |  |  |
-| 8 | `tags_json` | `json` | YES |  | NULL |  |  |
-| 9 | `source_url` | `varchar(1024)` | NO |  |  |  |  |
-| 10 | `status` | `tinyint` | NO |  | 1 |  |  |
-| 11 | `is_del` | `tinyint` | NO |  | 2 |  |  |
-| 12 | `created_at` | `datetime` | NO |  | CURRENT_TIMESTAMP | DEFAULT_GENERATED |  |
-| 13 | `updated_at` | `datetime` | NO |  | CURRENT_TIMESTAMP | DEFAULT_GENERATED on update CURRENT_TIMESTAMP |  |
 
 ### `canvas_video_tasks`
 

@@ -1,6 +1,6 @@
 # Runtime Inventory Snapshot
 
-Generated at: 2026-06-07 06:22:32 +08:00
+Generated at: 2026-06-07 19:25:11 +08:00
 
 This artifact is generated from current source manifests and directory structure. It is a navigation inventory, not runtime proof. Served API behavior, smoke/tests, and live MySQL schema still outrank this file.
 
@@ -24,7 +24,7 @@ This artifact is generated from current source manifests and directory structure
 | canvas_front_next `@tanstack/react-query` | `^5.100.9` |
 | canvas_front_next `axios` | `^1.16.0` |
 | Latest MySQL schema artifact | `docs/db/mysql-live-schema-2026-06-07.md` / `docs/db/mysql-live-schema-2026-06-07.sql` |
-| Latest MySQL base table count | `56` |
+| Latest MySQL base table count | `55` |
 
 ## Backend module transport inventory
 
@@ -65,8 +65,8 @@ These are route fragments found in module transport route files. They are useful
 | `admin_back_go/internal/module/ai/agent/transport/admin/route.go` | `DELETE /:id`<br>`GET /`<br>`GET /:id`<br>`GET /options`<br>`GET /page-init`<br>`GET /provider-models/:id`<br>`PATCH /:id/status`<br>`POST /`<br>`POST /:id/test`<br>`PUT /:id` |
 | `admin_back_go/internal/module/ai/chat/transport/canvas/route.go` | `POST /completions` |
 | `admin_back_go/internal/module/ai/conversation/transport/admin/route.go` | `DELETE /:id`<br>`GET /`<br>`GET /:id`<br>`POST /`<br>`PUT /:id` |
-| `admin_back_go/internal/module/ai/image/transport/admin/route.go` | `DELETE /:id`<br>`GET /`<br>`GET /:id`<br>`GET /page-init`<br>`PATCH /:id/favorite`<br>`POST /`<br>`POST /assets` |
-| `admin_back_go/internal/module/ai/image/transport/canvas/route.go` | `GET /:id`<br>`POST /edits`<br>`POST /generations` |
+| `admin_back_go/internal/module/ai/image/transport/admin/route.go` | `DELETE /:id`<br>`GET /`<br>`GET /:id`<br>`GET /page-init`<br>`PATCH /:id/favorite`<br>`POST /` |
+| `admin_back_go/internal/module/ai/image/transport/canvas/route.go` | `DELETE /:id`<br>`GET /`<br>`GET /:id`<br>`POST /edits`<br>`POST /generations` |
 | `admin_back_go/internal/module/ai/knowledge/transport/admin/route.go` | `DELETE /ai-knowledge-bases/:id`<br>`DELETE /ai-knowledge-documents/:id`<br>`GET /ai-agents/:id/knowledge-bases`<br>`GET /ai-knowledge-bases`<br>`GET /ai-knowledge-bases/:id`<br>`GET /ai-knowledge-bases/:id/documents`<br>`GET /ai-knowledge-bases/page-init`<br>`GET /ai-knowledge-documents/:id`<br>`GET /ai-knowledge-documents/:id/chunks`<br>`PATCH /ai-knowledge-bases/:id/status`<br>`PATCH /ai-knowledge-documents/:id/status`<br>`POST /ai-knowledge-bases`<br>`POST /ai-knowledge-bases/:id/documents`<br>`POST /ai-knowledge-bases/:id/retrieval-tests`<br>`POST /ai-knowledge-documents/:id/reindex`<br>`PUT /ai-agents/:id/knowledge-bases`<br>`PUT /ai-knowledge-bases/:id`<br>`PUT /ai-knowledge-documents/:id` |
 | `admin_back_go/internal/module/ai/message/transport/admin/route.go` | `GET /api/admin/v1/ai-conversations/:id/messages`<br>`POST /api/admin/v1/ai-conversations/:id/messages`<br>`POST /api/admin/v1/ai-conversations/:id/messages/cancel` |
 | `admin_back_go/internal/module/ai/provider/transport/admin/route.go` | `DELETE /:id`<br>`GET /`<br>`GET /:id/models`<br>`GET /page-init`<br>`PATCH /:id/status`<br>`POST /`<br>`POST /:id/model-options`<br>`POST /:id/sync-models`<br>`POST /:id/test`<br>`POST /model-options`<br>`PUT /:id`<br>`PUT /:id/models` |
@@ -116,14 +116,14 @@ These are route fragments found in module transport route files. They are useful
 | Hooks | `useCopy.ts`, `useCrudTable.ts`, `useExportSubmit.ts`, `useNetworkStatus.ts`, `useResponsive.ts`, `useTheme.ts`, `useWebSocket.ts` |
 | Router files | `guard-helpers.ts`, `guards.ts`, `index.ts`, `routes.ts`, `runtime-route-tree.ts`, `view-registry.ts` |
 | Store files | `menu.ts`, `tauri.ts`, `user.ts` |
-| View files count | `151` |
+| View files count | `152` |
 
 ## Canvas Next inventory
 
 | Area | Current source items |
 | --- | --- |
 | App pages | `(auth)/login`<br>`(user)/assets`<br>`(user)/canvas/[id]`<br>`(user)/canvas`<br>`(user)/image`<br>`(user)`<br>`(user)/profile`<br>`(user)/prompts`<br>`(user)/video` |
-| API service files | `admin.ts`, `assets.ts`, `auth.test.ts`, `auth.ts`, `error-payload.ts`, `image.test.ts`, `image.ts`, `profile.ts`, `prompts.ts`, `request.test.ts`, `request.ts`, `settings.ts`, `video.test.ts`, `video.ts` |
+| API service files | `admin.ts`, `assets.ts`, `auth.test.ts`, `auth.ts`, `error-payload.ts`, `image-complete-split.test.ts`, `image.test.ts`, `image.ts`, `profile.ts`, `prompts.ts`, `request.test.ts`, `request.ts`, `settings.ts`, `video.test.ts`, `video.ts` |
 | Feature directories | `rbac` |
 | Store files | `use-asset-store.ts`, `use-config-store.test.ts`, `use-config-store.ts`, `use-theme-store.ts`, `use-user-store.test.ts`, `use-user-store.ts` |
 

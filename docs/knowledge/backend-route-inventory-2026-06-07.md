@@ -1,6 +1,6 @@
 # Backend Route Inventory Snapshot
 
-Generated at: 2026-06-07 01:06:34 +08:00
+Generated at: 2026-06-07 19:25:14 +08:00
 
 This artifact is generated from current Go route source files and `admin_back_go/internal/bootstrap/route_meta.go`. It is a source inventory for navigation and contract drift checks, not proof that every route is currently served by a running process. Runtime behavior, smoke output, and captured traffic still outrank this file.
 
@@ -11,12 +11,12 @@ Path inference rule: only literal strings, same-file string constants, and simpl
 | Fact | Value |
 | --- | --- |
 | Route source files with registrations | `45` |
-| Route registrations found | `280` |
-| Inferred full paths | `280` |
+| Route registrations found | `281` |
+| Inferred full paths | `281` |
 | Unresolved registrations | `0` |
 | Callback exception registrations | `1` |
-| Permission route_meta matches | `123` |
-| Operation route_meta matches | `125` |
+| Permission route_meta matches | `122` |
+| Operation route_meta matches | `124` |
 | Unmatched permission route_meta keys | `0` |
 | Unmatched operation route_meta keys | `0` |
 
@@ -26,10 +26,10 @@ Path inference rule: only literal strings, same-file string constants, and simpl
 
 | Surface | Route registrations |
 | --- | --- |
-| `admin` | `245` |
+| `admin` | `244` |
 | `app` | `9` |
 | `callback` | `1` |
-| `canvas` | `25` |
+| `canvas` | `27` |
 
 ## Route inventory
 
@@ -54,13 +54,14 @@ Path inference rule: only literal strings, same-file string constants, and simpl
 | `ai/image` | `admin` | `admin_back_go/internal/module/ai/image/transport/admin/route.go` | `14` | `GET` | `/api/admin/v1/ai-images` | `"/page-init"` | `/page-init` | `/api/admin/v1/ai-images/page-init` | `group-fragment` |  |  |  |
 | `ai/image` | `admin` | `admin_back_go/internal/module/ai/image/transport/admin/route.go` | `15` | `GET` | `/api/admin/v1/ai-images` | `""` |  | `/api/admin/v1/ai-images` | `group-fragment` |  |  |  |
 | `ai/image` | `admin` | `admin_back_go/internal/module/ai/image/transport/admin/route.go` | `16` | `GET` | `/api/admin/v1/ai-images` | `"/:id"` | `/:id` | `/api/admin/v1/ai-images/:id` | `group-fragment` |  |  |  |
-| `ai/image` | `admin` | `admin_back_go/internal/module/ai/image/transport/admin/route.go` | `17` | `POST` | `/api/admin/v1/ai-images` | `"/assets"` | `/assets` | `/api/admin/v1/ai-images/assets` | `group-fragment` |  | `ai_image_asset_add` | `ai_image.register_asset / 注册AI图片资产` |
-| `ai/image` | `admin` | `admin_back_go/internal/module/ai/image/transport/admin/route.go` | `18` | `POST` | `/api/admin/v1/ai-images` | `""` |  | `/api/admin/v1/ai-images` | `group-fragment` |  | `ai_image_task_add` | `ai_image.create_task / 提交AI图片任务` |
-| `ai/image` | `admin` | `admin_back_go/internal/module/ai/image/transport/admin/route.go` | `19` | `PATCH` | `/api/admin/v1/ai-images` | `"/:id/favorite"` | `/:id/favorite` | `/api/admin/v1/ai-images/:id/favorite` | `group-fragment` |  | `ai_image_task_favorite` | `ai_image.favorite / 收藏AI图片任务` |
-| `ai/image` | `admin` | `admin_back_go/internal/module/ai/image/transport/admin/route.go` | `20` | `DELETE` | `/api/admin/v1/ai-images` | `"/:id"` | `/:id` | `/api/admin/v1/ai-images/:id` | `group-fragment` |  | `ai_image_task_del` | `ai_image.delete / 删除AI图片任务` |
-| `ai/image` | `canvas` | `admin_back_go/internal/module/ai/image/transport/canvas/route.go` | `14` | `POST` | `/api/canvas/v1/ai/images` | `"/generations"` | `/generations` | `/api/canvas/v1/ai/images/generations` | `group-fragment` |  |  |  |
-| `ai/image` | `canvas` | `admin_back_go/internal/module/ai/image/transport/canvas/route.go` | `15` | `POST` | `/api/canvas/v1/ai/images` | `"/edits"` | `/edits` | `/api/canvas/v1/ai/images/edits` | `group-fragment` |  |  |  |
-| `ai/image` | `canvas` | `admin_back_go/internal/module/ai/image/transport/canvas/route.go` | `16` | `GET` | `/api/canvas/v1/ai/images` | `"/:id"` | `/:id` | `/api/canvas/v1/ai/images/:id` | `group-fragment` |  |  |  |
+| `ai/image` | `admin` | `admin_back_go/internal/module/ai/image/transport/admin/route.go` | `17` | `POST` | `/api/admin/v1/ai-images` | `""` |  | `/api/admin/v1/ai-images` | `group-fragment` |  | `ai_image_task_add` | `ai_image.create_task / 提交AI图片任务` |
+| `ai/image` | `admin` | `admin_back_go/internal/module/ai/image/transport/admin/route.go` | `18` | `PATCH` | `/api/admin/v1/ai-images` | `"/:id/favorite"` | `/:id/favorite` | `/api/admin/v1/ai-images/:id/favorite` | `group-fragment` |  | `ai_image_task_favorite` | `ai_image.favorite / 收藏AI图片任务` |
+| `ai/image` | `admin` | `admin_back_go/internal/module/ai/image/transport/admin/route.go` | `19` | `DELETE` | `/api/admin/v1/ai-images` | `"/:id"` | `/:id` | `/api/admin/v1/ai-images/:id` | `group-fragment` |  | `ai_image_task_del` | `ai_image.delete / 删除AI图片任务` |
+| `ai/image` | `canvas` | `admin_back_go/internal/module/ai/image/transport/canvas/route.go` | `14` | `GET` | `/api/canvas/v1/ai/images` | `""` |  | `/api/canvas/v1/ai/images` | `group-fragment` |  |  |  |
+| `ai/image` | `canvas` | `admin_back_go/internal/module/ai/image/transport/canvas/route.go` | `15` | `POST` | `/api/canvas/v1/ai/images` | `"/generations"` | `/generations` | `/api/canvas/v1/ai/images/generations` | `group-fragment` |  |  |  |
+| `ai/image` | `canvas` | `admin_back_go/internal/module/ai/image/transport/canvas/route.go` | `16` | `POST` | `/api/canvas/v1/ai/images` | `"/edits"` | `/edits` | `/api/canvas/v1/ai/images/edits` | `group-fragment` |  |  |  |
+| `ai/image` | `canvas` | `admin_back_go/internal/module/ai/image/transport/canvas/route.go` | `17` | `GET` | `/api/canvas/v1/ai/images` | `"/:id"` | `/:id` | `/api/canvas/v1/ai/images/:id` | `group-fragment` |  |  |  |
+| `ai/image` | `canvas` | `admin_back_go/internal/module/ai/image/transport/canvas/route.go` | `18` | `DELETE` | `/api/canvas/v1/ai/images` | `"/:id"` | `/:id` | `/api/canvas/v1/ai/images/:id` | `group-fragment` |  |  |  |
 | `ai/knowledge` | `admin` | `admin_back_go/internal/module/ai/knowledge/transport/admin/route.go` | `13` | `GET` | `/api/admin/v1` | `"/ai-knowledge-bases/page-init"` | `/ai-knowledge-bases/page-init` | `/api/admin/v1/ai-knowledge-bases/page-init` | `group-fragment` |  |  |  |
 | `ai/knowledge` | `admin` | `admin_back_go/internal/module/ai/knowledge/transport/admin/route.go` | `14` | `GET` | `/api/admin/v1` | `"/ai-knowledge-bases"` | `/ai-knowledge-bases` | `/api/admin/v1/ai-knowledge-bases` | `group-fragment` |  |  |  |
 | `ai/knowledge` | `admin` | `admin_back_go/internal/module/ai/knowledge/transport/admin/route.go` | `15` | `GET` | `/api/admin/v1` | `"/ai-knowledge-bases/:id"` | `/ai-knowledge-bases/:id` | `/api/admin/v1/ai-knowledge-bases/:id` | `group-fragment` |  |  |  |

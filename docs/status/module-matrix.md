@@ -765,177 +765,32 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
 ### AI image playground gpt-image-2
 
 - Backend:
-  - implemented: active tables are `ai_image_tasks`, `ai_image_assets`, and `ai_image_task_assets`
-  - active module is `internal/module/ai/image`
-  - route group is `/api/admin/v1/ai-images`
-  - image generation is asynchronous through Redis/Asynq task `ai:image-generate:v1`
-  - service accepts only enabled `ai_agents` with `scene=image_generate`, OpenAI-compatible provider, and
-    `model_id=gpt-image-2`
-  - generated b64 outputs are archived to COS and remote URL outputs are kept as remote assets
+  - implemented/in progress: Admin image playground and Canvas image generation are one AI image capability owned by `internal/module/ai/image`
+  - active tables are `ai_image_tasks` and `ai_image_files`; platform ownership is expressed by the task `platform` column
+  - retired tables `admin_ai_image_tasks`, `admin_ai_image_files`, `canvas_image_tasks`, `canvas_image_files`, `ai_image_assets`, and `ai_image_task_assets` are copied into the single tables then dropped by `20260607_ai_image_single_capability_convergence.sql`
+  - active Admin transport is `internal/module/ai/image/transport/admin`; active Canvas transport is `internal/module/ai/image/transport/canvas`
+  - Admin route group remains `/api/admin/v1/ai-images`; Canvas route group remains `/api/canvas/v1/ai/images`
+  - image generation is asynchronous through the AI image task handler; `ai_runs.source_type` is `ai_image_task` for Admin and Canvas image attempts
+  - Admin service accepts agents with `scene=image_generate`; Canvas service accepts agents with `scene=canvas_image_generate`; both share repository/service/model ownership and are separated by `platform`
+  - generated b64 outputs are archived to COS and remote URL outputs are kept as task-owned output files
   - OperationLog route metadata skips request/response payload capture for prompt/image safety
 - Frontend:
-  - adapted: `/ai/image-playground` resolves to `src/views/Main/ai/image-playground/index.vue`, selects an image
-    agent only, uploads reference/mask images via existing COS-only upload-token runtime, registers assets, submits
-    tasks, lists history, opens detail, reuses prompts/assets, toggles favorite, deletes, and downloads outputs
-  - no provider/model/API-key UI, no IndexedDB/localStorage source of truth
+  - adapted: `/ai/image-playground` resolves to `src/views/Main/ai/image-playground/index.vue` and now uses a Canvas-style three-panel studio: records, composer, result
+  - adapted: uploads reference/mask images via existing COS-only upload-token runtime, sends task-owned `input_files`/`mask_file` metadata with `POST /api/admin/v1/ai-images`, lists history, selects inline result details, reuses prompts/files, toggles favorite, deletes, and downloads outputs
+  - removed: `POST /api/admin/v1/ai-images/assets`, global asset registration DTOs, provider/model/API-key UI, IndexedDB/localStorage source of truth, and the old table-plus-bottom-composer layout
+  - Canvas image history is read/deleted through backend `GET/DELETE /api/canvas/v1/ai/images`; browser cache is not used as business persistence
 - Tests:
-  - `internal/module/ai/image`, `internal/infra/ai/imagecompat`, `internal/infra/storage/cos`, `internal/bootstrap`,
-    `internal/jobs`, `internal/server`
-  - frontend `src/api/ai/images.ts`, `src/views/Main/ai/image-playground/*`, `tests/shared/ai/ai-image-api.test.ts`,
-    `vue-tsc`
+  - `internal/module/ai/image`, `internal/infra/storage/cos`, `internal/bootstrap`, `internal/jobs`, `internal/server`, `internal/architecture`
+  - frontend `src/api/ai/images.ts`, `src/views/Main/ai/image-playground/*`, `tests/shared/ai/ai-image-api.test.ts`, `tests/shared/ai/ai-image-complete-split.test.ts`, `vue-tsc`; Canvas Next `src/services/api/image-complete-split.test.ts`
 - Smoke:
-  - full smoke probes `ai-agents?scene=image_generate`, `ai-agents/options?scene=image_generate`,
-    `ai-images/page-init`, `ai-images` list, and optional detail when a task exists
+  - full smoke probes `ai-agents?scene=image_generate`, `ai-agents/options?scene=image_generate`, `ai-images/page-init`, `ai-images` list, and optional detail when a task exists
   - actual provider generation needs configured agent + worker + COS
-- Docs: AI image playground spec/plan + admin API contract + smoke matrix
+- Docs: AI image single capability spec/plan + admin API contract + smoke matrix
 - Risk:
   - no multi-model selector, no custom provider UI, no provider-key browser storage, no IndexedDB primary store
-  - real image generation requires an enabled queue worker, Tencent COS upload config, and a valid `gpt-image-2`
-    agent
+  - real image generation requires an enabled queue worker, Tencent COS upload config, and a valid image agent
   - upload runtime is Tencent COS-only
   - `bucket_domain` is stored as a bare host and runtime builds HTTPS public URLs
-  - Admin image generation is a provider runtime caller and now records `ai_runs`; it does not restore old AI billing.
-  - Canvas frontend integration is now tracked under `canvas_front_next / canvas platform API`; admin AI image remains independently supported.
-
-### AI run monitor unified provider-attempt MVP
-
-- Backend:
-  - implemented: active lifecycle tables are `ai_runs` and `ai_run_events`
-  - `internal/module/ai/run` owns one provider-attempt row for Admin chat, Canvas text, Admin/Canvas image, and Canvas video.
-    Chat rows may link persisted user/assistant messages; text/image/video rows use `source_type/source_id/input_snapshot`
-    instead of fake messages.
-  - run rows record `platform`, `modality`, `source_type`, `source_id`, `input_snapshot`, `usage_status`,
-    prompt/completion/total tokens, duration, and lifecycle events `start/completed/failed/canceled/timeout`; WebSocket
-    delta is never persisted
-  - stream timeout governance is layered: online stream max/idle timeout and stale-run cron cleanup are separate
-  - detail additionally reads `ai_tool_calls` and `ai_knowledge_retrievals`/`ai_knowledge_retrieval_hits` as
-    separate audit blocks
-  - no daily aggregate table, billing amount, raw provider usage dump, provider secrets, image bytes, or execution-step timeline
-- Frontend:
-  - adapted: `/ai/runs` uses Go REST typed client with platform/modality/source/usage filters, non-null source fields,
-    nullable chat message links, lifecycle event `message`, `avg_duration_ms`, `tool_calls`, and `knowledge_retrievals`
-  - old status/model/duration/error/event-payload aliases and execution-step UI are removed
-- Tests:
-  - `internal/shared/enum`, `internal/shared/dict`, `internal/module/ai/chat`, `internal/module/ai/run`,
-    `internal/module/ai/knowledge`
-  - frontend `src/api/ai/runs.ts`, `src/views/Main/ai/runs/*`, `vue-tsc`
-- Smoke:
-  - full smoke read gate covers page-init/list/stats shape and optional run detail
-    `tool_calls`/`knowledge_retrievals`
-  - unit tests cover runtime writes, terminal statuses, timeout marker, stale-only sweeper cutoff, monitor
-    aggregates, tool calls, and knowledge retrieval detail
-- Docs: AI run monitor spec/plan + AI knowledge RAG spec/plan + admin API contract + smoke matrix + backend architecture
-- Risk:
-  - token/duration stats cover all recorded modalities
-  - no billing, raw provider usage replay, or daily aggregate table in this slice
-
-### AI tool runtime MVP
-
-- Backend:
-  - implemented: active tables are `ai_tools`, `ai_agent_tools`, and `ai_tool_calls`
-  - active module is `internal/module/ai/tool`
-  - seed tool `admin_user_count` is read-only low-risk and returns only `total_users/enabled_users/disabled_users`
-  - `aichat` loads enabled agent tool bindings, sends structured function tools to the OpenAI-compatible provider,
-    executes one tool-call round, stores every call in `ai_tool_calls`, then sends tool output back for the final
-    assistant answer
-  - AI tool generation uses existing `agent_generate` agents to return a draft only and does not insert `ai_tools`
-  - no `ai_tools.executor` duplicate field, no `ai_agents` tool JSON field, and no old tool-map active runtime
-- Frontend:
-  - adapted: `/ai/tools` is tool definition management only and has an RBAC-gated `AI生成` draft dialog
-  - generated drafts fill the existing add form and final save still uses `POST /api/admin/v1/ai-tools`
-  - `/ai/agents` owns tool usage configuration through `GET/PUT /api/admin/v1/ai-agents/:id/tools`
-  - `/ai/runs` detail renders `tool_calls` with arguments/result/error/duration
-- Tests:
-  - `internal/module/ai/tool`, `internal/module/ai/chat`, `internal/module/ai/run`,
-    `internal/infra/ai/openaicompat`, `internal/server`, `internal/bootstrap`
-  - frontend `src/api/ai/tools.ts`, `src/views/Main/ai/tools/*`, `src/api/ai/agents.ts`,
-    `src/views/Main/ai/agents/*`, `src/api/ai/runs.ts`, `src/views/Main/ai/runs/*`
-- Smoke:
-  - full smoke probes `/ai-tools/page-init`, `/ai-tools/generate/page-init`, `/ai-tools`, optional
-    `/ai-agents/:id/tools` when an agent option exists, and run detail `tool_calls` when a run exists
-  - focused tests cover internal dispatch, binding, provider tool-call shape, generate-draft contract, and monitor
-    detail
-- Docs:
-  - AI tool runtime spec/plan + AI tool generate-draft plan + admin API contract + smoke matrix + backend
-    architecture
-- Risk:
-  - MVP intentionally excludes external HTTP tools, MCP, RAG, write-operation tools, manual execute button, billing,
-    multi-round tool loops, and persistent run-monitor rows for admin-side draft generation
-
-### AI knowledge base RAG MVP
-
-- Backend:
-  - implemented: active tables are `ai_knowledge_bases`, `ai_knowledge_documents`, `ai_knowledge_chunks`,
-    `ai_agent_knowledge_bases`, `ai_knowledge_retrievals`, and `ai_knowledge_retrieval_hits`
-  - active module is `internal/module/ai/knowledge`
-  - `/api/admin/v1/ai-knowledge-bases` manages local bases/documents/chunks/retrieval tests
-  - `/api/admin/v1/ai-agents/:id/knowledge-bases` stores which knowledge bases an agent can read
-  - `aichat` retrieves bound knowledge before provider call, injects selected context only into the current model
-    input, and writes retrieval/hit audit rows
-  - no vector DB, no hosted file_search, no Dify/RAGFlow dataset sync, no `ai_agents` knowledge JSON
-- Frontend:
-  - adapted: `/ai/knowledge` uses `src/api/ai/knowledge.ts` and split Vue components for base list, base form,
-    document panel, document form, chunks, and retrieval test
-  - `/ai/agents` adds knowledge binding dialog with per-base top_k/min_score/max_context_chars/status
-  - `/ai/runs` detail renders `knowledge_retrievals` before tool calls
-- Tests:
-  - `database/migrations/20260510_ai_knowledge_rag.sql`, `internal/module/ai/knowledge`, `internal/module/ai/chat`,
-    `internal/module/ai/run`, `internal/server`, `internal/bootstrap`
-  - frontend `src/api/ai/knowledge.ts`, `src/views/Main/ai/knowledge/*`, `src/api/ai/agents.ts`,
-    `src/views/Main/ai/agents/*`, `src/api/ai/runs.ts`, `src/views/Main/ai/runs/*`
-- Smoke:
-  - full smoke probes knowledge init/list/seed presence
-  - focused tests cover chunking, retrieval scoring/context, CRUD/binding/runtime retrieval, chat injection/failure
-    continuation, run detail retrievals, frontend API contracts, and vue-tsc
-- Docs: AI knowledge RAG spec/plan + admin API contract + smoke matrix + backend architecture
-- Risk:
-  - local deterministic retrieval is MVP quality
-  - semantic embeddings/vector DB/OCR/multi-tenant isolation are intentionally out of scope
-
-### realtime / WebSocket / AI conversation
-
-- Backend:
-  - implemented baseline plus restored old-admin conversation UX: gorilla/websocket thin wrapper, authenticated
-    admin ws route, path-scoped browser cookie auth for `/api/admin/v1/realtime/ws`, explicit Origin allowlist,
-    local connection manager, bounded send queue, read/write pump, connected event, ping/pong, identity topic
-    subscribe whitelist, local/no-op/redis Publisher boundary, Redis Pub/Sub notification fan-out,
-    conversation-scoped AI `ai.response.start/delta/completed/failed.v1` publication, in-process reply dispatcher
-    cancel by `conversation_id + request_id`, configured live reply max duration, provider stream idle timeout
-    without 30s HTTP total timeout, `ai_messages.meta_json` for explicit attachments/runtime params,
-    OpenAI-compatible vision content and `temperature/max_tokens/max_history` passthrough, typed REALTIME config,
-    localized disabled 503 and missing-identity errors
-- Frontend:
-  - adapted baseline plus restored chat surface: Vue client uses Go WS URL/envelope and no longer uses old
-    `/api/admin/WebSocket/bind`; current active path is `/api/admin/v1/realtime/ws`, message bus accepts
-    `ai.response.start/delta/completed/failed.v1`, AI chat page
-    uses `/ai-conversations/:id/messages` + `/messages/cancel` + shared WebSocket only, switches agent-scoped
-    conversations/messages without interrupting other agent sessions, moves conversation list into a drawer,
-    restores image upload/paste/drag, emoji, voice input, runtime params, local stop ignoring late events, and no
-    longer uses SSE/streamable polling/run events
-- Tests:
-  - `internal/infra/realtime`, `internal/module/realtime`, `internal/module/ai/chat`,
-    `internal/module/ai/conversation`, `internal/module/ai/message`, `internal/module/ai/agent`,
-    `internal/bootstrap`, `internal/config`, `internal/server`, `internal/infra/ai/openaicompat`,
-    `internal/shared/i18n`
-  - frontend AI REST/WebSocket/input/session Vitest + vue-tsc/build, including `AI-FE-001` canceled stream late-event regression coverage
-- Smoke:
-  - basic smoke covers backend connect/ping/pong
-  - full smoke covers AI conversation/read probes
-  - tests cover subscribe reject, disabled route, local/noop/redis publisher selection, browser cookie auth/origin
-    policy, localized disabled/missing-identity responses, frontend URL/envelope cleanup, conversation event
-    dispatch, session LRU pending preservation, restored input tools, dispatcher cancellation, OpenAI stream
-    idle/usage request behavior, OpenAI vision request shape, and message meta persistence
-- Docs: architecture + realtime/API contract + smoke matrix + AI conversation spec/plan
-- Risk:
-  - no arbitrary business topic permission yet
-  - AI response events are conversation-scoped first-version envelopes only
-  - no SSE/EventSource/streamable fallback, no `/ai-chat/runs` browser path, no Redis Stream replay, no real
-    provider E2E unless separately configured
-  - image upload needs Go upload runtime/COS config
-  - OpenAI-compatible `/chat/completions` cancellation is by request context, not provider stop API
-  - run monitor stores only final lifecycle/token facts
-  - ticket auth still planned for cross-domain/gateway cases
-
 
 ## Canvas frontend runtime
 
@@ -943,11 +798,11 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
 
 - Backend:
   - implemented: `auth_platforms.canvas` seed and canvas capability permissions, `/api/canvas/v1/auth/*`, `/api/canvas/v1/users/me`, `/api/canvas/v1/profile`, public settings/prompts/assets, and AI text/image/video generation routes. Old Canvas wallet/recharge UI/routes are retired from the Canvas free-generation surface; payment/wallet基础域 remains outside Canvas AI.
-  - route ownership: auth has dedicated `transport/admin`, `transport/app`, and `transport/canvas`; user app owns `/api/app/v1/users/me`, user canvas owns `/api/canvas/v1/users/me`; profile app owns `/api/app/v1/profile`, profile canvas owns `/api/canvas/v1/profile`; Canvas AI routes are owned by `internal/module/ai/chat|image|video/transport/canvas`; payment/wallet admin routes remain payment-owned, and Canvas AI generation no longer depends on payment/wallet transport.
+  - route ownership: auth has dedicated `transport/admin`, `transport/app`, and `transport/canvas`; user app owns `/api/app/v1/users/me`, user canvas owns `/api/canvas/v1/users/me`; profile app owns `/api/app/v1/profile`, profile canvas owns `/api/canvas/v1/profile`; Canvas chat/video AI routes are owned by `internal/module/ai/chat|video/transport/canvas`, while Canvas image routes are owned by `internal/module/ai/image/transport/canvas`; payment/wallet admin routes remain payment-owned, and Canvas AI generation no longer depends on payment/wallet transport.
   - implemented: `permissions/page-init` default platform dictionary includes `admin/app/canvas`; canvas RBAC gates live in `permissions.platform='canvas'` and are not copied into an admin menu tree.
   - planned cleanup: Canvas PAGE rows stay focused on free-generation pages (`canvas_page`, `canvas_image_page`, `canvas_video_page`, `canvas_prompts_page`, `canvas_assets_page`, `canvas_profile_page`) and BUTTON rows stay focused on generation/assets/prompts (`canvas_access`, `canvas_prompt_read`, `canvas_asset_read`, `canvas_ai_image_generate`, `canvas_ai_video_generate`); old wallet/recharge Canvas rows are retired with the old AI billing surface. Canvas auth login `data.user` and `/api/canvas/v1/users/me` return the canonical users/me payload (`user_id`, `username`, `avatar`, `role_name`, `permissions`, `router`, `buttonCodes`) instead of permission alias fields.
   - implemented: `/api/*/auth/login-config` returns `allow_register`; Canvas uses it with login types and slide captcha, and no `/api/canvas/v1/auth/register` route is exposed.
-  - implemented: text/image/video generation use backend-managed provider config for free; old `ai_billing_records(platform=canvas)` charge/refund/audit is deleted; video binds upstream task id to `canvas_video_tasks.provider_task_id` and reads status/content by task ownership (`id + user_id + is_del=2`).
+  - implemented: text/image/video generation use backend-managed provider config for free; old `ai_billing_records(platform=canvas)` charge/refund/audit is deleted; image tasks use `ai_image_tasks/ai_image_files` with `platform=canvas`; video binds upstream task id to `canvas_video_tasks.provider_task_id` and reads status/content by task ownership (`id + user_id + is_del=2`).
   - implemented: `/api/canvas/v1/settings` exposes selectable AI runtime through `agents.text|image|video` derived from enabled `ai_agents` Canvas-specific scene bindings (`canvas_text_generate`, `canvas_image_generate`, `canvas_video_generate`); old billing-scene metadata is removed and must not be treated as a model source.
   - not implemented in this slice: `admin_front_ts` Canvas prompt/asset CRUD UI and cloud-synced `canvas_projects`.
 - Frontend:
@@ -967,7 +822,7 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
   - canvas spec/plan, current-status, module matrix, admin API contract, and smoke matrix.
 - Risk:
   - live provider credentials/model availability still determines real text/image/video generation success; provider calls are backend-owned and fail closed without billing refund side effects.
-  - only new canvas business tables are `canvas_prompts`, `canvas_assets`, and `canvas_video_tasks`; do not add `canvas_users`, `canvas_credit_logs`, `canvas_settings`, `canvas_projects`, or `canvas_wallets` without a new spec.
+  - current Canvas business tables include `canvas_prompts`, `canvas_assets`, `canvas_video_tasks`; Canvas image history is stored in `ai_image_tasks` / `ai_image_files` with `platform=canvas`; do not add `canvas_users`, `canvas_credit_logs`, `canvas_settings`, `canvas_projects`, or `canvas_wallets` without a new spec.
 
 ## Removed / retired scope
 

@@ -1331,26 +1331,30 @@ try {
         }
 
         $schemaCount = Get-SchemaBaseTableCount $schemaMdPath
-        if ($schemaCount -ne 56) {
-            Add-Failure $failures "schema snapshot expected 56 base tables, got $schemaCount"
+        if ($schemaCount -ne 55) {
+            Add-Failure $failures "schema snapshot expected 55 base tables, got $schemaCount"
         }
         [void]$evidence.Add("schema_snapshot_base_tables=$schemaCount")
-        foreach ($table in @('users', 'permissions', 'ai_agents', 'canvas_prompts', 'canvas_assets', 'canvas_video_tasks', 'payment_recharges')) {
+        foreach ($table in @('users', 'permissions', 'ai_agents', 'ai_image_tasks', 'ai_image_files', 'canvas_prompts', 'canvas_assets', 'canvas_video_tasks', 'payment_recharges')) {
             Assert-Contains $failures $schemaSqlPath "CREATE TABLE ``$table``" "schema DDL missing table $table"
         }
 
         $dbSchemaOwnershipReviewed = Get-MarkdownSummaryCount $dbSchemaOwnershipMapPath 'Live tables reviewed'
-        $dbSchemaOwnershipLiveOnly = Get-MarkdownSummaryCount $dbSchemaOwnershipMapPath 'live-schema-only'
+        $dbSchemaOwnershipText = Read-Text $dbSchemaOwnershipMapPath
+        $dbSchemaOwnershipLiveOnly = 0
+        if ($dbSchemaOwnershipText.Contains('| live-schema-only |')) {
+            $dbSchemaOwnershipLiveOnly = Get-MarkdownSummaryCount $dbSchemaOwnershipMapPath 'live-schema-only'
+        }
         [void]$evidence.Add("db_schema_ownership_live_tables_reviewed=$dbSchemaOwnershipReviewed")
         [void]$evidence.Add("db_schema_ownership_live_schema_only=$dbSchemaOwnershipLiveOnly")
         if ($dbSchemaOwnershipReviewed -ne $schemaCount) {
             Add-Failure $failures "DB schema ownership reviewed $dbSchemaOwnershipReviewed tables, but schema snapshot has $schemaCount base tables"
         }
-        if ($dbSchemaOwnershipLiveOnly -ne 1) {
-            Add-Failure $failures "DB schema ownership live-schema-only count changed from expected 1 to $dbSchemaOwnershipLiveOnly"
+        if ($dbSchemaOwnershipLiveOnly -ne 0) {
+            Add-Failure $failures "DB schema ownership live-schema-only count changed from expected 0 to $dbSchemaOwnershipLiveOnly"
         }
         Assert-Contains $failures $dbSchemaOwnershipMapPath 'not a migration history' 'DB schema ownership scope disclaimer drift'
-        foreach ($table in @('users', 'permissions', 'ai_agents', 'canvas_prompts', 'payment_recharges', 'canvas_prompts_backup_20260601_before_infinite_import')) {
+        foreach ($table in @('users', 'permissions', 'ai_agents', 'ai_image_tasks', 'ai_image_files', 'canvas_prompts', 'payment_recharges')) {
             Assert-Contains $failures $dbSchemaOwnershipMapPath "``$table``" "DB schema ownership missing table $table"
         }
 
@@ -1400,8 +1404,8 @@ try {
         if ($backendCapabilityCount -lt 30) {
             Add-Failure $failures "backend capability manifest capability count unexpectedly low: $backendCapabilityCount"
         }
-        if ($backendCapabilityHelpers -ne 3) {
-            Add-Failure $failures "backend capability manifest helper package count changed from expected 3 to $backendCapabilityHelpers"
+        if ($backendCapabilityHelpers -ne 4) {
+            Add-Failure $failures "backend capability manifest helper package count changed from expected 4 to $backendCapabilityHelpers"
         }
         Assert-Contains $failures $backendCapabilityManifestPath 'instead of being promoted by fallback' 'backend capability manifest no-fallback helper rule drift'
         foreach ($capability in @('ai/agent', 'payment/wallet', 'notification/task', 'auth', 'user')) {
@@ -1730,20 +1734,25 @@ try {
         Assert-Contains $failures $knowledgePath 'docs/knowledge/admin-front-ai-image-payload-source-quality-review-2026-06-07.md' 'current runtime knowledge Admin AI image payload review drift'
         Assert-Contains $failures $sourceMapPath 'docs/knowledge/admin-front-ai-image-payload-source-quality-review-2026-06-07.md' 'runtime source map Admin AI image payload review drift'
         Assert-Contains $failures $statusPath 'docs/knowledge/admin-front-ai-image-payload-source-quality-review-2026-06-07.md' 'status Admin AI image payload review drift'
-        Assert-Contains $failures 'docs/knowledge/admin-front-ai-image-payload-source-quality-review-2026-06-07.md' 'fallback candidates = 555' 'Admin AI image payload review fallback count drift'
+        Assert-Contains $failures 'docs/knowledge/admin-front-ai-image-payload-source-quality-review-2026-06-07.md' 'fallback candidates = 542' 'Admin AI image payload review fallback count drift'
         Assert-Contains $failures 'docs/knowledge/admin-front-ai-image-payload-source-quality-review-2026-06-07.md' 'optionalImageEnum(...) treats only `undefined` and explicit empty string' 'Admin AI image payload review enum decision drift'
         Assert-Contains $failures 'admin_front_ts/tests/shared/ai/ai-image-api.test.ts' 'normalizes optional create-task payload fields without logical-or fallbacks' 'Admin AI image payload source guard missing'
         Assert-Contains $failures 'admin_front_ts/src/api/ai/images.ts' 'function optionalImageEnum<T extends string>(value: T |' 'Admin AI image optional enum helper missing'
-        Assert-Contains $failures 'admin_front_ts/src/api/ai/images.ts' 'function optionalPositiveID(value: number | undefined, label: string): number | undefined' 'Admin AI image optional ID helper missing'
         Assert-Contains $failures 'admin_front_ts/src/api/ai/images.ts' 'size: optionalImageEnum(payload.size),' 'Admin AI image size normalization drift'
-        Assert-Contains $failures 'admin_front_ts/src/api/ai/images.ts' "mask_asset_id: optionalPositiveID(payload.mask_asset_id, 'AI image mask asset id')," 'Admin AI image mask ID normalization drift'
+        Assert-Contains $failures 'admin_front_ts/src/api/ai/images.ts' 'input_files: payload.input_files,' 'Admin AI image input file payload drift'
+        Assert-Contains $failures 'admin_front_ts/src/api/ai/images.ts' 'mask_file: payload.mask_file,' 'Admin AI image mask file payload drift'
+        Assert-Contains $failures 'admin_front_ts/tests/shared/ai/ai-image-complete-split.test.ts' 'does not revive the old global ai_images asset contract' 'Admin AI image complete split source guard missing'
+        Assert-NotContains $failures 'admin_front_ts/src/api/ai/images.ts' '/ai-images/assets' 'Admin AI image asset registration route reintroduced'
+        Assert-NotContains $failures 'admin_front_ts/src/api/ai/images.ts' 'input_asset_ids' 'Admin AI image input asset IDs reintroduced'
+        Assert-NotContains $failures 'admin_front_ts/src/api/ai/images.ts' 'mask_asset_id' 'Admin AI image mask asset ID reintroduced'
+        Assert-NotContains $failures 'admin_front_ts/src/api/ai/images.ts' 'mask_target_asset_id' 'Admin AI image mask target asset ID reintroduced'
         Assert-NotContains $failures 'admin_front_ts/src/api/ai/images.ts' 'payload.size || undefined' 'Admin AI image reintroduced size fallback'
         Assert-NotContains $failures 'admin_front_ts/src/api/ai/images.ts' 'payload.quality || undefined' 'Admin AI image reintroduced quality fallback'
         Assert-NotContains $failures 'admin_front_ts/src/api/ai/images.ts' 'payload.output_format || undefined' 'Admin AI image reintroduced output format fallback'
         Assert-NotContains $failures 'admin_front_ts/src/api/ai/images.ts' 'payload.moderation || undefined' 'Admin AI image reintroduced moderation fallback'
         Assert-NotContains $failures 'admin_front_ts/src/api/ai/images.ts' 'if (payload.mask_asset_id)' 'Admin AI image reintroduced truthy mask ID guard'
         Assert-NotContains $failures 'admin_front_ts/src/api/ai/images.ts' 'if (payload.mask_target_asset_id)' 'Admin AI image reintroduced truthy mask target ID guard'
-        Assert-Contains $failures $adminFrontSourceQualityPath 'admin_front_ts/src/api/ai/images.ts` | L129 `logical-or-fallback`' 'Admin AI image inventory evidence drift'
+        Assert-Contains $failures $adminFrontSourceQualityPath 'admin_front_ts/src/api/ai/images.ts` | L130 `logical-or-fallback`' 'Admin AI image inventory evidence drift'
         Assert-Contains $failures 'docs/status/known-issues.md' 'Status: resolved on 2026-06-07 as an AI image create-task optional payload fallback cleanup.' 'ADMIN-FRONT-HARDENING-014 resolved status drift'
         [void]$evidence.Add('admin_front_ai_image_payload_source_quality=covered')
 

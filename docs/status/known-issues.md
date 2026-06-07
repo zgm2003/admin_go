@@ -6,7 +6,7 @@
 
 ## Current open issues
 
-No current open issue is tracked in this file after the 2026-06-07 Admin demo any cleanup. Do not treat this as “all quality debt closed”; `any/as any/catch(error: any)/direct external HTTP` candidates are currently zero, while the remaining `555` fallback rows stay in `docs/knowledge/admin-front-source-quality-inventory-2026-06-07.md` as review inventory.
+No current open issue is tracked in this file after the 2026-06-07 Admin demo any cleanup. Do not treat this as “all quality debt closed”; `any/as any/catch(error: any)/direct external HTTP` candidates are currently zero, while the remaining `542` fallback rows stay in `docs/knowledge/admin-front-source-quality-inventory-2026-06-07.md` as review inventory.
 
 ## Recently resolved
 
@@ -17,11 +17,11 @@ Status: resolved on 2026-06-07 as an AI image create-task optional payload fallb
 Evidence:
 
 ```text
-admin_front_ts/src/api/ai/images.ts defines optionalImageEnum(...) and optionalPositiveID(...).
-admin_front_ts/src/api/ai/images.ts no longer contains payload.size || undefined, payload.quality || undefined, payload.output_format || undefined, payload.moderation || undefined, if (payload.mask_asset_id), or if (payload.mask_target_asset_id).
-admin_front_ts/tests/shared/ai/ai-image-api.test.ts guards the source shape.
+admin_front_ts/src/api/ai/images.ts defines optionalImageEnum(...), input_files, and mask_file.
+admin_front_ts/src/api/ai/images.ts no longer contains payload.size || undefined, payload.quality || undefined, payload.output_format || undefined, payload.moderation || undefined, /ai-images/assets, input_asset_ids, mask_asset_id, or mask_target_asset_id.
+admin_front_ts/tests/shared/ai/ai-image-api.test.ts and admin_front_ts/tests/shared/ai/ai-image-complete-split.test.ts guard the source shape.
 docs/knowledge/admin-front-ai-image-payload-source-quality-review-2026-06-07.md records the source decision and inventory result.
-docs/knowledge/admin-front-source-quality-inventory-2026-06-07.md now reports fallback candidates = 555 and images.ts with only the positiveID validation predicate logical-or row.
+docs/knowledge/admin-front-source-quality-inventory-2026-06-07.md now reports fallback candidates = 542 and images.ts with only the positiveID validation predicate logical-or row.
 ```
 
 Boundary:

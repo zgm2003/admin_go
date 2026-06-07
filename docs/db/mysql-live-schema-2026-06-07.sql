@@ -1,5 +1,5 @@
 -- MySQL live schema snapshot
--- Verified at: 2026-06-07 00:30:27 +08:00
+-- Verified at: 2026-06-07 19:24:51 +08:00
 -- Truth source: live MySQL DATABASE() = admin on 127.0.0.1:3307
 -- Generated via mysqldump --no-data. Secrets are not included.
 
@@ -106,94 +106,63 @@ CREATE TABLE `ai_conversations` (
   KEY `idx_ai_conversations_user_agent_del_last_message` (`user_id`,`agent_id`,`is_del`,`last_message_at`,`id`) USING BTREE
 ) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='AI会话';
 /*!40101 SET character_set_client = @saved_cs_client */;
-DROP TABLE IF EXISTS `ai_image_assets`;
+DROP TABLE IF EXISTS `ai_image_files`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `ai_image_assets` (
-  `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '图片资产ID',
-  `user_id` bigint unsigned NOT NULL COMMENT '归属用户ID',
-  `storage_provider` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'cos/remote_url',
-  `storage_key` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '对象存储key',
-  `storage_url` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '可访问URL',
-  `mime_type` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT 'MIME类型',
-  `width` int unsigned NOT NULL DEFAULT '0' COMMENT '图片宽度',
-  `height` int unsigned NOT NULL DEFAULT '0' COMMENT '图片高度',
-  `size_bytes` bigint unsigned NOT NULL DEFAULT '0' COMMENT '文件字节数',
-  `source_type` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'upload/mask/generated',
-  `is_del` tinyint unsigned NOT NULL DEFAULT '2' COMMENT '1删除2正常',
-  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-  PRIMARY KEY (`id`) USING BTREE,
-  KEY `idx_ai_image_assets_user_created` (`user_id`,`is_del`,`created_at`,`id`) USING BTREE,
-  KEY `idx_ai_image_assets_storage` (`storage_provider`,`storage_key`) USING BTREE,
-  CONSTRAINT `chk_ai_image_assets_del` CHECK ((`is_del` in (1,2))),
-  CONSTRAINT `chk_ai_image_assets_source` CHECK ((`source_type` in (_utf8mb4'upload',_utf8mb4'mask',_utf8mb4'generated')))
-) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='AI图片资产';
-/*!40101 SET character_set_client = @saved_cs_client */;
-DROP TABLE IF EXISTS `ai_image_task_assets`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `ai_image_task_assets` (
-  `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '任务资产关系ID',
-  `task_id` bigint unsigned NOT NULL COMMENT 'ai_image_tasks.id',
-  `asset_id` bigint unsigned NOT NULL COMMENT 'ai_image_assets.id',
-  `role` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'input/mask/output',
-  `sort_order` int unsigned NOT NULL DEFAULT '0' COMMENT '排序',
-  `related_asset_id` bigint unsigned DEFAULT NULL COMMENT 'mask 对应的被编辑资产',
-  `actual_params_json` json DEFAULT NULL COMMENT '单图实际参数摘要',
-  `revised_prompt` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci COMMENT 'provider 返回的修订提示词',
-  `is_del` tinyint unsigned NOT NULL DEFAULT '2' COMMENT '1删除2正常',
-  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-  PRIMARY KEY (`id`) USING BTREE,
-  KEY `idx_ai_image_task_assets_task_role` (`task_id`,`role`,`sort_order`,`id`) USING BTREE,
-  KEY `idx_ai_image_task_assets_asset` (`asset_id`,`is_del`) USING BTREE,
-  KEY `idx_ai_image_task_assets_related` (`related_asset_id`) USING BTREE,
-  CONSTRAINT `fk_ai_image_task_assets_asset` FOREIGN KEY (`asset_id`) REFERENCES `ai_image_assets` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
-  CONSTRAINT `fk_ai_image_task_assets_task` FOREIGN KEY (`task_id`) REFERENCES `ai_image_tasks` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
-  CONSTRAINT `chk_ai_image_task_assets_del` CHECK ((`is_del` in (1,2))),
-  CONSTRAINT `chk_ai_image_task_assets_role` CHECK ((`role` in (_utf8mb4'input',_utf8mb4'mask',_utf8mb4'output')))
-) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='AI图片任务资产关系';
+CREATE TABLE `ai_image_files` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `task_id` bigint unsigned NOT NULL,
+  `role` varchar(16) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'input/mask/output',
+  `sort_order` int NOT NULL DEFAULT '0',
+  `storage_provider` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `storage_key` varchar(512) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `storage_url` varchar(1000) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `mime_type` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `width` int NOT NULL DEFAULT '0',
+  `height` int NOT NULL DEFAULT '0',
+  `size_bytes` bigint NOT NULL DEFAULT '0',
+  `related_file_id` bigint unsigned DEFAULT NULL,
+  `revised_prompt` text COLLATE utf8mb4_unicode_ci,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_ai_image_files_task_role_sort` (`task_id`,`role`,`sort_order`),
+  KEY `idx_ai_image_files_related` (`related_file_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `ai_image_tasks`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `ai_image_tasks` (
-  `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '图片任务ID',
-  `user_id` bigint unsigned NOT NULL COMMENT '发起用户ID',
-  `agent_id` bigint unsigned NOT NULL COMMENT 'ai_agents.id',
-  `agent_name_snapshot` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '任务创建时智能体名称',
-  `provider_id_snapshot` bigint unsigned NOT NULL COMMENT '任务创建时供应商ID',
-  `provider_name_snapshot` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '任务创建时供应商名称',
-  `model_id_snapshot` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '任务创建时模型ID',
-  `model_display_name_snapshot` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '任务创建时模型展示名',
-  `prompt` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '图片提示词',
-  `size` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '图片尺寸',
-  `quality` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '质量参数',
-  `output_format` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '输出格式',
-  `output_compression` int unsigned DEFAULT NULL COMMENT '输出压缩率，仅部分格式有效',
-  `moderation` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '安全审核参数',
-  `n` int unsigned NOT NULL DEFAULT '1' COMMENT '输出张数',
-  `status` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'pending/running/success/failed',
-  `error_message` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '失败原因',
-  `actual_params_json` json DEFAULT NULL COMMENT 'provider 实际参数摘要',
-  `raw_response_json` json DEFAULT NULL COMMENT 'provider 原始响应摘要，不保存图片bytes',
-  `is_favorite` tinyint unsigned NOT NULL DEFAULT '2' COMMENT '1是2否',
-  `finished_at` datetime DEFAULT NULL COMMENT '完成时间',
-  `elapsed_ms` int unsigned NOT NULL DEFAULT '0' COMMENT '耗时毫秒',
-  `is_del` tinyint unsigned NOT NULL DEFAULT '2' COMMENT '1删除2正常',
-  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-  PRIMARY KEY (`id`) USING BTREE,
-  KEY `idx_ai_image_tasks_user_created` (`user_id`,`is_del`,`created_at`,`id`) USING BTREE,
-  KEY `idx_ai_image_tasks_user_status` (`user_id`,`status`,`is_del`,`created_at`,`id`) USING BTREE,
-  KEY `idx_ai_image_tasks_user_favorite` (`user_id`,`is_favorite`,`is_del`,`created_at`,`id`) USING BTREE,
-  KEY `idx_ai_image_tasks_agent_created` (`agent_id`,`created_at`,`id`) USING BTREE,
-  KEY `idx_ai_image_tasks_status_created` (`status`,`created_at`,`id`) USING BTREE,
-  CONSTRAINT `chk_ai_image_tasks_del` CHECK ((`is_del` in (1,2))),
-  CONSTRAINT `chk_ai_image_tasks_favorite` CHECK ((`is_favorite` in (1,2))),
-  CONSTRAINT `chk_ai_image_tasks_status` CHECK ((`status` in (_utf8mb4'pending',_utf8mb4'running',_utf8mb4'success',_utf8mb4'failed')))
-) ENGINE=InnoDB AUTO_INCREMENT=26 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='AI图片生成任务';
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `platform` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `user_id` bigint unsigned NOT NULL,
+  `agent_id` bigint unsigned NOT NULL,
+  `agent_name_snapshot` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `provider_id_snapshot` bigint unsigned NOT NULL DEFAULT '0',
+  `provider_name_snapshot` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `model_id_snapshot` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `model_display_name_snapshot` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `prompt` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `size` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '1024x1024',
+  `quality` varchar(16) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'auto',
+  `output_format` varchar(16) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'png',
+  `output_compression` int DEFAULT NULL,
+  `moderation` varchar(16) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'auto',
+  `n` int NOT NULL DEFAULT '1',
+  `status` varchar(16) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'pending',
+  `error_message` varchar(1000) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `actual_params_json` json DEFAULT NULL,
+  `raw_response_json` json DEFAULT NULL,
+  `is_favorite` tinyint NOT NULL DEFAULT '2',
+  `finished_at` datetime DEFAULT NULL,
+  `elapsed_ms` int NOT NULL DEFAULT '0',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_ai_image_tasks_platform_user_created` (`platform`,`user_id`,`created_at`),
+  KEY `idx_ai_image_tasks_platform_status_created` (`platform`,`status`,`created_at`),
+  KEY `idx_ai_image_tasks_agent_created` (`agent_id`,`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `ai_knowledge_bases`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -381,26 +350,32 @@ CREATE TABLE `ai_run_events` (
   KEY `idx_ai_run_events_type_created` (`event_type`,`created_at`,`id`) USING BTREE,
   CONSTRAINT `fk_ai_run_events_run` FOREIGN KEY (`run_id`) REFERENCES `ai_runs` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `chk_ai_run_events_type` CHECK ((`event_type` in (_utf8mb4'start',_utf8mb4'completed',_utf8mb4'failed',_utf8mb4'canceled',_utf8mb4'timeout')))
-) ENGINE=InnoDB AUTO_INCREMENT=39 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='AI运行监控事件';
+) ENGINE=InnoDB AUTO_INCREMENT=45 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='AI运行监控事件';
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `ai_runs`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `ai_runs` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '运行ID',
-  `conversation_id` int unsigned NOT NULL COMMENT 'ai_conversations.id',
+  `platform` varchar(32) NOT NULL,
+  `modality` varchar(32) NOT NULL,
+  `source_type` varchar(64) NOT NULL,
+  `source_id` bigint unsigned NOT NULL,
+  `conversation_id` int unsigned DEFAULT NULL COMMENT 'ai_conversations.id; chat rows only',
   `request_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '客户端本轮请求ID',
-  `user_message_id` bigint unsigned NOT NULL COMMENT '本轮用户消息ID',
-  `assistant_message_id` bigint unsigned DEFAULT NULL COMMENT '完成后写入的助手消息ID',
+  `user_message_id` bigint unsigned DEFAULT NULL COMMENT '本轮用户消息ID; chat rows only',
+  `assistant_message_id` bigint unsigned DEFAULT NULL COMMENT '完成后写入的助手消息ID; chat rows only',
   `user_id` int unsigned NOT NULL COMMENT '发起用户ID',
   `agent_id` bigint unsigned NOT NULL COMMENT 'ai_agents.id',
   `provider_id` bigint unsigned NOT NULL COMMENT 'ai_providers.id',
   `model_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '实际调用模型ID',
   `model_display_name` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '实际调用模型展示名',
+  `input_snapshot` mediumtext NOT NULL,
   `status` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'queued/running/success/failed/canceled/timeout',
   `prompt_tokens` int unsigned NOT NULL DEFAULT '0' COMMENT '输入token',
   `completion_tokens` int unsigned NOT NULL DEFAULT '0' COMMENT '输出token',
   `total_tokens` int unsigned NOT NULL DEFAULT '0' COMMENT '总token',
+  `usage_status` varchar(16) NOT NULL,
   `duration_ms` int unsigned DEFAULT NULL COMMENT '运行耗时毫秒，终态后写入',
   `error_message` varchar(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '失败/取消/超时原因',
   `started_at` datetime DEFAULT NULL COMMENT '开始调用模型时间',
@@ -408,6 +383,7 @@ CREATE TABLE `ai_runs` (
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE KEY `uk_ai_runs_source_request` (`source_type`,`source_id`,`request_id`),
   UNIQUE KEY `uk_ai_runs_conversation_request` (`conversation_id`,`request_id`) USING BTREE,
   UNIQUE KEY `uk_ai_runs_user_message` (`user_message_id`) USING BTREE,
   KEY `idx_ai_runs_created` (`created_at`,`id`) USING BTREE,
@@ -417,11 +393,39 @@ CREATE TABLE `ai_runs` (
   KEY `idx_ai_runs_provider_created` (`provider_id`,`created_at`,`id`) USING BTREE,
   KEY `idx_ai_runs_conversation_created` (`conversation_id`,`created_at`,`id`) USING BTREE,
   KEY `fk_ai_runs_assistant_message` (`assistant_message_id`) USING BTREE,
+  KEY `idx_ai_runs_platform_modality_created` (`platform`,`modality`,`created_at`,`id`),
+  KEY `idx_ai_runs_source` (`source_type`,`source_id`,`created_at`,`id`),
   CONSTRAINT `fk_ai_runs_assistant_message` FOREIGN KEY (`assistant_message_id`) REFERENCES `ai_messages` (`id`) ON DELETE SET NULL ON UPDATE RESTRICT,
   CONSTRAINT `fk_ai_runs_conversation` FOREIGN KEY (`conversation_id`) REFERENCES `ai_conversations` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `fk_ai_runs_user_message` FOREIGN KEY (`user_message_id`) REFERENCES `ai_messages` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
-  CONSTRAINT `chk_ai_runs_status` CHECK ((`status` in (_utf8mb4'running',_utf8mb4'success',_utf8mb4'failed',_utf8mb4'canceled',_utf8mb4'timeout')))
-) ENGINE=InnoDB AUTO_INCREMENT=20 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='AI运行监控记录';
+  CONSTRAINT `chk_ai_runs_status` CHECK ((`status` in (_utf8mb4'running',_utf8mb4'success',_utf8mb4'failed',_utf8mb4'canceled',_utf8mb4'timeout'))),
+  CONSTRAINT `chk_ai_runs_usage_status` CHECK ((`usage_status` in (_utf8mb4'pending',_utf8mb4'reported',_utf8mb4'unavailable')))
+) ENGINE=InnoDB AUTO_INCREMENT=23 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='AI运行监控记录';
+/*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `ai_text_tasks`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `ai_text_tasks` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `platform` varchar(32) NOT NULL,
+  `user_id` bigint unsigned NOT NULL,
+  `agent_id` bigint unsigned NOT NULL,
+  `provider_id` bigint unsigned NOT NULL,
+  `model_id` varchar(191) NOT NULL,
+  `prompt` mediumtext NOT NULL,
+  `answer` mediumtext,
+  `status` varchar(16) NOT NULL,
+  `error_message` varchar(1024) DEFAULT NULL,
+  `started_at` datetime DEFAULT NULL,
+  `finished_at` datetime DEFAULT NULL,
+  `elapsed_ms` int unsigned NOT NULL,
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_ai_text_tasks_user_created` (`user_id`,`created_at`,`id`),
+  KEY `idx_ai_text_tasks_status_created` (`status`,`created_at`,`id`),
+  CONSTRAINT `chk_ai_text_tasks_status` CHECK ((`status` in (_utf8mb4'running',_utf8mb4'success',_utf8mb4'failed')))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='AI文本生成任务';
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `ai_tool_calls`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -549,25 +553,6 @@ CREATE TABLE `canvas_prompts` (
   KEY `idx_canvas_prompts_status_updated` (`status`,`is_del`,`updated_at`,`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2380 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='无限画布提示词公共库';
 /*!40101 SET character_set_client = @saved_cs_client */;
-DROP TABLE IF EXISTS `canvas_prompts_backup_20260601_before_infinite_import`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `canvas_prompts_backup_20260601_before_infinite_import` (
-  `id` bigint unsigned NOT NULL DEFAULT '0',
-  `slug` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `category` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
-  `title` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `cover_url` varchar(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
-  `prompt` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `preview` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
-  `tags_json` json DEFAULT NULL,
-  `source_url` varchar(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
-  `status` tinyint NOT NULL DEFAULT '1',
-  `is_del` tinyint NOT NULL DEFAULT '2',
-  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `canvas_video_tasks`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
@@ -655,7 +640,7 @@ CREATE TABLE `cron_task_log` (
   PRIMARY KEY (`id`) USING BTREE,
   KEY `idx_task_del_id` (`task_id`,`is_del`) USING BTREE,
   KEY `idx_name_del_id` (`task_name`,`is_del`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=89562 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='定时任务执行日志表';
+) ENGINE=InnoDB AUTO_INCREMENT=92600 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='定时任务执行日志表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `export_tasks`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -821,7 +806,7 @@ CREATE TABLE `operation_logs` (
   KEY `idx_action` (`action`) USING BTREE,
   KEY `idx_created_at` (`created_at`) USING BTREE,
   KEY `idx_del_created_id` (`is_del`,`created_at`,`id`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=102827 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='操作日志表';
+) ENGINE=InnoDB AUTO_INCREMENT=102835 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='操作日志表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `payment_callback_events`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -997,7 +982,7 @@ CREATE TABLE `role_permissions` (
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE KEY `uniq_role_permission` (`role_id`,`permission_id`) USING BTREE,
   KEY `idx_role_permissions_permission_del_role` (`permission_id`,`is_del`,`role_id`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=954 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='role permission pivot';
+) ENGINE=InnoDB AUTO_INCREMENT=973 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='role permission pivot';
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `roles`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -1201,7 +1186,7 @@ CREATE TABLE `user_sessions` (
   KEY `idx_expires_at` (`expires_at`) USING BTREE,
   KEY `idx_refresh_expires_at` (`refresh_expires_at`) USING BTREE,
   KEY `idx_active_stats` (`is_del`,`revoked_at`,`expires_at`,`platform`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=1090 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用户会话表';
+) ENGINE=InnoDB AUTO_INCREMENT=1105 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用户会话表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `user_wallets`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -1263,7 +1248,7 @@ CREATE TABLE `users_login_log` (
   KEY `idx_account_created` (`login_account`,`created_at` DESC) USING BTREE,
   KEY `idx_ip_created` (`ip`,`created_at` DESC) USING BTREE,
   KEY `idx_created` (`created_at` DESC) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=1140 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='登录日志';
+) ENGINE=InnoDB AUTO_INCREMENT=1155 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='登录日志';
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `wallet_transactions`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;

@@ -1,6 +1,6 @@
 # API Source-only Route Review Snapshot
 
-Generated at: 2026-06-07 06:57:36 +08:00
+Generated at: 2026-06-07 19:25:21 +08:00
 
 Frontend/backend API drift source: `docs/knowledge/frontend-backend-api-drift-2026-06-07.md`
 
