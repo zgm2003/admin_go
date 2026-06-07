@@ -12,13 +12,13 @@
 
 ## Scope check
 
-这是大切片，必须按顺序拆成 9 个可提交任务执行。不要一次性全改。
+这是大切片，必须按顺序拆成 9 个任务执行。不要一次性全改；只有已经 GREEN 的任务可以提交，RED guard 不允许单独 commit。
 
 执行顺序：
 
-1. 后端 schema/ownership guard。
-2. `ai/prompt` capability + Canvas `/api/canvas/v1/prompts` 保持不变。
-3. `ai/asset` capability + Canvas `/api/canvas/v1/assets` 保持不变。
+1. 后端 schema/ownership guard 先 RED，只作为后续 GREEN 的证据，不单独提交。
+2. `ai/prompt` capability + `ai_prompts/ai_assets` 建表迁移 + Canvas `/api/canvas/v1/prompts` 保持不变。
+3. `ai/asset` capability + Canvas `/api/canvas/v1/assets` 保持不变；旧 canvas 表只在无 runtime 引用后进入最终 drop。
 4. Admin prompt/asset API + RBAC metadata。
 5. 后端退休 Admin image favorite public surface。
 6. Admin prompt/asset 前端页面。
@@ -30,7 +30,7 @@
 
 Backend:
 
-- `admin_back_go/database/migrations/20260607_ai_prompt_asset_convergence.sql` — 建 `ai_prompts/ai_assets`，迁移旧表，seed Admin prompt/asset permissions。
+- `admin_back_go/database/migrations/20260607_ai_prompt_asset_convergence.sql` — 建 `ai_prompts/ai_assets`，迁移旧表数据，seed Admin prompt/asset permissions；本阶段不直接 drop 旧表。
 - `admin_back_go/internal/architecture/ai_prompt_asset_convergence_test.go` — 防止 prompt/asset 继续归 `canvas` module。
 - `admin_back_go/internal/module/ai/prompt/*` — AI prompt model/repository/service + admin/canvas transports。
 - `admin_back_go/internal/module/ai/asset/*` — AI asset model/repository/service + admin/canvas transports。
@@ -48,9 +48,9 @@ Admin frontend:
 
 Canvas frontend:
 
-- `canvas_front_next/src/services/api/assets.ts` — Canvas asset backend API。
+- `canvas_front_next/src/services/api/assets.ts` — 已存在的 Canvas public asset list client；本计划扩展为 backend-backed my-assets CRUD。
 - `canvas_front_next/src/stores/use-asset-store.ts` — 从 browser-primary store 改成 backend-backed state。
-- `canvas_front_next/src/app/(user)/assets/page.tsx`、`image/page.tsx`、`prompts/page.tsx` — 使用 backend asset actions。
+- `canvas_front_next/src/app/(user)/assets/page.tsx`、`image/page.tsx`、`video/page.tsx`、`prompts/page.tsx`、`canvas/[id]/canvas-client-page.tsx`、`canvas/components/asset-picker-modal.tsx` — 使用 backend asset actions，同时保持现有调用方契约不被同步改烂。
 - `canvas_front_next/src/services/api/image.ts`、`request.ts`、`components/layout/canvas-auth-guard.tsx` — 403 分流。
 - `canvas_front_next/tests/shared/*` — persisted asset 与 403 guards。
 
@@ -71,6 +71,7 @@ database/migrations/20260607_ai_prompt_asset_convergence.sql contains:
 - CREATE TABLE IF NOT EXISTS `ai_assets`
 - INSERT IGNORE INTO `ai_prompts`
 - INSERT IGNORE INTO `ai_assets`
+database/migrations/20260607_ai_prompt_asset_drop_legacy.sql is absent until final retirement, or contains:
 - DROP TABLE IF EXISTS `canvas_prompts`
 - DROP TABLE IF EXISTS `canvas_assets`
 
@@ -100,16 +101,13 @@ go test ./internal/architecture -run TestAIPromptAsset -count=1
 
 Expected: FAIL because migration and AI prompt/asset modules do not exist.
 
-- [ ] **Step 3: Commit failing guard**
+- [ ] **Step 3: Do not commit RED**
 
-```powershell
-git add internal/architecture/ai_prompt_asset_convergence_test.go
-git commit -m "test: guard AI prompt asset ownership"
-```
+Keep `internal/architecture/ai_prompt_asset_convergence_test.go` as working-tree RED evidence for Tasks 2-3, or recreate it at Task 3 before the GREEN run. Do not commit this file while the test fails.
 
 ---
 
-### Task 2: Add `ai/prompt` capability and keep Canvas prompt URL
+### Task 2: Add `ai/prompt` capability, create AI tables, and keep Canvas prompt URL
 
 **Files:**
 - Create: `admin_back_go/internal/module/ai/prompt/model.go`
@@ -119,7 +117,8 @@ git commit -m "test: guard AI prompt asset ownership"
 - Create: `admin_back_go/internal/module/ai/prompt/service_test.go`
 - Create: `admin_back_go/internal/module/ai/prompt/repository_test.go`
 - Create: `admin_back_go/internal/module/ai/prompt/transport/canvas/{request.go,handler.go,route.go,handler_test.go}`
-- Modify: `admin_back_go/internal/module/canvas/{dto.go,model.go,repository.go,service.go}`
+- Create: `admin_back_go/database/migrations/20260607_ai_prompt_asset_convergence.sql`
+- Modify: `admin_back_go/internal/module/canvas/{dto.go,model.go,repository.go,service.go}` — remove prompt ownership only; asset ownership stays until Task 3.
 - Modify: `admin_back_go/internal/module/canvas/transport/canvas/{handler.go,route.go}`
 - Modify: `admin_back_go/internal/server/{router.go,routes_canvas.go}`
 - Modify: `admin_back_go/internal/bootstrap/app.go`
@@ -157,7 +156,20 @@ go test ./internal/module/ai/prompt/... -count=1
 
 Expected: FAIL because `ai/prompt` package is missing.
 
-- [ ] **Step 4: Implement prompt model**
+- [ ] **Step 4: Implement non-destructive migration**
+
+Migration must create both target tables before any route is switched:
+
+```text
+CREATE TABLE IF NOT EXISTS `ai_prompts`
+CREATE TABLE IF NOT EXISTS `ai_assets`
+INSERT IGNORE INTO `ai_prompts` SELECT from `canvas_prompts`
+INSERT IGNORE INTO `ai_assets` SELECT from `canvas_assets`
+```
+
+Do not include `DROP TABLE canvas_prompts` or `DROP TABLE canvas_assets` in this migration. If duplicate slug data appears in live DB, stop and report the exact duplicate rows; do not add slug fallback logic in Go.
+
+- [ ] **Step 5: Implement prompt model**
 
 Use current `canvas.Prompt` fields exactly, but change table ownership:
 
@@ -167,7 +179,7 @@ func (Prompt) TableName() string { return "ai_prompts" }
 
 Copy current Canvas prompt query/list/create logic into `internal/module/ai/prompt`, renaming package to `prompt`.
 
-- [ ] **Step 5: Wire Canvas prompt route from AI module**
+- [ ] **Step 6: Wire Canvas prompt route from AI module**
 
 `routes_canvas.go` must register:
 
@@ -175,9 +187,9 @@ Copy current Canvas prompt query/list/create logic into `internal/module/ai/prom
 aipromptcanvas.RegisterRoutes(router, deps.AiPromptService)
 ```
 
-`internal/module/canvas/transport/canvas` must keep only `/api/canvas/v1/settings`.
+`internal/module/canvas/transport/canvas` must stop owning `/api/canvas/v1/prompts` in this task. It may still own `/api/canvas/v1/assets` until Task 3 moves assets; do not create a commit where `/api/canvas/v1/assets` is unregistered.
 
-- [ ] **Step 6: Verify GREEN**
+- [ ] **Step 7: Verify GREEN**
 
 ```powershell
 cd E:\admin_go\admin_back_go
@@ -188,16 +200,16 @@ go test ./internal/server -run "TestRouter.*Canvas.*Prompt" -count=1
 
 Expected: PASS.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit GREEN prompt slice**
 
 ```powershell
-git add internal/module/ai/prompt internal/module/canvas internal/server internal/bootstrap
+git add database/migrations/20260607_ai_prompt_asset_convergence.sql internal/module/ai/prompt internal/module/canvas internal/server internal/bootstrap
 git commit -m "feat: move canvas prompts to AI prompt capability"
 ```
 
 ---
 
-### Task 3: Add `ai/asset` capability and schema migration
+### Task 3: Add `ai/asset` capability and complete ownership guard
 
 **Files:**
 - Create: `admin_back_go/internal/module/ai/asset/model.go`
@@ -207,7 +219,10 @@ git commit -m "feat: move canvas prompts to AI prompt capability"
 - Create: `admin_back_go/internal/module/ai/asset/service_test.go`
 - Create: `admin_back_go/internal/module/ai/asset/repository_test.go`
 - Create: `admin_back_go/internal/module/ai/asset/transport/canvas/{request.go,handler.go,route.go,handler_test.go}`
-- Create: `admin_back_go/database/migrations/20260607_ai_prompt_asset_convergence.sql`
+- Modify: `admin_back_go/database/migrations/20260607_ai_prompt_asset_convergence.sql`
+- Create or keep from Task 1: `admin_back_go/internal/architecture/ai_prompt_asset_convergence_test.go`
+- Modify: `admin_back_go/internal/module/canvas/{dto.go,model.go,repository.go,service.go}` — remove remaining asset ownership.
+- Modify: `admin_back_go/internal/module/canvas/transport/canvas/{handler.go,route.go}` — leave only Canvas settings routes.
 - Modify: `admin_back_go/internal/server/{router.go,routes_canvas.go}`
 - Modify: `admin_back_go/internal/bootstrap/app.go`
 
@@ -221,6 +236,8 @@ Create() rejects empty slug/type/title.
 Create() accepts type text/image/video only.
 GET /api/canvas/v1/assets keeps current list URL.
 POST /api/canvas/v1/assets creates backend asset.
+PUT /api/canvas/v1/assets/:id updates backend asset.
+DELETE /api/canvas/v1/assets/:id soft-deletes backend asset.
 ```
 
 - [ ] **Step 2: Verify RED**
@@ -246,20 +263,25 @@ const (
 func (Asset) TableName() string { return "ai_assets" }
 ```
 
-- [ ] **Step 4: Implement migration**
+- [ ] **Step 4: Verify migration remains non-destructive**
 
-Migration must:
+Migration must already contain the table creation and data copy from Task 2:
 
 ```text
 CREATE TABLE IF NOT EXISTS `ai_prompts`
 CREATE TABLE IF NOT EXISTS `ai_assets`
 INSERT IGNORE INTO `ai_prompts` SELECT from `canvas_prompts`
 INSERT IGNORE INTO `ai_assets` SELECT from `canvas_assets`
+```
+
+It must not contain:
+
+```text
 DROP TABLE IF EXISTS `canvas_prompts`
 DROP TABLE IF EXISTS `canvas_assets`
 ```
 
-Stop if duplicate slug data appears in live DB. Do not add slug fallback logic in Go.
+Old table retirement is a later migration after route/source/live-schema guards prove no runtime dependency remains.
 
 - [ ] **Step 5: Wire Canvas asset route**
 
@@ -294,13 +316,22 @@ git commit -m "feat: move canvas assets to AI asset capability"
 ### Task 4: Add Admin prompt/asset backend APIs and permissions
 
 **Files:**
+- Modify first: `docs/contracts/admin-api-v1.md`
 - Create: `admin_back_go/internal/module/ai/prompt/transport/admin/{request.go,handler.go,route.go,handler_test.go}`
 - Create: `admin_back_go/internal/module/ai/asset/transport/admin/{request.go,handler.go,route.go,handler_test.go}`
 - Modify: `admin_back_go/internal/server/routes_admin_ai.go`
 - Modify: `admin_back_go/internal/bootstrap/{route_meta.go,route_meta_test.go}`
 - Modify: `admin_back_go/database/migrations/20260607_ai_prompt_asset_convergence.sql`
+- Create: `admin_back_go/internal/shared/i18n/locales/zh-CN/aiprompt.yaml`
+- Create: `admin_back_go/internal/shared/i18n/locales/en-US/aiprompt.yaml`
+- Create: `admin_back_go/internal/shared/i18n/locales/zh-CN/aiasset.yaml`
+- Create: `admin_back_go/internal/shared/i18n/locales/en-US/aiasset.yaml`
 
-- [ ] **Step 1: Write failing Admin transport tests**
+- [ ] **Step 1: Update API contract before code**
+
+Add `AI Prompts` and `AI Assets` sections to `docs/contracts/admin-api-v1.md` before implementation. The contract must list method/path, auth requirement, request shape, response shape, and permission codes for the Admin mutation routes. Do not document `/add`, `/edit`, `/del`, or `/init` aliases.
+
+- [ ] **Step 2: Write failing Admin transport tests**
 
 Tests must verify these REST paths:
 
@@ -323,7 +354,7 @@ DELETE /api/admin/v1/ai-assets/:id
 DELETE /api/admin/v1/ai-assets
 ```
 
-- [ ] **Step 2: Verify RED**
+- [ ] **Step 3: Verify RED**
 
 ```powershell
 cd E:\admin_go\admin_back_go
@@ -333,7 +364,7 @@ go test ./internal/module/ai/asset/transport/admin -count=1
 
 Expected: FAIL because Admin transports are missing.
 
-- [ ] **Step 3: Implement Admin routes**
+- [ ] **Step 4: Implement Admin routes**
 
 Use standard method names:
 
@@ -343,7 +374,7 @@ pageInit/list/detail/create/update/changeStatus/deleteOne/deleteBatch
 
 Do not add `add/edit/del/init` aliases.
 
-- [ ] **Step 4: Add permission rules**
+- [ ] **Step 5: Add permission rules and i18n catalogs**
 
 Add route metadata for mutation routes:
 
@@ -364,24 +395,29 @@ ai_image_task_favorite
 ai_image_task_audit
 ```
 
-- [ ] **Step 5: Verify GREEN**
+All new response messages must use `apperror.*Key` / `response.OKWithMessageKey` keys backed by `aiprompt.yaml` and `aiasset.yaml` in both `zh-CN` and `en-US`. Do not ship Chinese-only fallbacks as the only source of truth.
+
+- [ ] **Step 6: Verify GREEN**
 
 ```powershell
 cd E:\admin_go\admin_back_go
 go test ./internal/module/ai/prompt/transport/admin -count=1
 go test ./internal/module/ai/asset/transport/admin -count=1
 go test ./internal/bootstrap -run TestPermissionRouteRules -count=1
+go test ./internal/shared/i18n -count=1
 go test ./internal/server -run "TestRouter.*AI.*(Prompt|Asset)" -count=1
 ```
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```powershell
-git add internal/module/ai/prompt internal/module/ai/asset internal/server internal/bootstrap database/migrations/20260607_ai_prompt_asset_convergence.sql
+git add internal/module/ai/prompt internal/module/ai/asset internal/server internal/bootstrap internal/shared/i18n/locales database/migrations/20260607_ai_prompt_asset_convergence.sql
 git commit -m "feat: add admin AI prompt asset APIs"
 ```
+
+The root contract edit in `docs/contracts/admin-api-v1.md` is committed from the root repo in Task 9 together with other docs. Do not try to `git add` root docs from inside the `admin_back_go` child repo.
 
 ---
 
@@ -390,6 +426,7 @@ git commit -m "feat: add admin AI prompt asset APIs"
 **Files:**
 - Modify: `admin_back_go/internal/module/ai/image/{dto.go,service.go,repository.go,service_test.go,model_split_test.go}`
 - Modify: `admin_back_go/internal/module/ai/image/transport/admin/{route.go,request.go,handler.go}`
+- Modify: `admin_back_go/internal/module/ai/image/transport/canvas/{handler.go,handler_test.go}`
 - Modify: `admin_back_go/internal/bootstrap/route_meta_test.go`
 
 - [ ] **Step 1: Write failing source guard**
@@ -403,6 +440,8 @@ favoriteRequest
 is_favorite
 FavoriteArr
 ```
+
+The same guard must assert that Canvas image transport interfaces do not keep a dead `Favorite` method after `Service.Favorite` is removed.
 
 - [ ] **Step 2: Verify RED**
 
@@ -425,6 +464,7 @@ Service.Favorite
 Repository.UpdateFavorite
 favorite_arr from page-init
 is_favorite from Admin list filter and public DTO
+Favorite from admin/canvas HTTP service interfaces and nil/fake service stubs
 ```
 
 Keep DB column until live schema migration is verified. Do not hide it with a default.
@@ -458,7 +498,7 @@ git commit -m "refactor: retire admin image favorite surface"
 - Create: `admin_front_ts/tests/shared/ai/ai-prompt-asset-api.test.ts`
 - Modify: `admin_front_ts/src/i18n/locales/zh-CN.ts`
 - Modify: `admin_front_ts/src/i18n/locales/en-US.ts`
-- Modify: Admin route view registry located by `rg -n "image-playground|view_key|setupDynamicRoutes" admin_front_ts/src`
+- No Admin route registry file should be modified for these pages: `admin_front_ts/src/router/view-registry.ts` resolves pages by `view_key` to `../views/Main/<view_key>/index.vue`. Backend permission/menu seed must use view keys that match the created page paths.
 
 - [ ] **Step 1: Write failing API/source guard**
 
@@ -473,6 +513,7 @@ neither contains add/edit/del aliases
 neither contains any/as any/Record<string, any>
 prompt/assets pages contain Search + AppTable + AppDialog + useCrudTable
 prompt/assets pages do not contain raw <el-table or <el-dialog
+router/view-registry.ts is not modified just to special-case these pages
 ```
 
 - [ ] **Step 2: Verify RED**
@@ -633,11 +674,14 @@ git commit -m "refactor: align admin image workspace with canvas"
 ### Task 8: Persist Canvas assets through backend and split image 403 handling
 
 **Files:**
-- Create: `canvas_front_next/src/services/api/assets.ts`
+- Modify: `canvas_front_next/src/services/api/assets.ts`
 - Modify: `canvas_front_next/src/stores/use-asset-store.ts`
 - Modify: `canvas_front_next/src/app/(user)/assets/page.tsx`
 - Modify: `canvas_front_next/src/app/(user)/image/page.tsx`
+- Modify: `canvas_front_next/src/app/(user)/video/page.tsx`
 - Modify: `canvas_front_next/src/app/(user)/prompts/page.tsx`
+- Modify: `canvas_front_next/src/app/(user)/canvas/[id]/canvas-client-page.tsx`
+- Modify: `canvas_front_next/src/app/(user)/canvas/components/asset-picker-modal.tsx`
 - Modify: `canvas_front_next/src/services/api/image.ts`
 - Modify: `canvas_front_next/src/services/api/request.ts`
 - Create: `canvas_front_next/tests/shared/ai-asset-backend-persistence.test.ts`
@@ -653,6 +697,8 @@ use-asset-store.ts does not contain persist(
 use-asset-store.ts does not contain createJSONStorage
 use-asset-store.ts does not contain localStorage
 assets page does not treat readAssetPackage as primary persistence
+image/page.tsx, video/page.tsx, prompts/page.tsx, canvas/[id]/canvas-client-page.tsx, and asset-picker-modal.tsx either call the async backend-backed store actions or keep using a compatibility facade that itself calls backend POST/PUT/DELETE
+services/api/assets.ts exposes GET/POST/PUT/DELETE for /api/canvas/v1/assets
 ```
 
 - [ ] **Step 2: Write failing 403 guard**
@@ -664,6 +710,7 @@ image.ts contains readImageAxiosError
 image.ts contains isAuthPermissionError
 image.ts does not notifyAuthError for every axios 403
 request.ts still dispatches auth/RBAC errors to CanvasAuthGuard
+isAuthPermissionError decides from structured status/code only; it must not string-match provider messages
 ```
 
 - [ ] **Step 3: Verify RED**
@@ -677,7 +724,7 @@ Expected: FAIL.
 
 - [ ] **Step 4: Implement Canvas asset API/store**
 
-Create `services/api/assets.ts` for:
+Extend existing `services/api/assets.ts` for both public library reads and my-assets CRUD:
 
 ```text
 GET    /api/canvas/v1/assets
@@ -688,13 +735,20 @@ DELETE /api/canvas/v1/assets/:id
 
 Change Zustand store to in-memory UI state backed by these calls. Do not silently import old localStorage data.
 
+Keep one of these two paths explicit:
+
+```text
+Preferred: preserve addAsset/updateAsset/removeAsset as async compatibility facades that call createAsset/updateAsset/deleteAsset, then update call sites to await or void those promises deliberately.
+Allowed: replace every existing addAsset/updateAsset/removeAsset consumer in this task with createAsset/updateAsset/deleteAsset and prove no old consumer remains.
+```
+
 - [ ] **Step 5: Update Canvas pages**
 
-`assets/page.tsx`, `image/page.tsx`, and `prompts/page.tsx` must call async backend store actions. Import/export can stay only if imported assets are persisted through backend `POST /api/canvas/v1/assets`.
+`assets/page.tsx`, `image/page.tsx`, `video/page.tsx`, `prompts/page.tsx`, `canvas/[id]/canvas-client-page.tsx`, and `asset-picker-modal.tsx` must use backend-backed asset state. Import/export can stay only if imported assets are persisted through backend `POST /api/canvas/v1/assets`; export may serialize current backend-loaded assets, but it must not become the primary persistence layer.
 
 - [ ] **Step 6: Split 403 behavior**
 
-`image.ts` must only call `notifyAuthError` when error is auth/RBAC. Provider/business 403 remains a local image workflow error.
+`image.ts` must only call `notifyAuthError` when `isAuthPermissionError(status, code)` is true. Provider/business 403 remains a local image workflow error. If backend currently cannot distinguish provider/business 403 from auth/RBAC with structured status/code, stop and add a backend contract/test first; do not add frontend string matching.
 
 - [ ] **Step 7: Verify GREEN**
 
@@ -709,7 +763,7 @@ Expected: PASS.
 - [ ] **Step 8: Commit**
 
 ```powershell
-git add src/services/api/assets.ts src/stores/use-asset-store.ts "src/app/(user)/assets/page.tsx" "src/app/(user)/image/page.tsx" "src/app/(user)/prompts/page.tsx" src/services/api/image.ts src/services/api/request.ts tests/shared/ai-asset-backend-persistence.test.ts tests/shared/canvas-image-403.test.ts
+git add src/services/api/assets.ts src/stores/use-asset-store.ts "src/app/(user)/assets/page.tsx" "src/app/(user)/image/page.tsx" "src/app/(user)/video/page.tsx" "src/app/(user)/prompts/page.tsx" "src/app/(user)/canvas/[id]/canvas-client-page.tsx" "src/app/(user)/canvas/components/asset-picker-modal.tsx" src/services/api/image.ts src/services/api/request.ts tests/shared/ai-asset-backend-persistence.test.ts tests/shared/canvas-image-403.test.ts
 git commit -m "feat: persist canvas assets through AI asset API"
 ```
 
@@ -718,6 +772,7 @@ git commit -m "feat: persist canvas assets through AI asset API"
 ### Task 9: Update docs, generated inventories, and run full gates
 
 **Files:**
+- Modify: `docs/contracts/admin-api-v1.md`
 - Modify: `docs/status/current-status.md`
 - Modify: `docs/status/module-matrix.md`
 - Regenerate: `docs/knowledge/backend-capability-manifest-2026-06-07.md`
@@ -727,7 +782,9 @@ git commit -m "feat: persist canvas assets through AI asset API"
 - Refresh when DB is reachable: `docs/db/mysql-live-schema-2026-06-07.md`
 - Refresh when DB is reachable: `docs/db/mysql-live-schema-2026-06-07.sql`
 
-- [ ] **Step 1: Backend full tests**
+Do not write old `canvas_prompts` / `canvas_assets` table retirement as verified unless the live schema refresh proves they are gone. If this plan only completes route/service ownership and keeps old tables for a safe migration window, status docs must say that explicitly.
+
+- [x] **Step 1: Backend full tests**
 
 ```powershell
 cd E:\admin_go\admin_back_go
@@ -737,7 +794,7 @@ go test ./... -count=1 -p=1
 
 Expected: PASS.
 
-- [ ] **Step 2: Admin frontend full tests**
+- [x] **Step 2: Admin frontend full tests**
 
 ```powershell
 cd E:\admin_go\admin_front_ts
@@ -747,7 +804,7 @@ npm run typecheck
 
 Expected: PASS.
 
-- [ ] **Step 3: Canvas frontend full tests**
+- [x] **Step 3: Canvas frontend full tests**
 
 ```powershell
 cd E:\admin_go\canvas_front_next
@@ -757,7 +814,7 @@ npm run typecheck
 
 Expected: PASS.
 
-- [ ] **Step 4: Backend contract and smoke**
+- [x] **Step 4: Backend contract and smoke**
 
 ```powershell
 cd E:\admin_go\admin_back_go
@@ -768,7 +825,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\full-admin-smoke.ps1 -Account
 
 Expected: PASS.
 
-- [ ] **Step 5: Regenerate inventories**
+- [x] **Step 5: Regenerate inventories**
 
 ```powershell
 cd E:\admin_go
@@ -780,7 +837,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\export-full-stack-module-map.
 
 Expected: prompt/asset ownership reports under AI, with no owner-decision-required API rows.
 
-- [ ] **Step 6: Refresh live schema when DB is reachable**
+- [x] **Step 6: Refresh live schema when DB is reachable**
 
 ```powershell
 cd E:\admin_go
@@ -790,11 +847,28 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-runtime-doc-facts.ps1 -
 
 Expected: `ai_prompts` and `ai_assets` exist. If old tables remain for a migration window, record that as a verification gap instead of claiming table retirement.
 
-- [ ] **Step 7: Update status docs**
+- [x] **Step 7: Record legacy-table retirement decision**
+
+Only after source guards, route inventory, full smoke, and live schema verification prove no runtime dependency on `canvas_prompts` / `canvas_assets`, a later separate backend task may create this migration:
+
+```text
+admin_back_go/database/migrations/20260607_ai_prompt_asset_drop_legacy.sql
+```
+
+The migration may contain:
+
+```sql
+DROP TABLE IF EXISTS `canvas_prompts`;
+DROP TABLE IF EXISTS `canvas_assets`;
+```
+
+This plan does not create or commit that drop migration by default. If the proof is not available, record old tables as a verification gap, not as completed retirement. If the drop migration is added in a later task, rerun `export-live-mysql-schema.ps1` and `check-runtime-doc-facts.ps1 -LiveSchema` after applying it.
+
+- [x] **Step 8: Update status docs**
 
 Only after previous gates pass, update current status with exact passed commands. Do not write WIP as verified.
 
-- [ ] **Step 8: Root governance**
+- [x] **Step 9: Root governance**
 
 ```powershell
 cd E:\admin_go
@@ -805,12 +879,32 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-runtime-doc-facts.ps1
 
 Expected: PASS.
 
-- [ ] **Step 9: Commit docs/generated artifacts**
+- [x] **Step 10: Commit docs/generated artifacts**
 
 ```powershell
-git add docs/status docs/knowledge docs/db
+git add docs/contracts/admin-api-v1.md docs/status docs/knowledge docs/db
 git commit -m "docs: record AI prompt asset convergence"
 ```
+
+### Task 9 verification notes (2026-06-08 local run)
+
+- PASS before live migration application:
+  - `admin_back_go`: `go test ./... -count=1 -p=1` with `GOMAXPROCS=2`
+  - `admin_back_go`: `scripts/check-contract.ps1`
+  - `admin_back_go`: `scripts/basic-admin-smoke.ps1 -Account 15671628271 -Password 123456`
+  - `admin_back_go`: `scripts/full-admin-smoke.ps1 -Account 15671628271 -Password 123456`
+  - `admin_front_ts`: `npm test`, `npm run typecheck`
+  - `canvas_front_next`: `npm run test`, `npm run typecheck`
+- Live DB migration action: checked duplicate `canvas_prompts.slug` / `canvas_assets.slug` rows first; no duplicates returned; applied `admin_back_go/database/migrations/20260607_ai_prompt_asset_convergence.sql` to local live MySQL.
+- PASS after live migration application:
+  - `scripts/export-live-mysql-schema.ps1 -OutputDate 2026-06-07` -> `tables=57` with `ai_prompts` / `ai_assets` present
+  - `scripts/export-db-schema-ownership-map.ps1 -OutputDate 2026-06-07` -> `live_tables=57`, `go-model=55`, `live-schema-only=2` (`canvas_assets`, `canvas_prompts`)
+  - `scripts/check-runtime-doc-facts.ps1` and `scripts/check-runtime-doc-facts.ps1 -LiveSchema`
+- PASS after backend smoke guard alignment (`admin_back_go` child commit `21c37be`):
+  - `admin_back_go/scripts/basic-admin-smoke.ps1 -Account 15671628271 -Password 123456` -> PASS, with `ai_prompts_route_present=true` and `ai_assets_route_present=true`.
+  - `admin_back_go/scripts/full-admin-smoke.ps1 -Account 15671628271 -Password 123456` -> PASS, with the same Admin AI prompt/asset route gates present and old `/ai/models`, `/ai/agent`, `/ai/goods`, `/ai/cine` absent.
+- Legacy table decision: do not create/drop `20260607_ai_prompt_asset_drop_legacy.sql` in this plan. Live `canvas_prompts` / `canvas_assets` remain as the safe migration window.
+- Future gap C1: Canvas “我的素材” still writes global `ai_assets` without user owner / mutation-permission isolation; this remains a future architecture/verification gap, not a Task 8/9 solved item.
 
 ---
 
@@ -824,10 +918,12 @@ Spec coverage:
 - Canvas URL 不破坏：Tasks 2, 3, 8.
 - Admin/Canvas 交互一致：Task 7.
 - 403 分流：Task 8.
+- Admin API contract：Tasks 4 and 9.
+- Legacy table retirement safety：Tasks 1, 2, 3, and optional Task 9 Step 7.
 - 验证与文档：Task 9.
 
 Execution requirements:
 
 - 每个实现任务先 RED，再 GREEN。
-- 每个任务单独提交。
+- Task 1 RED 不提交；Tasks 2-8 只在 GREEN 后各自提交。
 - 完成前必须跑 Task 9 的 full gates。

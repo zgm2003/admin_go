@@ -762,6 +762,26 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
   - Old AI billing rules are retired; AI agent config now owns runtime scene/model selection only.
   - Canvas frontend integration is now tracked under `canvas_front_next / canvas platform API`; admin AI image remains independently supported.
 
+### AI prompt/asset library convergence
+
+- Backend:
+  - implemented: prompt ownership is `internal/module/ai/prompt`, with Admin transport `/api/admin/v1/ai-prompts` and Canvas transport preserving `/api/canvas/v1/prompts`.
+  - implemented: asset ownership is `internal/module/ai/asset`, with Admin transport `/api/admin/v1/ai-assets` and Canvas transport preserving `GET/POST/PUT/DELETE /api/canvas/v1/assets`.
+  - active tables are `ai_prompts` and `ai_assets`; live legacy `canvas_prompts` / `canvas_assets` remain only as safe migration-window tables and are not dropped by this plan.
+  - retired Admin image favorite public surface is not part of the active image workspace API.
+- Frontend:
+  - Admin Vue prompt/asset pages are implemented under `src/views/Main/ai/prompts` and `src/views/Main/ai/assets` using Search + AppTable + AppDialog + useCrudTable, with typed clients in `src/api/ai/prompts.ts` and `src/api/ai/assets.ts`.
+  - Canvas Next asset store is backend-backed; `localStorage` / Zustand `persist` is not the primary asset persistence path.
+  - Canvas image 403 handling uses structured auth/RBAC classification and keeps provider/business 403 as local image workflow errors.
+- Tests:
+  - backend `go test ./... -count=1 -p=1` with `GOMAXPROCS=2`, Admin Vue `npm test` + `npm run typecheck`, Canvas Next `npm run test` + `npm run typecheck` passed for Task 9.
+  - backend contract, basic smoke, and full smoke passed after the convergence commits.
+- Docs:
+  - admin API contract, generated route/API/schema/module artifacts, current-status, and this module matrix are refreshed in Task 9.
+- Risk / future gap:
+  - C1 remains open by design: Canvas “我的素材” writes global `ai_assets` without user owner or mutation-permission isolation. Add a separate architecture/spec slice before introducing multi-tenant visibility or per-user ownership semantics.
+  - Do not claim `canvas_prompts` / `canvas_assets` are dropped until a later backend migration applies and live schema is refreshed.
+
 ### AI image playground gpt-image-2
 
 - Backend:
@@ -776,7 +796,7 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
   - OperationLog route metadata skips request/response payload capture for prompt/image safety
 - Frontend:
   - adapted: `/ai/image-playground` resolves to `src/views/Main/ai/image-playground/index.vue` and now uses a Canvas-style three-panel studio: records, composer, result
-  - adapted: uploads reference/mask images via existing COS-only upload-token runtime, sends task-owned `input_files`/`mask_file` metadata with `POST /api/admin/v1/ai-images`, lists history, selects inline result details, reuses prompts/files, toggles favorite, deletes, and downloads outputs
+  - adapted: uploads reference/mask images via existing COS-only upload-token runtime, sends task-owned `input_files`/`mask_file` metadata with `POST /api/admin/v1/ai-images`, lists history, selects inline result details, reuses prompts/files, deletes selected records, retries failed results, saves generated outputs to assets, adds outputs to references, and downloads outputs
   - removed: `POST /api/admin/v1/ai-images/assets`, global asset registration DTOs, provider/model/API-key UI, IndexedDB/localStorage source of truth, and the old table-plus-bottom-composer layout
   - Canvas image history is read/deleted through backend `GET/DELETE /api/canvas/v1/ai/images`; browser cache is not used as business persistence
 - Tests:
@@ -797,17 +817,17 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
 ### canvas_front_next / canvas platform API
 
 - Backend:
-  - implemented: `auth_platforms.canvas` seed and canvas capability permissions, `/api/canvas/v1/auth/*`, `/api/canvas/v1/users/me`, `/api/canvas/v1/profile`, public settings/prompts/assets, and AI text/image/video generation routes. Old Canvas wallet/recharge UI/routes are retired from the Canvas free-generation surface; payment/wallet基础域 remains outside Canvas AI.
-  - route ownership: auth has dedicated `transport/admin`, `transport/app`, and `transport/canvas`; user app owns `/api/app/v1/users/me`, user canvas owns `/api/canvas/v1/users/me`; profile app owns `/api/app/v1/profile`, profile canvas owns `/api/canvas/v1/profile`; Canvas chat/video AI routes are owned by `internal/module/ai/chat|video/transport/canvas`, while Canvas image routes are owned by `internal/module/ai/image/transport/canvas`; payment/wallet admin routes remain payment-owned, and Canvas AI generation no longer depends on payment/wallet transport.
+  - implemented: `auth_platforms.canvas` seed and canvas capability permissions, `/api/canvas/v1/auth/*`, `/api/canvas/v1/users/me`, `/api/canvas/v1/profile`, public settings, AI-owned prompts/assets transports, and AI text/image/video generation routes. Old Canvas wallet/recharge UI/routes are retired from the Canvas free-generation surface; payment/wallet基础域 remains outside Canvas AI.
+  - route ownership: auth has dedicated `transport/admin`, `transport/app`, and `transport/canvas`; user app owns `/api/app/v1/users/me`, user canvas owns `/api/canvas/v1/users/me`; profile app owns `/api/app/v1/profile`, profile canvas owns `/api/canvas/v1/profile`; Canvas chat/video AI routes are owned by `internal/module/ai/chat|video/transport/canvas`, Canvas image routes are owned by `internal/module/ai/image/transport/canvas`, and Canvas prompt/asset routes are owned by `internal/module/ai/prompt|asset/transport/canvas`; payment/wallet admin routes remain payment-owned, and Canvas AI generation no longer depends on payment/wallet transport.
   - implemented: `permissions/page-init` default platform dictionary includes `admin/app/canvas`; canvas RBAC gates live in `permissions.platform='canvas'` and are not copied into an admin menu tree.
   - planned cleanup: Canvas PAGE rows stay focused on free-generation pages (`canvas_page`, `canvas_image_page`, `canvas_video_page`, `canvas_prompts_page`, `canvas_assets_page`, `canvas_profile_page`) and BUTTON rows stay focused on generation/assets/prompts (`canvas_access`, `canvas_prompt_read`, `canvas_asset_read`, `canvas_ai_image_generate`, `canvas_ai_video_generate`); old wallet/recharge Canvas rows are retired with the old AI billing surface. Canvas auth login `data.user` and `/api/canvas/v1/users/me` return the canonical users/me payload (`user_id`, `username`, `avatar`, `role_name`, `permissions`, `router`, `buttonCodes`) instead of permission alias fields.
   - implemented: `/api/*/auth/login-config` returns `allow_register`; Canvas uses it with login types and slide captcha, and no `/api/canvas/v1/auth/register` route is exposed.
   - implemented: text/image/video generation use backend-managed provider config for free; old `ai_billing_records(platform=canvas)` charge/refund/audit is deleted; image tasks use `ai_image_tasks/ai_image_files` with `platform=canvas`; video binds upstream task id to `canvas_video_tasks.provider_task_id` and reads status/content by task ownership (`id + user_id + is_del=2`).
   - implemented: `/api/canvas/v1/settings` exposes selectable AI runtime through `agents.text|image|video` derived from enabled `ai_agents` Canvas-specific scene bindings (`canvas_text_generate`, `canvas_image_generate`, `canvas_video_generate`); old billing-scene metadata is removed and must not be treated as a model source.
-  - not implemented in this slice: `admin_front_ts` Canvas prompt/asset CRUD UI and cloud-synced `canvas_projects`.
+  - not implemented in this slice: cloud-synced `canvas_projects`, per-user asset ownership/visibility, and mutation-permission isolation for Canvas “我的素材”.
 - Frontend:
   - implemented: `canvas_front_next` is an independent Next.js repo on `master`; source comes from `infinite-canvas/web` but old admin UI and local/custom API-key channel mode are removed.
-  - implemented boundary: auth/settings/prompts/assets/profile/text/image/video clients call `/api/canvas/v1/*`; no user-entered provider API key/base URL is used for generation; wallet/recharge UI is removed from Canvas free-generation surface while payment/wallet基础域保留 outside Canvas AI.
+  - implemented boundary: auth/settings/prompts/assets/profile/text/image/video clients call `/api/canvas/v1/*`; prompt and asset clients are backed by AI module transports; no user-entered provider API key/base URL is used for generation; wallet/recharge UI is removed from Canvas free-generation surface while payment/wallet基础域保留 outside Canvas AI.
   - implemented: Canvas model/agent pickers use only configured `agents.*` options from settings, submit only `agent_id`, and no longer invent `canvas_text_generate` / `canvas_image_generate` / `canvas_video_generate` as selectable models.
   - implemented: Canvas login page reads `/api/canvas/v1/auth/login-config`, renders the configured email/phone/password login-type tabs, uses `/api/canvas/v1/auth/send-code` for email/phone code login and `allow_register` auto-open-account semantics, opens slide captcha only after password-login submit, removes standalone register UI/API, and protects `(user)` pages with an auth guard; 401 redirects to login and 403 renders an explicit no-permission state.
   - implemented/planned boundary: Canvas frontend RBAC registry keeps local route labels/icons while route authorization comes from backend `router` paths; session store keeps `routePaths` separate from BUTTON-only `buttonCodes`; `can(code)` reads only `buttonCodes`; top/mobile navigation and route guard use `routePaths`; prompts/assets/settings protected API calls require ready token plus matching BUTTON permission before firing; `/profile` reads/saves through profile service; wallet/recharge account pages and cost wording are removed from the Canvas AI surface.
@@ -822,7 +842,7 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
   - canvas spec/plan, current-status, module matrix, admin API contract, and smoke matrix.
 - Risk:
   - live provider credentials/model availability still determines real text/image/video generation success; provider calls are backend-owned and fail closed without billing refund side effects.
-  - current Canvas business tables include `canvas_prompts`, `canvas_assets`, `canvas_video_tasks`; Canvas image history is stored in `ai_image_tasks` / `ai_image_files` with `platform=canvas`; do not add `canvas_users`, `canvas_credit_logs`, `canvas_settings`, `canvas_projects`, or `canvas_wallets` without a new spec.
+  - current Canvas prompt/asset active tables are `ai_prompts` and `ai_assets`; live `canvas_prompts` / `canvas_assets` are retained only as safe migration-window legacy tables. Canvas video remains in `canvas_video_tasks`; Canvas image history is stored in `ai_image_tasks` / `ai_image_files` with `platform=canvas`; do not add `canvas_users`, `canvas_credit_logs`, `canvas_settings`, `canvas_projects`, or `canvas_wallets` without a new spec.
 
 ## Removed / retired scope
 

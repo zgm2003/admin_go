@@ -1,6 +1,6 @@
 # Backend Route Inventory Snapshot
 
-Generated at: 2026-06-07 19:25:14 +08:00
+Generated at: 2026-06-08 06:02:58 +08:00
 
 This artifact is generated from current Go route source files and `admin_back_go/internal/bootstrap/route_meta.go`. It is a source inventory for navigation and contract drift checks, not proof that every route is currently served by a running process. Runtime behavior, smoke output, and captured traffic still outrank this file.
 
@@ -10,13 +10,13 @@ Path inference rule: only literal strings, same-file string constants, and simpl
 
 | Fact | Value |
 | --- | --- |
-| Route source files with registrations | `45` |
-| Route registrations found | `281` |
-| Inferred full paths | `281` |
+| Route source files with registrations | `49` |
+| Route registrations found | `298` |
+| Inferred full paths | `298` |
 | Unresolved registrations | `0` |
 | Callback exception registrations | `1` |
-| Permission route_meta matches | `122` |
-| Operation route_meta matches | `124` |
+| Permission route_meta matches | `130` |
+| Operation route_meta matches | `132` |
 | Unmatched permission route_meta keys | `0` |
 | Unmatched operation route_meta keys | `0` |
 
@@ -26,10 +26,10 @@ Path inference rule: only literal strings, same-file string constants, and simpl
 
 | Surface | Route registrations |
 | --- | --- |
-| `admin` | `244` |
+| `admin` | `258` |
 | `app` | `9` |
 | `callback` | `1` |
-| `canvas` | `27` |
+| `canvas` | `30` |
 
 ## Route inventory
 
@@ -45,6 +45,17 @@ Path inference rule: only literal strings, same-file string constants, and simpl
 | `ai/agent` | `admin` | `admin_back_go/internal/module/ai/agent/transport/admin/route.go` | `22` | `PATCH` | `/api/admin/v1/ai-agents` | `"/:id/status"` | `/:id/status` | `/api/admin/v1/ai-agents/:id/status` | `group-fragment` |  | `ai_agent_status` | `ai_agent.change_status / 修改AI智能体状态` |
 | `ai/agent` | `admin` | `admin_back_go/internal/module/ai/agent/transport/admin/route.go` | `23` | `POST` | `/api/admin/v1/ai-agents` | `"/:id/test"` | `/:id/test` | `/api/admin/v1/ai-agents/:id/test` | `group-fragment` |  | `ai_agent_test` | `ai_agent.test / 测试AI智能体` |
 | `ai/agent` | `admin` | `admin_back_go/internal/module/ai/agent/transport/admin/route.go` | `24` | `DELETE` | `/api/admin/v1/ai-agents` | `"/:id"` | `/:id` | `/api/admin/v1/ai-agents/:id` | `group-fragment` |  | `ai_agent_del` | `ai_agent.delete / 删除AI智能体` |
+| `ai/asset` | `admin` | `admin_back_go/internal/module/ai/asset/transport/admin/route.go` | `13` | `GET` | `/api/admin/v1/ai-assets` | `"/page-init"` | `/page-init` | `/api/admin/v1/ai-assets/page-init` | `group-fragment` |  |  |  |
+| `ai/asset` | `admin` | `admin_back_go/internal/module/ai/asset/transport/admin/route.go` | `14` | `GET` | `/api/admin/v1/ai-assets` | `""` |  | `/api/admin/v1/ai-assets` | `group-fragment` |  |  |  |
+| `ai/asset` | `admin` | `admin_back_go/internal/module/ai/asset/transport/admin/route.go` | `15` | `POST` | `/api/admin/v1/ai-assets` | `""` |  | `/api/admin/v1/ai-assets` | `group-fragment` |  | `ai_asset_add` | `ai_asset.create / 新增AI素材` |
+| `ai/asset` | `admin` | `admin_back_go/internal/module/ai/asset/transport/admin/route.go` | `16` | `GET` | `/api/admin/v1/ai-assets` | `"/:id"` | `/:id` | `/api/admin/v1/ai-assets/:id` | `group-fragment` |  |  |  |
+| `ai/asset` | `admin` | `admin_back_go/internal/module/ai/asset/transport/admin/route.go` | `17` | `PUT` | `/api/admin/v1/ai-assets` | `"/:id"` | `/:id` | `/api/admin/v1/ai-assets/:id` | `group-fragment` |  | `ai_asset_edit` | `ai_asset.update / 编辑AI素材` |
+| `ai/asset` | `admin` | `admin_back_go/internal/module/ai/asset/transport/admin/route.go` | `18` | `DELETE` | `/api/admin/v1/ai-assets` | `"/:id"` | `/:id` | `/api/admin/v1/ai-assets/:id` | `group-fragment` |  | `ai_asset_del` | `ai_asset.delete / 删除AI素材` |
+| `ai/asset` | `admin` | `admin_back_go/internal/module/ai/asset/transport/admin/route.go` | `19` | `DELETE` | `/api/admin/v1/ai-assets` | `""` |  | `/api/admin/v1/ai-assets` | `group-fragment` |  | `ai_asset_del` | `ai_asset.delete_batch / 批量删除AI素材` |
+| `ai/asset` | `canvas` | `admin_back_go/internal/module/ai/asset/transport/canvas/route.go` | `13` | `GET` | `/api/canvas/v1` | `"/assets"` | `/assets` | `/api/canvas/v1/assets` | `group-fragment` |  |  |  |
+| `ai/asset` | `canvas` | `admin_back_go/internal/module/ai/asset/transport/canvas/route.go` | `14` | `POST` | `/api/canvas/v1` | `"/assets"` | `/assets` | `/api/canvas/v1/assets` | `group-fragment` |  |  |  |
+| `ai/asset` | `canvas` | `admin_back_go/internal/module/ai/asset/transport/canvas/route.go` | `15` | `PUT` | `/api/canvas/v1` | `"/assets/:id"` | `/assets/:id` | `/api/canvas/v1/assets/:id` | `group-fragment` |  |  |  |
+| `ai/asset` | `canvas` | `admin_back_go/internal/module/ai/asset/transport/canvas/route.go` | `16` | `DELETE` | `/api/canvas/v1` | `"/assets/:id"` | `/assets/:id` | `/api/canvas/v1/assets/:id` | `group-fragment` |  |  |  |
 | `ai/chat` | `canvas` | `admin_back_go/internal/module/ai/chat/transport/canvas/route.go` | `14` | `POST` | `/api/canvas/v1/ai/chat` | `"/completions"` | `/completions` | `/api/canvas/v1/ai/chat/completions` | `group-fragment` |  |  |  |
 | `ai/conversation` | `admin` | `admin_back_go/internal/module/ai/conversation/transport/admin/route.go` | `14` | `GET` | `/api/admin/v1/ai-conversations` | `""` |  | `/api/admin/v1/ai-conversations` | `group-fragment` |  |  |  |
 | `ai/conversation` | `admin` | `admin_back_go/internal/module/ai/conversation/transport/admin/route.go` | `15` | `GET` | `/api/admin/v1/ai-conversations` | `"/:id"` | `/:id` | `/api/admin/v1/ai-conversations/:id` | `group-fragment` |  |  |  |
@@ -55,8 +66,7 @@ Path inference rule: only literal strings, same-file string constants, and simpl
 | `ai/image` | `admin` | `admin_back_go/internal/module/ai/image/transport/admin/route.go` | `15` | `GET` | `/api/admin/v1/ai-images` | `""` |  | `/api/admin/v1/ai-images` | `group-fragment` |  |  |  |
 | `ai/image` | `admin` | `admin_back_go/internal/module/ai/image/transport/admin/route.go` | `16` | `GET` | `/api/admin/v1/ai-images` | `"/:id"` | `/:id` | `/api/admin/v1/ai-images/:id` | `group-fragment` |  |  |  |
 | `ai/image` | `admin` | `admin_back_go/internal/module/ai/image/transport/admin/route.go` | `17` | `POST` | `/api/admin/v1/ai-images` | `""` |  | `/api/admin/v1/ai-images` | `group-fragment` |  | `ai_image_task_add` | `ai_image.create_task / 提交AI图片任务` |
-| `ai/image` | `admin` | `admin_back_go/internal/module/ai/image/transport/admin/route.go` | `18` | `PATCH` | `/api/admin/v1/ai-images` | `"/:id/favorite"` | `/:id/favorite` | `/api/admin/v1/ai-images/:id/favorite` | `group-fragment` |  | `ai_image_task_favorite` | `ai_image.favorite / 收藏AI图片任务` |
-| `ai/image` | `admin` | `admin_back_go/internal/module/ai/image/transport/admin/route.go` | `19` | `DELETE` | `/api/admin/v1/ai-images` | `"/:id"` | `/:id` | `/api/admin/v1/ai-images/:id` | `group-fragment` |  | `ai_image_task_del` | `ai_image.delete / 删除AI图片任务` |
+| `ai/image` | `admin` | `admin_back_go/internal/module/ai/image/transport/admin/route.go` | `18` | `DELETE` | `/api/admin/v1/ai-images` | `"/:id"` | `/:id` | `/api/admin/v1/ai-images/:id` | `group-fragment` |  | `ai_image_task_del` | `ai_image.delete / 删除AI图片任务` |
 | `ai/image` | `canvas` | `admin_back_go/internal/module/ai/image/transport/canvas/route.go` | `14` | `GET` | `/api/canvas/v1/ai/images` | `""` |  | `/api/canvas/v1/ai/images` | `group-fragment` |  |  |  |
 | `ai/image` | `canvas` | `admin_back_go/internal/module/ai/image/transport/canvas/route.go` | `15` | `POST` | `/api/canvas/v1/ai/images` | `"/generations"` | `/generations` | `/api/canvas/v1/ai/images/generations` | `group-fragment` |  |  |  |
 | `ai/image` | `canvas` | `admin_back_go/internal/module/ai/image/transport/canvas/route.go` | `16` | `POST` | `/api/canvas/v1/ai/images` | `"/edits"` | `/edits` | `/api/canvas/v1/ai/images/edits` | `group-fragment` |  |  |  |
@@ -83,6 +93,15 @@ Path inference rule: only literal strings, same-file string constants, and simpl
 | `ai/message` | `admin` | `admin_back_go/internal/module/ai/message/transport/admin/route.go` | `13` | `GET` |  | `"/api/admin/v1/ai-conversations/:id/messages"` | `/api/admin/v1/ai-conversations/:id/messages` | `/api/admin/v1/ai-conversations/:id/messages` | `full-literal` |  |  |  |
 | `ai/message` | `admin` | `admin_back_go/internal/module/ai/message/transport/admin/route.go` | `14` | `POST` |  | `"/api/admin/v1/ai-conversations/:id/messages"` | `/api/admin/v1/ai-conversations/:id/messages` | `/api/admin/v1/ai-conversations/:id/messages` | `full-literal` |  |  | `ai_message.send / 发送AI消息` |
 | `ai/message` | `admin` | `admin_back_go/internal/module/ai/message/transport/admin/route.go` | `15` | `POST` |  | `"/api/admin/v1/ai-conversations/:id/messages/cancel"` | `/api/admin/v1/ai-conversations/:id/messages/cancel` | `/api/admin/v1/ai-conversations/:id/messages/cancel` | `full-literal` |  |  |  |
+| `ai/prompt` | `admin` | `admin_back_go/internal/module/ai/prompt/transport/admin/route.go` | `13` | `GET` | `/api/admin/v1/ai-prompts` | `"/page-init"` | `/page-init` | `/api/admin/v1/ai-prompts/page-init` | `group-fragment` |  |  |  |
+| `ai/prompt` | `admin` | `admin_back_go/internal/module/ai/prompt/transport/admin/route.go` | `14` | `GET` | `/api/admin/v1/ai-prompts` | `""` |  | `/api/admin/v1/ai-prompts` | `group-fragment` |  |  |  |
+| `ai/prompt` | `admin` | `admin_back_go/internal/module/ai/prompt/transport/admin/route.go` | `15` | `POST` | `/api/admin/v1/ai-prompts` | `""` |  | `/api/admin/v1/ai-prompts` | `group-fragment` |  | `ai_prompt_add` | `ai_prompt.create / 新增AI提示词` |
+| `ai/prompt` | `admin` | `admin_back_go/internal/module/ai/prompt/transport/admin/route.go` | `16` | `GET` | `/api/admin/v1/ai-prompts` | `"/:id"` | `/:id` | `/api/admin/v1/ai-prompts/:id` | `group-fragment` |  |  |  |
+| `ai/prompt` | `admin` | `admin_back_go/internal/module/ai/prompt/transport/admin/route.go` | `17` | `PUT` | `/api/admin/v1/ai-prompts` | `"/:id"` | `/:id` | `/api/admin/v1/ai-prompts/:id` | `group-fragment` |  | `ai_prompt_edit` | `ai_prompt.update / 编辑AI提示词` |
+| `ai/prompt` | `admin` | `admin_back_go/internal/module/ai/prompt/transport/admin/route.go` | `18` | `PATCH` | `/api/admin/v1/ai-prompts` | `"/:id/status"` | `/:id/status` | `/api/admin/v1/ai-prompts/:id/status` | `group-fragment` |  | `ai_prompt_status` | `ai_prompt.change_status / 修改AI提示词状态` |
+| `ai/prompt` | `admin` | `admin_back_go/internal/module/ai/prompt/transport/admin/route.go` | `19` | `DELETE` | `/api/admin/v1/ai-prompts` | `"/:id"` | `/:id` | `/api/admin/v1/ai-prompts/:id` | `group-fragment` |  | `ai_prompt_del` | `ai_prompt.delete / 删除AI提示词` |
+| `ai/prompt` | `admin` | `admin_back_go/internal/module/ai/prompt/transport/admin/route.go` | `20` | `DELETE` | `/api/admin/v1/ai-prompts` | `""` |  | `/api/admin/v1/ai-prompts` | `group-fragment` |  | `ai_prompt_del` | `ai_prompt.delete_batch / 批量删除AI提示词` |
+| `ai/prompt` | `canvas` | `admin_back_go/internal/module/ai/prompt/transport/canvas/route.go` | `13` | `GET` | `/api/canvas/v1` | `"/prompts"` | `/prompts` | `/api/canvas/v1/prompts` | `group-fragment` |  |  |  |
 | `ai/provider` | `admin` | `admin_back_go/internal/module/ai/provider/transport/admin/route.go` | `14` | `GET` | `/api/admin/v1/ai-providers` | `"/page-init"` | `/page-init` | `/api/admin/v1/ai-providers/page-init` | `group-fragment` |  |  |  |
 | `ai/provider` | `admin` | `admin_back_go/internal/module/ai/provider/transport/admin/route.go` | `15` | `GET` | `/api/admin/v1/ai-providers` | `""` |  | `/api/admin/v1/ai-providers` | `group-fragment` |  |  |  |
 | `ai/provider` | `admin` | `admin_back_go/internal/module/ai/provider/transport/admin/route.go` | `16` | `POST` | `/api/admin/v1/ai-providers` | `"/model-options"` | `/model-options` | `/api/admin/v1/ai-providers/model-options` | `group-fragment` |  | `ai_provider_test` | `ai_provider.preview_models / 拉取AI供应商模型` |
@@ -148,8 +167,6 @@ Path inference rule: only literal strings, same-file string constants, and simpl
 | `auth_platform` | `admin` | `admin_back_go/internal/module/auth_platform/transport/admin/route.go` | `19` | `DELETE` | `/api/admin/v1/auth-platforms` | `"/:id"` | `/:id` | `/api/admin/v1/auth-platforms/:id` | `group-fragment` |  | `permission_authPlatform_del` | `auth_platform.delete / 删除认证平台` |
 | `auth_platform` | `admin` | `admin_back_go/internal/module/auth_platform/transport/admin/route.go` | `20` | `DELETE` | `/api/admin/v1/auth-platforms` | `""` |  | `/api/admin/v1/auth-platforms` | `group-fragment` |  | `permission_authPlatform_del` | `auth_platform.delete_batch / 批量删除认证平台` |
 | `canvas` | `canvas` | `admin_back_go/internal/module/canvas/transport/canvas/route.go` | `13` | `GET` | `/api/canvas/v1` | `"/settings"` | `/settings` | `/api/canvas/v1/settings` | `group-fragment` |  |  |  |
-| `canvas` | `canvas` | `admin_back_go/internal/module/canvas/transport/canvas/route.go` | `14` | `GET` | `/api/canvas/v1` | `"/prompts"` | `/prompts` | `/api/canvas/v1/prompts` | `group-fragment` |  |  |  |
-| `canvas` | `canvas` | `admin_back_go/internal/module/canvas/transport/canvas/route.go` | `15` | `GET` | `/api/canvas/v1` | `"/assets"` | `/assets` | `/api/canvas/v1/assets` | `group-fragment` |  |  |  |
 | `clientversion` | `admin` | `admin_back_go/internal/module/clientversion/transport/admin/route.go` | `15` | `GET` | `/api/admin/v1/client-versions` | `"/page-init"` | `/page-init` | `/api/admin/v1/client-versions/page-init` | `group-fragment` |  |  |  |
 | `clientversion` | `admin` | `admin_back_go/internal/module/clientversion/transport/admin/route.go` | `16` | `GET` | `/api/admin/v1/client-versions` | `"/update-json"` | `/update-json` | `/api/admin/v1/client-versions/update-json` | `group-fragment` |  |  |  |
 | `clientversion` | `admin` | `admin_back_go/internal/module/clientversion/transport/admin/route.go` | `17` | `GET` | `/api/admin/v1/client-versions` | `"/current-check"` | `/current-check` | `/api/admin/v1/client-versions/current-check` | `group-fragment` |  |  |  |

@@ -1,6 +1,6 @@
 # MySQL Live Schema Snapshot
 
-Verified at: 2026-06-07 19:24:51 +08:00
+Verified at: 2026-06-08 06:10:27 +08:00
 
 Truth source: live MySQL `DATABASE() = admin` on `127.0.0.1:3307`. Passwords and secrets are intentionally not recorded here.
 
@@ -11,7 +11,7 @@ This snapshot is generated from `information_schema`, per-table `COUNT(*)`, and 
 | Item | Value |
 | --- | --- |
 | Database | `admin` |
-| Base tables | 55 |
+| Base tables | 57 |
 | Full DDL artifact | `docs/db/mysql-live-schema-2026-06-07.sql` |
 
 ## Table inventory
@@ -22,19 +22,21 @@ This snapshot is generated from `information_schema`, per-table `COUNT(*)`, and 
 | `ai_agent_knowledge_bases` | 1 | InnoDB | utf8mb4_0900_ai_ci | AI智能体知识库绑定 |
 | `ai_agent_tools` | 2 | InnoDB | utf8mb4_0900_ai_ci | AI智能体工具绑定 |
 | `ai_agents` | 7 | InnoDB | utf8mb4_0900_ai_ci | AI agent mappings |
+| `ai_assets` | 0 | InnoDB | utf8mb4_unicode_ci | AI素材库 |
 | `ai_conversations` | 0 | InnoDB | utf8mb4_0900_ai_ci | AI会话 |
-| `ai_image_files` | 0 | InnoDB | utf8mb4_unicode_ci |  |
-| `ai_image_tasks` | 0 | InnoDB | utf8mb4_unicode_ci |  |
+| `ai_image_files` | 2 | InnoDB | utf8mb4_unicode_ci |  |
+| `ai_image_tasks` | 1 | InnoDB | utf8mb4_unicode_ci |  |
 | `ai_knowledge_bases` | 1 | InnoDB | utf8mb4_0900_ai_ci | AI知识库 |
 | `ai_knowledge_chunks` | 6 | InnoDB | utf8mb4_0900_ai_ci | AI知识库分块 |
 | `ai_knowledge_documents` | 6 | InnoDB | utf8mb4_0900_ai_ci | AI知识库文档 |
 | `ai_knowledge_retrieval_hits` | 0 | InnoDB | utf8mb4_0900_ai_ci | AI知识库检索命中 |
 | `ai_knowledge_retrievals` | 0 | InnoDB | utf8mb4_0900_ai_ci | AI知识库检索记录 |
 | `ai_messages` | 0 | InnoDB | utf8mb4_0900_ai_ci | AI消息 |
+| `ai_prompts` | 1356 | InnoDB | utf8mb4_unicode_ci | AI提示词库 |
 | `ai_provider_models` | 4 | InnoDB | utf8mb4_0900_ai_ci | AI provider enabled model catalog |
 | `ai_providers` | 2 | InnoDB | utf8mb4_0900_ai_ci | AI engine connection configs |
-| `ai_run_events` | 0 | InnoDB | utf8mb4_0900_ai_ci | AI运行监控事件 |
-| `ai_runs` | 0 | InnoDB | utf8mb4_0900_ai_ci | AI运行监控记录 |
+| `ai_run_events` | 4 | InnoDB | utf8mb4_0900_ai_ci | AI运行监控事件 |
+| `ai_runs` | 2 | InnoDB | utf8mb4_0900_ai_ci | AI运行监控记录 |
 | `ai_text_tasks` | 0 | InnoDB | utf8mb4_0900_ai_ci | AI文本生成任务 |
 | `ai_tool_calls` | 0 | InnoDB | utf8mb4_0900_ai_ci | AI工具调用记录 |
 | `ai_tools` | 1 | InnoDB | utf8mb4_0900_ai_ci | AI工具定义 |
@@ -44,34 +46,34 @@ This snapshot is generated from `information_schema`, per-table `COUNT(*)`, and 
 | `canvas_video_tasks` | 0 | InnoDB | utf8mb4_unicode_ci | 无限画布视频生成任务 |
 | `client_versions` | 8 | InnoDB | utf8mb4_0900_ai_ci | 客户端版本管理 |
 | `cron_task` | 11 | InnoDB | utf8mb4_0900_ai_ci | 定时任务配置表 |
-| `cron_task_log` | 92585 | InnoDB | utf8mb4_0900_ai_ci | 定时任务执行日志表 |
+| `cron_task_log` | 94330 | InnoDB | utf8mb4_0900_ai_ci | 定时任务执行日志表 |
 | `export_tasks` | 120 | InnoDB | utf8mb4_0900_ai_ci | 导出任务记录 |
 | `mail_configs` | 1 | InnoDB | utf8mb4_0900_ai_ci |  |
 | `mail_logs` | 6 | InnoDB | utf8mb4_0900_ai_ci |  |
 | `mail_templates` | 4 | InnoDB | utf8mb4_0900_ai_ci |  |
 | `notification_task` | 19 | InnoDB | utf8mb4_0900_ai_ci |  |
 | `notifications` | 3085 | InnoDB | utf8mb4_0900_ai_ci | 用户通知表 |
-| `operation_logs` | 2418 | InnoDB | utf8mb4_0900_ai_ci | 操作日志表 |
+| `operation_logs` | 2501 | InnoDB | utf8mb4_0900_ai_ci | 操作日志表 |
 | `payment_callback_events` | 0 | InnoDB | utf8mb4_unicode_ci |  |
 | `payment_configs` | 1 | InnoDB | utf8mb4_unicode_ci |  |
 | `payment_orders` | 19 | InnoDB | utf8mb4_unicode_ci |  |
 | `payment_recharge_packages` | 8 | InnoDB | utf8mb4_unicode_ci |  |
 | `payment_recharges` | 19 | InnoDB | utf8mb4_unicode_ci |  |
-| `permissions` | 314 | InnoDB | utf8mb4_0900_ai_ci | 菜单权限表 |
-| `role_permissions` | 409 | InnoDB | utf8mb4_0900_ai_ci | role permission pivot |
+| `permissions` | 341 | InnoDB | utf8mb4_0900_ai_ci | 菜单权限表 |
+| `role_permissions` | 437 | InnoDB | utf8mb4_0900_ai_ci | role permission pivot |
 | `roles` | 2 | InnoDB | utf8mb4_0900_ai_ci | 角色 |
 | `sms_configs` | 1 | InnoDB | utf8mb4_0900_ai_ci |  |
 | `sms_logs` | 0 | InnoDB | utf8mb4_0900_ai_ci |  |
 | `sms_templates` | 0 | InnoDB | utf8mb4_0900_ai_ci |  |
 | `system_settings` | 9 | InnoDB | utf8mb4_0900_ai_ci | 系统设置（key-value） |
-| `upload_driver` | 50 | InnoDB | utf8mb4_0900_ai_ci |  |
-| `upload_rule` | 50 | InnoDB | utf8mb4_0900_ai_ci |  |
-| `upload_setting` | 52 | InnoDB | utf8mb4_0900_ai_ci | 上传设置：驱动+规则组合与启用状态 |
+| `upload_driver` | 53 | InnoDB | utf8mb4_0900_ai_ci |  |
+| `upload_rule` | 53 | InnoDB | utf8mb4_0900_ai_ci |  |
+| `upload_setting` | 55 | InnoDB | utf8mb4_0900_ai_ci | 上传设置：驱动+规则组合与启用状态 |
 | `user_profiles` | 4 | InnoDB | utf8mb4_0900_ai_ci | 用户资料表 |
-| `user_sessions` | 230 | InnoDB | utf8mb4_0900_ai_ci | 用户会话表 |
+| `user_sessions` | 247 | InnoDB | utf8mb4_0900_ai_ci | 用户会话表 |
 | `user_wallets` | 2 | InnoDB | utf8mb4_unicode_ci |  |
 | `users` | 4 | InnoDB | utf8mb4_0900_ai_ci | 用户表 |
-| `users_login_log` | 309 | InnoDB | utf8mb4_0900_ai_ci | 登录日志 |
+| `users_login_log` | 326 | InnoDB | utf8mb4_0900_ai_ci | 登录日志 |
 | `wallet_transactions` | 3 | InnoDB | utf8mb4_unicode_ci |  |
 
 ## Foreign keys observed
@@ -168,6 +170,31 @@ Indexes:
 - `idx_ai_agents_model` (non-unique, BTREE): `provider_id`, `model_id`, `status`, `is_del`
 - `idx_ai_agents_provider` (non-unique, BTREE): `provider_id`, `status`, `is_del`
 - `PRIMARY` (unique, BTREE): `id`
+
+### `ai_assets`
+
+| # | Column | Type | Null | Key | Default | Extra | Comment |
+| ---: | --- | --- | --- | --- | --- | --- | --- |
+| 1 | `id` | `bigint unsigned` | NO | PRI | NULL | auto_increment |  |
+| 2 | `slug` | `varchar(191)` | NO | UNI | NULL |  |  |
+| 3 | `type` | `varchar(16)` | NO | MUL | NULL |  |  |
+| 4 | `category` | `varchar(191)` | NO |  |  |  |  |
+| 5 | `title` | `varchar(191)` | NO |  | NULL |  |  |
+| 6 | `cover_url` | `varchar(1024)` | NO |  |  |  |  |
+| 7 | `description` | `varchar(512)` | NO |  |  |  |  |
+| 8 | `content` | `text` | YES |  | NULL |  |  |
+| 9 | `url` | `varchar(1024)` | NO |  |  |  |  |
+| 10 | `tags_json` | `json` | YES |  | NULL |  |  |
+| 11 | `status` | `tinyint` | NO | MUL | 1 |  |  |
+| 12 | `is_del` | `tinyint` | NO |  | 2 |  |  |
+| 13 | `created_at` | `datetime` | NO |  | CURRENT_TIMESTAMP | DEFAULT_GENERATED |  |
+| 14 | `updated_at` | `datetime` | NO |  | CURRENT_TIMESTAMP | DEFAULT_GENERATED on update CURRENT_TIMESTAMP |  |
+
+Indexes:
+- `idx_ai_assets_status_updated` (non-unique, BTREE): `status`, `is_del`, `updated_at`, `id`
+- `idx_ai_assets_type_status` (non-unique, BTREE): `type`, `status`, `is_del`, `updated_at`, `id`
+- `PRIMARY` (unique, BTREE): `id`
+- `uk_ai_assets_slug` (unique, BTREE): `slug`
 
 ### `ai_conversations`
 
@@ -379,6 +406,30 @@ Indexes:
 Indexes:
 - `idx_ai_messages_conversation_del_id` (non-unique, BTREE): `conversation_id`, `is_del`, `id`
 - `PRIMARY` (unique, BTREE): `id`
+
+### `ai_prompts`
+
+| # | Column | Type | Null | Key | Default | Extra | Comment |
+| ---: | --- | --- | --- | --- | --- | --- | --- |
+| 1 | `id` | `bigint unsigned` | NO | PRI | NULL | auto_increment |  |
+| 2 | `slug` | `varchar(191)` | NO | UNI | NULL |  |  |
+| 3 | `category` | `varchar(191)` | NO | MUL |  |  |  |
+| 4 | `title` | `varchar(191)` | NO |  | NULL |  |  |
+| 5 | `cover_url` | `varchar(1024)` | NO |  |  |  |  |
+| 6 | `prompt` | `text` | NO |  | NULL |  |  |
+| 7 | `preview` | `varchar(512)` | NO |  |  |  |  |
+| 8 | `tags_json` | `json` | YES |  | NULL |  |  |
+| 9 | `source_url` | `varchar(1024)` | NO |  |  |  |  |
+| 10 | `status` | `tinyint` | NO | MUL | 1 |  |  |
+| 11 | `is_del` | `tinyint` | NO |  | 2 |  |  |
+| 12 | `created_at` | `datetime` | NO |  | CURRENT_TIMESTAMP | DEFAULT_GENERATED |  |
+| 13 | `updated_at` | `datetime` | NO |  | CURRENT_TIMESTAMP | DEFAULT_GENERATED on update CURRENT_TIMESTAMP |  |
+
+Indexes:
+- `idx_ai_prompts_category_status` (non-unique, BTREE): `category`, `status`, `is_del`, `updated_at`, `id`
+- `idx_ai_prompts_status_updated` (non-unique, BTREE): `status`, `is_del`, `updated_at`, `id`
+- `PRIMARY` (unique, BTREE): `id`
+- `uk_ai_prompts_slug` (unique, BTREE): `slug`
 
 ### `ai_provider_models`
 

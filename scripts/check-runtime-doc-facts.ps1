@@ -1331,11 +1331,11 @@ try {
         }
 
         $schemaCount = Get-SchemaBaseTableCount $schemaMdPath
-        if ($schemaCount -ne 55) {
-            Add-Failure $failures "schema snapshot expected 55 base tables, got $schemaCount"
+        if ($schemaCount -ne 57) {
+            Add-Failure $failures "schema snapshot expected 57 base tables, got $schemaCount"
         }
         [void]$evidence.Add("schema_snapshot_base_tables=$schemaCount")
-        foreach ($table in @('users', 'permissions', 'ai_agents', 'ai_image_tasks', 'ai_image_files', 'canvas_prompts', 'canvas_assets', 'canvas_video_tasks', 'payment_recharges')) {
+        foreach ($table in @('users', 'permissions', 'ai_agents', 'ai_image_tasks', 'ai_image_files', 'ai_prompts', 'ai_assets', 'canvas_prompts', 'canvas_assets', 'canvas_video_tasks', 'payment_recharges')) {
             Assert-Contains $failures $schemaSqlPath "CREATE TABLE ``$table``" "schema DDL missing table $table"
         }
 
@@ -1350,12 +1350,16 @@ try {
         if ($dbSchemaOwnershipReviewed -ne $schemaCount) {
             Add-Failure $failures "DB schema ownership reviewed $dbSchemaOwnershipReviewed tables, but schema snapshot has $schemaCount base tables"
         }
-        if ($dbSchemaOwnershipLiveOnly -ne 0) {
-            Add-Failure $failures "DB schema ownership live-schema-only count changed from expected 0 to $dbSchemaOwnershipLiveOnly"
+        if ($dbSchemaOwnershipLiveOnly -ne 2) {
+            Add-Failure $failures "DB schema ownership live-schema-only count changed from expected 2 legacy AI prompt/asset migration-window tables to $dbSchemaOwnershipLiveOnly"
         }
         Assert-Contains $failures $dbSchemaOwnershipMapPath 'not a migration history' 'DB schema ownership scope disclaimer drift'
         foreach ($table in @('users', 'permissions', 'ai_agents', 'ai_image_tasks', 'ai_image_files', 'canvas_prompts', 'payment_recharges')) {
             Assert-Contains $failures $dbSchemaOwnershipMapPath "``$table``" "DB schema ownership missing table $table"
+        }
+        foreach ($table in @('canvas_prompts', 'canvas_assets')) {
+            Assert-Contains $failures $dbSchemaOwnershipMapPath "| ``$table``" "DB schema ownership missing retained legacy migration-window table $table"
+            Assert-Contains $failures $dbSchemaOwnershipMapPath "``$table`` |" "DB schema ownership missing retained legacy migration-window table $table"
         }
 
         $fullStackBackendRoutes = Get-MarkdownSummaryCount $fullStackModuleMapPath 'Backend route registrations joined'
@@ -1445,9 +1449,9 @@ try {
         if ($adminFrontDirectExternalCandidates -ne 0) {
             Add-Failure $failures "Admin front source quality inventory direct external HTTP count changed from expected 0 to $adminFrontDirectExternalCandidates"
         }
-        Assert-Contains $failures $knowledgePath 'Current counts are `280` source files scanned, `0` `any` candidates, `0` `as any` candidates, `0` `catch(error: any)` candidates, `555` fallback candidates, and `0` direct external HTTP candidates.' 'current runtime knowledge Admin front source-quality count drift'
-        Assert-Contains $failures $sourceMapPath 'Current inventory facts: `280` Admin Vue source files scanned, `0` `any` candidates, `0` `as any` candidates, `0` `catch(error: any)` candidates, `555` fallback candidates, and `0` direct external HTTP candidates.' 'runtime source map Admin front source-quality count drift'
-        Assert-Contains $failures $statusPath 'current inventory records 0 `any` candidates, 0 `as any` candidates, 0 `Record<string, any>` candidates, 0 `catch(...: any)` candidates, 555 fallback candidates, and 0 direct external HTTP candidates' 'status Admin front source-quality count drift'
+        Assert-Contains $failures $knowledgePath 'Current counts are `280` source files scanned, `0` `any` candidates, `0` `as any` candidates, `0` `catch(error: any)` candidates, `542` fallback candidates, and `0` direct external HTTP candidates.' 'current runtime knowledge Admin front source-quality count drift'
+        Assert-Contains $failures $sourceMapPath 'Current inventory facts: `280` Admin Vue source files scanned, `0` `any` candidates, `0` `as any` candidates, `0` `catch(error: any)` candidates, `542` fallback candidates, and `0` direct external HTTP candidates.' 'runtime source map Admin front source-quality count drift'
+        Assert-Contains $failures $statusPath 'current inventory records 0 `any` candidates, 0 `as any` candidates, 0 `Record<string, any>` candidates, 0 `catch(...: any)` candidates, 542 fallback candidates, and 0 direct external HTTP candidates' 'status Admin front source-quality count drift'
         Assert-Contains $failures $adminFrontSourceQualityPath 'This is a regex source inventory, not type-aware semantic proof.' 'Admin front source quality inventory scope disclaimer drift'
         foreach ($priorityPath in @(
             'admin_front_ts/src/views/Layout/components/Header/index.vue',

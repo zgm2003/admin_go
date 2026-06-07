@@ -1,6 +1,6 @@
 # Runtime Inventory Snapshot
 
-Generated at: 2026-06-07 19:25:11 +08:00
+Generated at: 2026-06-08 06:02:57 +08:00
 
 This artifact is generated from current source manifests and directory structure. It is a navigation inventory, not runtime proof. Served API behavior, smoke/tests, and live MySQL schema still outrank this file.
 
@@ -32,7 +32,7 @@ Rule: `callback` is an external callback HTTP surface exception, not a business 
 
 | Capability | HTTP surfaces from source tree |
 | --- | --- |
-| `ai` | `agent/transport/admin`, `chat/transport/admin`, `chat/transport/canvas`, `conversation/transport/admin`, `image/transport/admin`, `image/transport/canvas`, `knowledge/transport/admin`, `message/transport/admin`, `provider/transport/admin`, `run/transport/admin`, `tool/transport/admin`, `video/transport/canvas` |
+| `ai` | `agent/transport/admin`, `asset/transport/admin`, `asset/transport/canvas`, `chat/transport/admin`, `chat/transport/canvas`, `conversation/transport/admin`, `image/transport/admin`, `image/transport/canvas`, `knowledge/transport/admin`, `message/transport/admin`, `prompt/transport/admin`, `prompt/transport/canvas`, `provider/transport/admin`, `run/transport/admin`, `tool/transport/admin`, `video/transport/canvas` |
 | `auth` | `transport/admin`, `transport/app`, `transport/canvas` |
 | `auth_platform` | `transport/admin` |
 | `canvas` | `transport/canvas` |
@@ -63,12 +63,16 @@ These are route fragments found in module transport route files. They are useful
 | Route file | Method fragments |
 | --- | --- |
 | `admin_back_go/internal/module/ai/agent/transport/admin/route.go` | `DELETE /:id`<br>`GET /`<br>`GET /:id`<br>`GET /options`<br>`GET /page-init`<br>`GET /provider-models/:id`<br>`PATCH /:id/status`<br>`POST /`<br>`POST /:id/test`<br>`PUT /:id` |
+| `admin_back_go/internal/module/ai/asset/transport/admin/route.go` | `DELETE /`<br>`DELETE /:id`<br>`GET /`<br>`GET /:id`<br>`GET /page-init`<br>`POST /`<br>`PUT /:id` |
+| `admin_back_go/internal/module/ai/asset/transport/canvas/route.go` | `DELETE /assets/:id`<br>`GET /assets`<br>`POST /assets`<br>`PUT /assets/:id` |
 | `admin_back_go/internal/module/ai/chat/transport/canvas/route.go` | `POST /completions` |
 | `admin_back_go/internal/module/ai/conversation/transport/admin/route.go` | `DELETE /:id`<br>`GET /`<br>`GET /:id`<br>`POST /`<br>`PUT /:id` |
-| `admin_back_go/internal/module/ai/image/transport/admin/route.go` | `DELETE /:id`<br>`GET /`<br>`GET /:id`<br>`GET /page-init`<br>`PATCH /:id/favorite`<br>`POST /` |
+| `admin_back_go/internal/module/ai/image/transport/admin/route.go` | `DELETE /:id`<br>`GET /`<br>`GET /:id`<br>`GET /page-init`<br>`POST /` |
 | `admin_back_go/internal/module/ai/image/transport/canvas/route.go` | `DELETE /:id`<br>`GET /`<br>`GET /:id`<br>`POST /edits`<br>`POST /generations` |
 | `admin_back_go/internal/module/ai/knowledge/transport/admin/route.go` | `DELETE /ai-knowledge-bases/:id`<br>`DELETE /ai-knowledge-documents/:id`<br>`GET /ai-agents/:id/knowledge-bases`<br>`GET /ai-knowledge-bases`<br>`GET /ai-knowledge-bases/:id`<br>`GET /ai-knowledge-bases/:id/documents`<br>`GET /ai-knowledge-bases/page-init`<br>`GET /ai-knowledge-documents/:id`<br>`GET /ai-knowledge-documents/:id/chunks`<br>`PATCH /ai-knowledge-bases/:id/status`<br>`PATCH /ai-knowledge-documents/:id/status`<br>`POST /ai-knowledge-bases`<br>`POST /ai-knowledge-bases/:id/documents`<br>`POST /ai-knowledge-bases/:id/retrieval-tests`<br>`POST /ai-knowledge-documents/:id/reindex`<br>`PUT /ai-agents/:id/knowledge-bases`<br>`PUT /ai-knowledge-bases/:id`<br>`PUT /ai-knowledge-documents/:id` |
 | `admin_back_go/internal/module/ai/message/transport/admin/route.go` | `GET /api/admin/v1/ai-conversations/:id/messages`<br>`POST /api/admin/v1/ai-conversations/:id/messages`<br>`POST /api/admin/v1/ai-conversations/:id/messages/cancel` |
+| `admin_back_go/internal/module/ai/prompt/transport/admin/route.go` | `DELETE /`<br>`DELETE /:id`<br>`GET /`<br>`GET /:id`<br>`GET /page-init`<br>`PATCH /:id/status`<br>`POST /`<br>`PUT /:id` |
+| `admin_back_go/internal/module/ai/prompt/transport/canvas/route.go` | `GET /prompts` |
 | `admin_back_go/internal/module/ai/provider/transport/admin/route.go` | `DELETE /:id`<br>`GET /`<br>`GET /:id/models`<br>`GET /page-init`<br>`PATCH /:id/status`<br>`POST /`<br>`POST /:id/model-options`<br>`POST /:id/sync-models`<br>`POST /:id/test`<br>`POST /model-options`<br>`PUT /:id`<br>`PUT /:id/models` |
 | `admin_back_go/internal/module/ai/run/transport/admin/route.go` | `GET /`<br>`GET /:id`<br>`GET /page-init`<br>`GET /stats`<br>`GET /stats/by-agent`<br>`GET /stats/by-date`<br>`GET /stats/by-user` |
 | `admin_back_go/internal/module/ai/tool/transport/admin/route.go` | `DELETE /:id`<br>`GET /`<br>`GET /:id/tools`<br>`GET /generate/page-init`<br>`GET /page-init`<br>`PATCH /:id/status`<br>`POST /`<br>`POST /generate-draft`<br>`PUT /:id`<br>`PUT /:id/tools` |
@@ -77,7 +81,7 @@ These are route fragments found in module transport route files. They are useful
 | `admin_back_go/internal/module/auth/transport/admin/route.go` | `GET /`<br>`GET /captcha`<br>`GET /login-config`<br>`GET /page-init`<br>`GET /stats`<br>`PATCH /:id/revoke`<br>`PATCH /revoke`<br>`POST /forgot-password`<br>`POST /login`<br>`POST /logout`<br>`POST /refresh`<br>`POST /send-code` |
 | `admin_back_go/internal/module/auth/transport/app/route.go` | `GET /captcha`<br>`GET /login-config`<br>`POST /login`<br>`POST /logout`<br>`POST /send-code` |
 | `admin_back_go/internal/module/auth/transport/canvas/route.go` | `GET /captcha`<br>`GET /login-config`<br>`POST /login`<br>`POST /logout`<br>`POST /refresh`<br>`POST /send-code` |
-| `admin_back_go/internal/module/canvas/transport/canvas/route.go` | `GET /assets`<br>`GET /prompts`<br>`GET /settings` |
+| `admin_back_go/internal/module/canvas/transport/canvas/route.go` | `GET /settings` |
 | `admin_back_go/internal/module/clientversion/transport/admin/route.go` | `DELETE /:id`<br>`GET /`<br>`GET /current-check`<br>`GET /page-init`<br>`GET /update-json`<br>`PATCH /:id/force-update`<br>`PATCH /:id/latest`<br>`POST /`<br>`PUT /:id` |
 | `admin_back_go/internal/module/crontask/transport/admin/route.go` | `DELETE /`<br>`DELETE /:id`<br>`GET /`<br>`GET /:id/logs`<br>`GET /page-init`<br>`PATCH /:id/status`<br>`POST /`<br>`PUT /:id` |
 | `admin_back_go/internal/module/export/transport/admin/route.go` | `DELETE /`<br>`DELETE /:id`<br>`GET /`<br>`GET /status-count` |
@@ -116,7 +120,7 @@ These are route fragments found in module transport route files. They are useful
 | Hooks | `useCopy.ts`, `useCrudTable.ts`, `useExportSubmit.ts`, `useNetworkStatus.ts`, `useResponsive.ts`, `useTheme.ts`, `useWebSocket.ts` |
 | Router files | `guard-helpers.ts`, `guards.ts`, `index.ts`, `routes.ts`, `runtime-route-tree.ts`, `view-registry.ts` |
 | Store files | `menu.ts`, `tauri.ts`, `user.ts` |
-| View files count | `152` |
+| View files count | `159` |
 
 ## Canvas Next inventory
 

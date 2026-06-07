@@ -1,6 +1,6 @@
 # Frontend API Inventory Snapshot
 
-Generated at: 2026-06-07 19:25:18 +08:00
+Generated at: 2026-06-08 06:02:12 +08:00
 
 This artifact is generated from current frontend source. It is a source inventory, not served-route smoke and not browser runtime proof. It intentionally resolves only literal strings, same-file constants, simple string/template concatenation, and the shared admin API prefix. Computed URLs are classified instead of guessed.
 
@@ -8,17 +8,17 @@ This artifact is generated from current frontend source. It is a source inventor
 
 | Fact | Count |
 | --- | --- |
-| Source files scanned | `324` |
-| Frontend API calls found | `276` |
-| Admin frontend backend API calls | `238` |
-| Canvas frontend backend API calls | `22` |
+| Source files scanned | `333` |
+| Frontend API calls found | `293` |
+| Admin frontend backend API calls | `252` |
+| Canvas frontend backend API calls | `25` |
 | App backend API calls | `0` |
 | External HTTP helper calls | `3` |
 | Dynamic blob/download URL calls | `4` |
 | Wrapper/proxy infrastructure calls | `7` |
 | Parametric backend admin helper calls | `2` |
-| Calls under /api/admin/v1 | `238` |
-| Calls under /api/canvas/v1 | `22` |
+| Calls under /api/admin/v1 | `252` |
+| Calls under /api/canvas/v1 | `25` |
 | Backend /api calls outside known prefixes | `0` |
 | Frontend calls outside known backend prefixes | `16` |
 | Unresolved frontend API expressions | `0` |
@@ -41,18 +41,24 @@ This artifact is generated from current frontend source. It is a source inventor
 | `admin_front_ts` | `admin_front_ts/src/api/ai/agents.ts` | `259` | `request.get` | `GET /api/admin/v1/ai-agents/:param/knowledge-bases` | ``${ADMIN_API_PREFIX}/ai-agents/${positiveID(params.agent_id, 'AI agent id')}/knowledge-bases`` | `admin-prefix` |
 | `admin_front_ts` | `admin_front_ts/src/api/ai/agents.ts` | `260` | `request.put` | `PUT /api/admin/v1/ai-agents/:param/knowledge-bases` | ``${ADMIN_API_PREFIX}/ai-agents/${positiveID(params.agent_id, 'AI agent id')}/knowledge-bases`` | `admin-prefix` |
 | `admin_front_ts` | `admin_front_ts/src/api/ai/agents.ts` | `264` | `request.post` | `POST /api/admin/v1/ai-agents/:param/test` | ``${ADMIN_API_PREFIX}/ai-agents/${positiveID(params.id, 'AI agent id')}/test`` | `admin-prefix` |
+| `admin_front_ts` | `admin_front_ts/src/api/ai/assets.ts` | `135` | `request.get` | `GET /api/admin/v1/ai-assets/page-init` | ``${ADMIN_API_PREFIX}/ai-assets/page-init`` | `admin-prefix` |
+| `admin_front_ts` | `admin_front_ts/src/api/ai/assets.ts` | `137` | `request.get` | `GET /api/admin/v1/ai-assets` | ``${ADMIN_API_PREFIX}/ai-assets`` | `admin-prefix` |
+| `admin_front_ts` | `admin_front_ts/src/api/ai/assets.ts` | `138` | `request.get` | `GET /api/admin/v1/ai-assets/:param` | ``${ADMIN_API_PREFIX}/ai-assets/${positiveID(params.id, 'AI asset id')}`` | `admin-prefix` |
+| `admin_front_ts` | `admin_front_ts/src/api/ai/assets.ts` | `139` | `request.post` | `POST /api/admin/v1/ai-assets` | ``${ADMIN_API_PREFIX}/ai-assets`` | `admin-prefix` |
+| `admin_front_ts` | `admin_front_ts/src/api/ai/assets.ts` | `140` | `request.put` | `PUT /api/admin/v1/ai-assets/:param` | ``${ADMIN_API_PREFIX}/ai-assets/${mutationID(params.id)}`` | `admin-prefix` |
+| `admin_front_ts` | `admin_front_ts/src/api/ai/assets.ts` | `141` | `request.delete` | `DELETE /api/admin/v1/ai-assets/:param` | ``${ADMIN_API_PREFIX}/ai-assets/${positiveID(params.id, 'AI asset id')}`` | `admin-prefix` |
+| `admin_front_ts` | `admin_front_ts/src/api/ai/assets.ts` | `142` | `request.delete` | `DELETE /api/admin/v1/ai-assets` | ``${ADMIN_API_PREFIX}/ai-assets`` | `admin-prefix` |
 | `admin_front_ts` | `admin_front_ts/src/api/ai/chat.ts` | `28` | `request.post` | `POST /api/admin/v1/ai-conversations/:param/messages/cancel` | ``${ADMIN_API_PREFIX}/ai-conversations/${positiveID(params.conversation_id, 'conversation id')}/messages/cancel`` | `admin-prefix` |
 | `admin_front_ts` | `admin_front_ts/src/api/ai/conversations.ts` | `66` | `request.delete` | `DELETE /api/admin/v1/ai-conversations/:param` | ``${ADMIN_API_PREFIX}/ai-conversations/${id}`` | `admin-prefix` |
 | `admin_front_ts` | `admin_front_ts/src/api/ai/conversations.ts` | `69` | `request.post` | `POST /api/admin/v1/ai-conversations` | ``${ADMIN_API_PREFIX}/ai-conversations`` | `admin-prefix` |
 | `admin_front_ts` | `admin_front_ts/src/api/ai/conversations.ts` | `70` | `request.put` | `PUT /api/admin/v1/ai-conversations/:param` | ``${ADMIN_API_PREFIX}/ai-conversations/${positiveID(params.id)}`` | `admin-prefix` |
 | `admin_front_ts` | `admin_front_ts/src/api/ai/conversations.ts` | `77` | `request.get` | `GET /api/admin/v1/ai-conversations` | ``${ADMIN_API_PREFIX}/ai-conversations`` | `admin-prefix` |
 | `admin_front_ts` | `admin_front_ts/src/api/ai/conversations.ts` | `78` | `request.get` | `GET /api/admin/v1/ai-conversations/:param` | ``${ADMIN_API_PREFIX}/ai-conversations/${positiveID(params.id)}`` | `admin-prefix` |
-| `admin_front_ts` | `admin_front_ts/src/api/ai/images.ts` | `171` | `request.delete` | `DELETE /api/admin/v1/ai-images/:param` | ``${BASE}/${id}`` | `admin-prefix` |
-| `admin_front_ts` | `admin_front_ts/src/api/ai/images.ts` | `174` | `request.get` | `GET /api/admin/v1/ai-images/page-init` | ``${BASE}/page-init`` | `admin-prefix` |
-| `admin_front_ts` | `admin_front_ts/src/api/ai/images.ts` | `175` | `request.post` | `POST /api/admin/v1/ai-images` | `BASE` | `admin-prefix` |
-| `admin_front_ts` | `admin_front_ts/src/api/ai/images.ts` | `183` | `request.get` | `GET /api/admin/v1/ai-images` | `BASE` | `admin-prefix` |
-| `admin_front_ts` | `admin_front_ts/src/api/ai/images.ts` | `184` | `request.get` | `GET /api/admin/v1/ai-images/:param` | ``${BASE}/${positiveID(params.id, 'AI image task id')}`` | `admin-prefix` |
-| `admin_front_ts` | `admin_front_ts/src/api/ai/images.ts` | `186` | `request.patch` | `PATCH /api/admin/v1/ai-images/:param/favorite` | ``${BASE}/${positiveID(params.id, 'AI image task id')}/favorite`` | `admin-prefix` |
+| `admin_front_ts` | `admin_front_ts/src/api/ai/images.ts` | `153` | `request.delete` | `DELETE /api/admin/v1/ai-images/:param` | ``${BASE}/${id}`` | `admin-prefix` |
+| `admin_front_ts` | `admin_front_ts/src/api/ai/images.ts` | `156` | `request.get` | `GET /api/admin/v1/ai-images/page-init` | ``${BASE}/page-init`` | `admin-prefix` |
+| `admin_front_ts` | `admin_front_ts/src/api/ai/images.ts` | `157` | `request.post` | `POST /api/admin/v1/ai-images` | `BASE` | `admin-prefix` |
+| `admin_front_ts` | `admin_front_ts/src/api/ai/images.ts` | `165` | `request.get` | `GET /api/admin/v1/ai-images` | `BASE` | `admin-prefix` |
+| `admin_front_ts` | `admin_front_ts/src/api/ai/images.ts` | `166` | `request.get` | `GET /api/admin/v1/ai-images/:param` | ``${BASE}/${positiveID(params.id, 'AI image task id')}`` | `admin-prefix` |
 | `admin_front_ts` | `admin_front_ts/src/api/ai/knowledge.ts` | `258` | `request.delete` | `DELETE /api/admin/v1/ai-knowledge-bases/:param` | ``${ADMIN_API_PREFIX}/ai-knowledge-bases/${positiveID(id, 'AI knowledge base id')}`` | `admin-prefix` |
 | `admin_front_ts` | `admin_front_ts/src/api/ai/knowledge.ts` | `261` | `request.get` | `GET /api/admin/v1/ai-knowledge-bases/page-init` | ``${ADMIN_API_PREFIX}/ai-knowledge-bases/page-init`` | `admin-prefix` |
 | `admin_front_ts` | `admin_front_ts/src/api/ai/knowledge.ts` | `262` | `request.post` | `POST /api/admin/v1/ai-knowledge-bases` | ``${ADMIN_API_PREFIX}/ai-knowledge-bases`` | `admin-prefix` |
@@ -71,6 +77,14 @@ This artifact is generated from current frontend source. It is a source inventor
 | `admin_front_ts` | `admin_front_ts/src/api/ai/knowledge.ts` | `297` | `request.post` | `POST /api/admin/v1/ai-knowledge-bases/:param/retrieval-tests` | ``${ADMIN_API_PREFIX}/ai-knowledge-bases/${positiveID(params.knowledge_base_id, 'AI knowledge base id')}/retrieval-tests`` | `admin-prefix` |
 | `admin_front_ts` | `admin_front_ts/src/api/ai/messages.ts` | `89` | `request.get` | `GET /api/admin/v1/ai-conversations/:param/messages` | ``${ADMIN_API_PREFIX}/ai-conversations/${positiveID(params.conversation_id, 'conversation id')}/messages`` | `admin-prefix` |
 | `admin_front_ts` | `admin_front_ts/src/api/ai/messages.ts` | `90` | `request.post` | `POST /api/admin/v1/ai-conversations/:param/messages` | ``${ADMIN_API_PREFIX}/ai-conversations/${positiveID(params.conversation_id, 'conversation id')}/messages`` | `admin-prefix` |
+| `admin_front_ts` | `admin_front_ts/src/api/ai/prompts.ts` | `128` | `request.get` | `GET /api/admin/v1/ai-prompts/page-init` | ``${ADMIN_API_PREFIX}/ai-prompts/page-init`` | `admin-prefix` |
+| `admin_front_ts` | `admin_front_ts/src/api/ai/prompts.ts` | `130` | `request.get` | `GET /api/admin/v1/ai-prompts` | ``${ADMIN_API_PREFIX}/ai-prompts`` | `admin-prefix` |
+| `admin_front_ts` | `admin_front_ts/src/api/ai/prompts.ts` | `131` | `request.get` | `GET /api/admin/v1/ai-prompts/:param` | ``${ADMIN_API_PREFIX}/ai-prompts/${positiveID(params.id, 'AI prompt id')}`` | `admin-prefix` |
+| `admin_front_ts` | `admin_front_ts/src/api/ai/prompts.ts` | `132` | `request.post` | `POST /api/admin/v1/ai-prompts` | ``${ADMIN_API_PREFIX}/ai-prompts`` | `admin-prefix` |
+| `admin_front_ts` | `admin_front_ts/src/api/ai/prompts.ts` | `133` | `request.put` | `PUT /api/admin/v1/ai-prompts/:param` | ``${ADMIN_API_PREFIX}/ai-prompts/${mutationID(params.id)}`` | `admin-prefix` |
+| `admin_front_ts` | `admin_front_ts/src/api/ai/prompts.ts` | `134` | `request.patch` | `PATCH /api/admin/v1/ai-prompts/:param/status` | ``${ADMIN_API_PREFIX}/ai-prompts/${positiveID(params.id, 'AI prompt id')}/status`` | `admin-prefix` |
+| `admin_front_ts` | `admin_front_ts/src/api/ai/prompts.ts` | `135` | `request.delete` | `DELETE /api/admin/v1/ai-prompts/:param` | ``${ADMIN_API_PREFIX}/ai-prompts/${positiveID(params.id, 'AI prompt id')}`` | `admin-prefix` |
+| `admin_front_ts` | `admin_front_ts/src/api/ai/prompts.ts` | `136` | `request.delete` | `DELETE /api/admin/v1/ai-prompts` | ``${ADMIN_API_PREFIX}/ai-prompts`` | `admin-prefix` |
 | `admin_front_ts` | `admin_front_ts/src/api/ai/providers.ts` | `194` | `request.delete` | `DELETE /api/admin/v1/ai-providers/:param` | ``${ADMIN_API_PREFIX}/ai-providers/${id}`` | `admin-prefix` |
 | `admin_front_ts` | `admin_front_ts/src/api/ai/providers.ts` | `197` | `request.get` | `GET /api/admin/v1/ai-providers/page-init` | ``${ADMIN_API_PREFIX}/ai-providers/page-init`` | `admin-prefix` |
 | `admin_front_ts` | `admin_front_ts/src/api/ai/providers.ts` | `198` | `request.post` | `POST /api/admin/v1/ai-providers` | ``${ADMIN_API_PREFIX}/ai-providers`` | `admin-prefix` |
@@ -265,7 +279,10 @@ This artifact is generated from current frontend source. It is a source inventor
 | `admin_front_ts` | `admin_front_ts/src/api/wallet/index.ts` | `86` | `request.get` | `GET /api/admin/v1/payment/ledger/page-init` | ``${ADMIN_API_PREFIX}/payment/ledger/page-init`` | `admin-prefix` |
 | `admin_front_ts` | `admin_front_ts/src/api/wallet/index.ts` | `87` | `request.get` | `GET /api/admin/v1/payment/ledger` | ``${ADMIN_API_PREFIX}/payment/ledger`` | `admin-prefix` |
 | `admin_front_ts` | `admin_front_ts/src/lib/http/auth-session.ts` | `77` | `axios.post` | `POST /api/admin/v1/auth/refresh` | ``${baseURL}${REFRESH_PATH}`` | `admin-prefix` |
-| `canvas_front_next` | `canvas_front_next/src/services/api/assets.ts` | `51` | `apiGet` | `GET /api/canvas/v1/assets` | `"/api/canvas/v1/assets"` | `canvas-prefix` |
+| `canvas_front_next` | `canvas_front_next/src/services/api/assets.ts` | `68` | `apiGet` | `GET /api/canvas/v1/assets` | `"/api/canvas/v1/assets"` | `canvas-prefix` |
+| `canvas_front_next` | `canvas_front_next/src/services/api/assets.ts` | `72` | `apiPost` | `POST /api/canvas/v1/assets` | `CANVAS_ASSETS_URL` | `canvas-prefix` |
+| `canvas_front_next` | `canvas_front_next/src/services/api/assets.ts` | `76` | `apiPut` | `PUT /api/canvas/v1/assets/:param` | ``/api/canvas/v1/assets/${id}`` | `canvas-prefix` |
+| `canvas_front_next` | `canvas_front_next/src/services/api/assets.ts` | `80` | `apiDelete` | `DELETE /api/canvas/v1/assets/:param` | ``/api/canvas/v1/assets/${id}`` | `canvas-prefix` |
 | `canvas_front_next` | `canvas_front_next/src/services/api/auth.ts` | `107` | `apiPost` | `POST /api/canvas/v1/auth/login` | `"/api/canvas/v1/auth/login"` | `canvas-prefix` |
 | `canvas_front_next` | `canvas_front_next/src/services/api/auth.ts` | `112` | `apiPost` | `POST /api/canvas/v1/auth/refresh` | `"/api/canvas/v1/auth/refresh"` | `canvas-prefix` |
 | `canvas_front_next` | `canvas_front_next/src/services/api/auth.ts` | `117` | `apiPost` | `POST /api/canvas/v1/auth/logout` | `"/api/canvas/v1/auth/logout"` | `canvas-prefix` |
@@ -273,13 +290,13 @@ This artifact is generated from current frontend source. It is a source inventor
 | `canvas_front_next` | `canvas_front_next/src/services/api/auth.ts` | `125` | `apiGet` | `GET /api/canvas/v1/auth/login-config` | `"/api/canvas/v1/auth/login-config"` | `canvas-prefix` |
 | `canvas_front_next` | `canvas_front_next/src/services/api/auth.ts` | `129` | `apiGet` | `GET /api/canvas/v1/auth/captcha` | `"/api/canvas/v1/auth/captcha"` | `canvas-prefix` |
 | `canvas_front_next` | `canvas_front_next/src/services/api/auth.ts` | `133` | `apiGet` | `GET /api/canvas/v1/users/me` | `"/api/canvas/v1/users/me"` | `canvas-prefix` |
-| `canvas_front_next` | `canvas_front_next/src/services/api/image.ts` | `246` | `axios.post` | `POST /api/canvas/v1/ai/images/generations` | `CANVAS_IMAGE_GENERATION_URL` | `canvas-prefix` |
-| `canvas_front_next` | `canvas_front_next/src/services/api/image.ts` | `264` | `axios.get` | `GET /api/canvas/v1/ai/images/:param` | ``${CANVAS_IMAGE_TASK_URL}/${taskID}`` | `canvas-prefix` |
-| `canvas_front_next` | `canvas_front_next/src/services/api/image.ts` | `292` | `axios.post` | `POST /api/canvas/v1/ai/images/edits` | `CANVAS_IMAGE_EDIT_URL` | `canvas-prefix` |
-| `canvas_front_next` | `canvas_front_next/src/services/api/image.ts` | `306` | `axios.post` | `POST /api/canvas/v1/ai/chat/completions` | `CANVAS_CHAT_URL` | `canvas-prefix` |
-| `canvas_front_next` | `canvas_front_next/src/services/api/image.ts` | `323` | `axios.get` | `GET /api/canvas/v1/ai/images` | `CANVAS_IMAGE_TASK_URL` | `canvas-prefix` |
-| `canvas_front_next` | `canvas_front_next/src/services/api/image.ts` | `335` | `axios.get` | `GET /api/canvas/v1/ai/images/:param` | ``${CANVAS_IMAGE_TASK_URL}/${requireImageTaskID(id)}`` | `canvas-prefix` |
-| `canvas_front_next` | `canvas_front_next/src/services/api/image.ts` | `344` | `axios.delete` | `DELETE /api/canvas/v1/ai/images/:param` | ``${CANVAS_IMAGE_TASK_URL}/${requireImageTaskID(id)}`` | `canvas-prefix` |
+| `canvas_front_next` | `canvas_front_next/src/services/api/image.ts` | `287` | `axios.post` | `POST /api/canvas/v1/ai/images/generations` | `CANVAS_IMAGE_GENERATION_URL` | `canvas-prefix` |
+| `canvas_front_next` | `canvas_front_next/src/services/api/image.ts` | `305` | `axios.get` | `GET /api/canvas/v1/ai/images/:param` | ``${CANVAS_IMAGE_TASK_URL}/${taskID}`` | `canvas-prefix` |
+| `canvas_front_next` | `canvas_front_next/src/services/api/image.ts` | `333` | `axios.post` | `POST /api/canvas/v1/ai/images/edits` | `CANVAS_IMAGE_EDIT_URL` | `canvas-prefix` |
+| `canvas_front_next` | `canvas_front_next/src/services/api/image.ts` | `347` | `axios.post` | `POST /api/canvas/v1/ai/chat/completions` | `CANVAS_CHAT_URL` | `canvas-prefix` |
+| `canvas_front_next` | `canvas_front_next/src/services/api/image.ts` | `364` | `axios.get` | `GET /api/canvas/v1/ai/images` | `CANVAS_IMAGE_TASK_URL` | `canvas-prefix` |
+| `canvas_front_next` | `canvas_front_next/src/services/api/image.ts` | `376` | `axios.get` | `GET /api/canvas/v1/ai/images/:param` | ``${CANVAS_IMAGE_TASK_URL}/${requireImageTaskID(id)}`` | `canvas-prefix` |
+| `canvas_front_next` | `canvas_front_next/src/services/api/image.ts` | `385` | `axios.delete` | `DELETE /api/canvas/v1/ai/images/:param` | ``${CANVAS_IMAGE_TASK_URL}/${requireImageTaskID(id)}`` | `canvas-prefix` |
 | `canvas_front_next` | `canvas_front_next/src/services/api/profile.ts` | `53` | `apiGet` | `GET /api/canvas/v1/profile` | `"/api/canvas/v1/profile"` | `canvas-prefix` |
 | `canvas_front_next` | `canvas_front_next/src/services/api/profile.ts` | `57` | `apiPut` | `PUT /api/canvas/v1/profile` | `"/api/canvas/v1/profile"` | `canvas-prefix` |
 | `canvas_front_next` | `canvas_front_next/src/services/api/prompts.ts` | `44` | `apiGet` | `GET /api/canvas/v1/prompts` | `"/api/canvas/v1/prompts"` | `canvas-prefix` |
@@ -297,7 +314,7 @@ External/blob/dynamic/proxy/parametric rows are kept separate so they do not bec
 | `admin_front_ts` | `admin_front_ts/src/api/system/uploadConfig.ts` | `275` | `request.delete` | `DELETE :param/:param` | ``${base}/${ids[0]}`` | `backend-admin-parametric` |
 | `admin_front_ts` | `admin_front_ts/src/api/system/uploadConfig.ts` | `279` | `request.delete` | `DELETE` | `base` | `backend-admin-parametric` |
 | `admin_front_ts` | `admin_front_ts/src/components/DownloadManager/src/download.ts` | `283` | `fetch` | `GET` | `url` | `blob/download` |
-| `canvas_front_next` | `canvas_front_next/src/app/(user)/canvas/components/asset-picker-modal.tsx` | `181` | `axios.get` | `GET` | `url` | `blob/download` |
+| `canvas_front_next` | `canvas_front_next/src/app/(user)/canvas/components/asset-picker-modal.tsx` | `196` | `axios.get` | `GET` | `url` | `blob/download` |
 | `canvas_front_next` | `canvas_front_next/src/services/file-storage.ts` | `83` | `axios.get` | `GET` | `url` | `blob/download` |
 | `canvas_front_next` | `canvas_front_next/src/services/image-storage.ts` | `97` | `axios.get` | `GET` | `url` | `blob/download` |
 | `canvas_front_next` | `canvas_front_next/src/hooks/use-version-check.ts` | `42` | `axios.get` | `GET https://raw.githubusercontent.com/basketikun/infinite-canvas/main/VERSION` | `latestVersionUrl` | `external` |
@@ -309,7 +326,7 @@ External/blob/dynamic/proxy/parametric rows are kept separate so they do not bec
 | `admin_front_ts` | `admin_front_ts/src/lib/http/client.ts` | `104` | `service.put` | `PUT` | `url` | `wrapper-internal` |
 | `admin_front_ts` | `admin_front_ts/src/lib/http/client.ts` | `107` | `service.patch` | `PATCH` | `url` | `wrapper-internal` |
 | `admin_front_ts` | `admin_front_ts/src/lib/http/client.ts` | `110` | `service.delete` | `DELETE` | `url` | `wrapper-internal` |
-| `canvas_front_next` | `canvas_front_next/src/services/api/request.ts` | `96` | `axios.request` | `ANY` | `config.url` | `wrapper-internal` |
+| `canvas_front_next` | `canvas_front_next/src/services/api/request.ts` | `100` | `axios.request` | `ANY` | `config.url` | `wrapper-internal` |
 
 ## Parser boundary
 

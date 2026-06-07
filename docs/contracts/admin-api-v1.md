@@ -96,7 +96,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-contract.ps1
 | current profile update | `PUT /api/admin/v1/profile` | bearer token; operation log only, no user-manager button permission |
 | wallet current-user read | `GET /api/admin/v1/wallet/summary`, `GET /api/admin/v1/wallet/transactions` | bearer token; current-user ownership only; no `consume` HTTP route in the active product contract |
 | payment wallet admin read | `GET /api/admin/v1/payment/ledger/page-init`, `GET /api/admin/v1/payment/ledger`, `GET /api/admin/v1/payment/wallets/page-init`, `GET /api/admin/v1/payment/wallets` | bearer token + `payment_ledger_list` or `payment_wallet_list` |
-| AI sidecar provider/agent/tool/knowledge management | ai-providers/ai-agents/ai-tools/ai-knowledge-bases/ai-knowledge-documents write routes | bearer token; mutation routes use explicit `ai_provider_*`, `ai_agent_*`, `ai_tool_*`, `ai_knowledge_*`, and `ai_knowledge_document_*` route permissions and OperationLog metadata; secret fields are write-only/masked |
+| AI sidecar provider/agent/tool/knowledge/prompt/asset management | ai-providers/ai-agents/ai-tools/ai-knowledge-bases/ai-knowledge-documents/ai-prompts/ai-assets write routes | bearer token; mutation routes use explicit `ai_provider_*`, `ai_agent_*`, `ai_tool_*`, `ai_knowledge_*`, `ai_knowledge_document_*`, `ai_prompt_*`, and `ai_asset_*` route permissions and OperationLog metadata; secret fields are write-only/masked |
 | Retired old AI billing system | `/api/admin/v1/ai-billing-rules*`, `ai_billing_rules`, `ai_billing_records`, `ai_billing_rule_edit` | retired/deleted from active contract; AI generation is free in this slice and must not debit wallet balance or require billing rules |
 | AI sidecar runtime current-user | ai-conversations current-user CRUD, ai-conversations/:id/messages list/send, and ai-runs read monitor | bearer token; current-user ownership where applicable; message send requires an enabled chat-scene AI agent + provider and must fail explicitly when not configured |
 | Retired AI legacy routes | legacy model/tool/prompt/agent/knowledge-base routes | not mounted in active Go runtime; only backup/rollback SQL, historical specs, or negative router tests may mention exact old route strings |
@@ -157,7 +157,7 @@ interface AppSendCodeBody {
 
 状态：implemented and verified in Go backend + `canvas_front_next`; live DB/full smoke baseline passed on 2026-05-31. Old Canvas wallet/recharge UI and old AI billing are retired from the active Canvas contract.
 
-Route ownership：`/api/canvas/v1/auth/*` -> `internal/module/auth/transport/canvas`；`/api/canvas/v1/users/me` -> `internal/module/user/transport/canvas`；`/api/canvas/v1/profile` -> `internal/module/profile/transport/canvas`；`/api/canvas/v1/prompts|assets|settings` -> `internal/module/canvas/transport/canvas`；`/api/canvas/v1/ai/chat/*` -> `internal/module/ai/chat/transport/canvas`；`/api/canvas/v1/ai/images/*` -> `internal/module/ai/image/transport/canvas`；`/api/canvas/v1/ai/videos*` -> `internal/module/ai/video/transport/canvas`。Canvas AI URLs 保持不变；运行时 owner 不再回落到 `internal/module/canvas`。
+Route ownership：`/api/canvas/v1/auth/*` -> `internal/module/auth/transport/canvas`；`/api/canvas/v1/users/me` -> `internal/module/user/transport/canvas`；`/api/canvas/v1/profile` -> `internal/module/profile/transport/canvas`；`/api/canvas/v1/prompts` -> `internal/module/ai/prompt/transport/canvas`；`/api/canvas/v1/assets` -> `internal/module/ai/asset/transport/canvas`；`/api/canvas/v1/settings` -> `internal/module/canvas/transport/canvas`；`/api/canvas/v1/ai/chat/*` -> `internal/module/ai/chat/transport/canvas`；`/api/canvas/v1/ai/images/*` -> `internal/module/ai/image/transport/canvas`；`/api/canvas/v1/ai/videos*` -> `internal/module/ai/video/transport/canvas`。Canvas AI URLs 保持不变；运行时 owner 不再回落到 `internal/module/canvas`。
 
 `canvas_front_next` 是独立 Next.js 前端，所有安全、provider 和公共库数据都通过 Go 后端 `/api/canvas/v1/*`。Next 前端不保存 provider API key/base_url，不调用旧 `infinite-canvas` 后端。旧 AI billing 已从 Canvas 生成链路退休；payment/wallet 基础充值域保留给非本切片能力，但 AI 生成不扣余额。
 
@@ -175,6 +175,9 @@ PUT  /api/canvas/v1/profile
 GET  /api/canvas/v1/settings
 GET  /api/canvas/v1/prompts
 GET  /api/canvas/v1/assets
+POST /api/canvas/v1/assets
+PUT  /api/canvas/v1/assets/:id
+DELETE /api/canvas/v1/assets/:id
 
 POST /api/canvas/v1/ai/chat/completions
 POST /api/canvas/v1/ai/images/generations
@@ -1815,6 +1818,207 @@ Rules:
 - old split/global image tables are retired by the convergence migration; do not reintroduce `admin_ai_image_*`, `canvas_image_*`, or standalone image asset registration tables
 - prompt text, image URLs, base64 payloads, and provider raw response are not captured by OperationLog; image mutation route metadata uses `SkipRequestPayload` and `SkipResponsePayload`
 - `raw_response_json` stays server-side only; API list/detail return task facts and grouped task files, not raw provider payloads
+
+## AI Prompts / Prompt Library
+
+状态：active contract for Admin prompt management. Canvas prompt browsing keeps `/api/canvas/v1/prompts`; Admin owns management under `/api/admin/v1/ai-prompts`.
+
+Auth requirement:
+
+```text
+All routes require bearer token.
+Read routes (`page-init`, list, detail) do not add route-level mutation permission rules.
+Mutations require route permission codes:
+POST   /api/admin/v1/ai-prompts             ai_prompt_add
+PUT    /api/admin/v1/ai-prompts/:id         ai_prompt_edit
+PATCH  /api/admin/v1/ai-prompts/:id/status  ai_prompt_status
+DELETE /api/admin/v1/ai-prompts/:id         ai_prompt_del
+DELETE /api/admin/v1/ai-prompts             ai_prompt_del
+```
+
+Routes:
+
+```text
+GET    /api/admin/v1/ai-prompts/page-init
+GET    /api/admin/v1/ai-prompts
+POST   /api/admin/v1/ai-prompts
+GET    /api/admin/v1/ai-prompts/:id
+PUT    /api/admin/v1/ai-prompts/:id
+PATCH  /api/admin/v1/ai-prompts/:id/status
+DELETE /api/admin/v1/ai-prompts/:id
+DELETE /api/admin/v1/ai-prompts
+```
+
+Request shapes:
+
+```ts
+interface AIPromptListQuery {
+  current_page?: number
+  page_size?: number
+  keyword?: string
+  category?: string
+  status?: 1 | 2
+}
+
+interface AIPromptMutationBody {
+  slug: string
+  category?: string
+  title: string
+  cover_url?: string
+  prompt: string
+  preview?: string
+  tags_json?: string
+  source_url?: string
+  status?: 0 | 1 | 2 // omitted or 0 defaults to enabled; other invalid values are rejected
+}
+
+interface AIStatusBody {
+  status: 1 | 2
+}
+
+interface DeleteBatchBody {
+  ids: number[]
+}
+```
+
+Response shapes:
+
+```ts
+interface Option<T> {
+  label: string
+  value: T
+}
+
+interface AIPromptPageInitResponse {
+  common_status_arr: Option<1 | 2>[]
+}
+
+interface AIPromptItem {
+  id: number
+  slug: string
+  category: string
+  title: string
+  cover_url: string
+  prompt: string
+  preview: string
+  tags_json: string
+  source_url: string
+  status: 1 | 2
+  created_at: string
+  updated_at: string
+}
+
+type AIPromptListResponse = {
+  list: AIPromptItem[]
+  page: { page_size: number; current_page: number; total_page: number; total: number }
+}
+
+type AIPromptDetailResponse = AIPromptItem
+type CreateResponse = { id: number }
+type EmptyResponse = {}
+```
+
+Rules:
+
+- table: `ai_prompts`; legacy `canvas_prompts` is not dropped by this Admin contract
+- `slug`, `title`, and `prompt` are required for create/update
+- invalid route IDs, batch IDs, and status values fail explicitly
+- response `msg` uses `ai.prompt.*` i18n keys for errors and mutation success messages
+
+## AI Assets / Asset Library
+
+状态：active contract for Admin asset management. Canvas asset browsing keeps `/api/canvas/v1/assets`; Admin owns management under `/api/admin/v1/ai-assets`.
+
+Auth requirement:
+
+```text
+All routes require bearer token.
+Read routes (`page-init`, list, detail) do not add route-level mutation permission rules.
+Mutations require route permission codes:
+POST   /api/admin/v1/ai-assets             ai_asset_add
+PUT    /api/admin/v1/ai-assets/:id         ai_asset_edit
+DELETE /api/admin/v1/ai-assets/:id         ai_asset_del
+DELETE /api/admin/v1/ai-assets             ai_asset_del
+```
+
+Routes:
+
+```text
+GET    /api/admin/v1/ai-assets/page-init
+GET    /api/admin/v1/ai-assets
+POST   /api/admin/v1/ai-assets
+GET    /api/admin/v1/ai-assets/:id
+PUT    /api/admin/v1/ai-assets/:id
+DELETE /api/admin/v1/ai-assets/:id
+DELETE /api/admin/v1/ai-assets
+```
+
+Request shapes:
+
+```ts
+type AIAssetType = 'text' | 'image' | 'video'
+
+interface AIAssetListQuery {
+  current_page?: number
+  page_size?: number
+  keyword?: string
+  type?: AIAssetType
+  status?: 1 | 2
+}
+
+interface AIAssetMutationBody {
+  slug: string
+  type: AIAssetType
+  category?: string
+  title: string
+  cover_url?: string
+  description?: string
+  content?: string
+  url?: string
+  tags_json?: string
+  status?: 0 | 1 | 2 // omitted or 0 defaults to enabled; other invalid values are rejected
+}
+```
+
+Response shapes:
+
+```ts
+interface AIAssetPageInitResponse {
+  common_status_arr: Option<1 | 2>[]
+  ai_asset_type_arr: Option<AIAssetType>[]
+}
+
+interface AIAssetItem {
+  id: number
+  slug: string
+  type: AIAssetType
+  category: string
+  title: string
+  cover_url: string
+  description: string
+  content: string
+  url: string
+  tags_json: string
+  status: 1 | 2
+  created_at: string
+  updated_at: string
+}
+
+type AIAssetListResponse = {
+  list: AIAssetItem[]
+  page: { page_size: number; current_page: number; total_page: number; total: number }
+}
+
+type AIAssetDetailResponse = AIAssetItem
+```
+
+Rules:
+
+- table: `ai_assets`; legacy `canvas_assets` is not dropped by this Admin contract
+- `slug`, `type`, and `title` are required for create/update
+- allowed `type` values are exactly `text`, `image`, and `video`
+- invalid route IDs, batch IDs, status values, and asset types fail explicitly
+- response `msg` uses `ai.asset.*` i18n keys for errors and mutation success messages
 
 ## AI Conversations
 

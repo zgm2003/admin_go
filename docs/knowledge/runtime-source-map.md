@@ -64,7 +64,7 @@ docs/knowledge/admin-ai-agent-test-contract-review-2026-06-07.md
 
 | Capability | Current HTTP surfaces |
 | --- | --- |
-| `ai` | `image/transport/admin`, `image/transport/canvas`, `agent/transport/admin`, `chat/transport/admin`, `chat/transport/canvas`, `conversation/transport/admin`, `knowledge/transport/admin`, `message/transport/admin`, `provider/transport/admin`, `run/transport/admin`, `tool/transport/admin`, `video/transport/canvas` |
+| `ai` | `agent/transport/admin`, `asset/transport/admin`, `asset/transport/canvas`, `chat/transport/admin`, `chat/transport/canvas`, `conversation/transport/admin`, `image/transport/admin`, `image/transport/canvas`, `knowledge/transport/admin`, `message/transport/admin`, `prompt/transport/admin`, `prompt/transport/canvas`, `provider/transport/admin`, `run/transport/admin`, `tool/transport/admin`, `video/transport/canvas` |
 | `auth` | `transport/admin`, `transport/app`, `transport/canvas` |
 | `auth_platform` | `transport/admin` |
 | `canvas` | `transport/canvas` |
@@ -127,7 +127,7 @@ docs/knowledge/admin-ai-agent-test-contract-review-2026-06-07.md
 
 
 
-`ADMIN-FRONT-HARDENING-014` is resolved for `src/api/ai/images.ts` create-task optional payload normalization. The source guard is `tests/shared/ai/ai-image-api.test.ts`, and the current source-quality inventory now reports `555` fallback candidates. `docs/knowledge/admin-front-ai-image-payload-source-quality-review-2026-06-07.md` records the decision.
+`ADMIN-FRONT-HARDENING-014` is resolved for `src/api/ai/images.ts` create-task optional payload normalization. The source guard is `tests/shared/ai/ai-image-api.test.ts`, and the current source-quality inventory now reports `542` fallback candidates. `docs/knowledge/admin-front-ai-image-payload-source-quality-review-2026-06-07.md` records the decision.
 
 `ADMIN-FRONT-HARDENING-013` is resolved for remaining tracked demo any rows: `form/index.vue`, `display/index.vue`, and `ParticleBackground.vue` are guarded by form/display/effect source-quality tests. Current source-quality inventory now reports `0` `any` candidates; fallback rows remain review inventory. `docs/knowledge/admin-front-demo-any-source-quality-review-2026-06-07.md` records the decision.
 Source-quality inventory:
@@ -137,7 +137,7 @@ docs/knowledge/admin-front-source-quality-inventory-2026-06-07.md
 docs/architecture/09-codex-first-quality-runway.md
 ```
 
-Current inventory facts: `280` Admin Vue source files scanned, `0` `any` candidates, `0` `as any` candidates, `0` `catch(error: any)` candidates, `555` fallback candidates, and `0` direct external HTTP candidates. This is regex review evidence, not type-aware proof and not permission to sweep-replace code.
+Current inventory facts: `280` Admin Vue source files scanned, `0` `any` candidates, `0` `as any` candidates, `0` `catch(error: any)` candidates, `542` fallback candidates, and `0` direct external HTTP candidates. This is regex review evidence, not type-aware proof and not permission to sweep-replace code.
 
 `ADMIN-FRONT-HARDENING-012` is resolved for upload demo media-list typing: `upload/index.vue` now uses `ref<UploadMediaItem[]>([])`, and `UpMediaList.vue` shares that model through `components/media.ts`; `tests/shared/upload/upload-demo-source-quality.test.ts` guards the slice. `docs/knowledge/admin-front-upload-demo-source-quality-review-2026-06-07.md` records the decision.
 
@@ -267,10 +267,10 @@ docs/knowledge/admin-user-status-contract-review-2026-06-07.md
 docs/knowledge/admin-ai-agent-test-contract-review-2026-06-07.md
 ```
 
-Verified table count in the snapshot: `56`.
-The DB schema ownership map is derived from the live schema artifact plus current Go source references. It records `56` live tables reviewed, `55` `go-model` tables, and one `live-schema-only` table: `canvas_prompts_backup_20260601_before_infinite_import`.
-The full-stack module map joins route inventory, frontend API inventory, DB ownership, and source-only review at capability level. It records `280` backend route registrations joined, `258` frontend exact backend calls assigned, `0` unassigned exact frontend calls, and `56` live DB tables mapped.
-The backend capability manifest records `34` Go capabilities, `280` backend route registrations covered, and `3` helper packages that are not promoted to capability: `auth/verifycode`, `payment/serialno`, and `queuemonitor/asynqmonui`.
+Verified table count in the snapshot: `57`.
+The DB schema ownership map is derived from the live schema artifact plus current Go source references. It records `57` live tables reviewed, `55` `go-model` tables, and two `live-schema-only` tables: `canvas_assets` and `canvas_prompts`. Those two legacy tables are retained only as the AI prompt/asset safe migration window; this plan does not drop them.
+The full-stack module map joins route inventory, frontend API inventory, DB ownership, and source-only review at capability level. It records `298` backend route registrations joined, `277` frontend exact backend calls assigned, `0` unassigned exact frontend calls, and `57` live DB tables mapped.
+The backend capability manifest records `37` Go capabilities, `298` backend route registrations covered, and `4` helper packages that are not promoted to capability: `ai/internal/canvasrequest`, `auth/verifycode`, `payment/serialno`, and `queuemonitor/asynqmonui`.
 
 Key active tables present in the DDL artifact:
 

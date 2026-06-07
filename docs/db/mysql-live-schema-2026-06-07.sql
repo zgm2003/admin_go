@@ -1,5 +1,5 @@
 -- MySQL live schema snapshot
--- Verified at: 2026-06-07 19:24:51 +08:00
+-- Verified at: 2026-06-08 06:10:27 +08:00
 -- Truth source: live MySQL DATABASE() = admin on 127.0.0.1:3307
 -- Generated via mysqldump --no-data. Secrets are not included.
 
@@ -90,6 +90,30 @@ CREATE TABLE `ai_agents` (
   KEY `idx_ai_agents_model` (`provider_id`,`model_id`,`status`,`is_del`) USING BTREE
 ) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='AI agent mappings';
 /*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `ai_assets`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `ai_assets` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `slug` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `type` varchar(16) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `category` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `title` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `cover_url` varchar(1024) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `description` varchar(512) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `content` text COLLATE utf8mb4_unicode_ci,
+  `url` varchar(1024) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `tags_json` json DEFAULT NULL,
+  `status` tinyint NOT NULL DEFAULT '1',
+  `is_del` tinyint NOT NULL DEFAULT '2',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_ai_assets_slug` (`slug`),
+  KEY `idx_ai_assets_type_status` (`type`,`status`,`is_del`,`updated_at`,`id`),
+  KEY `idx_ai_assets_status_updated` (`status`,`is_del`,`updated_at`,`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='AI素材库';
+/*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `ai_conversations`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
@@ -127,7 +151,7 @@ CREATE TABLE `ai_image_files` (
   PRIMARY KEY (`id`),
   KEY `idx_ai_image_files_task_role_sort` (`task_id`,`role`,`sort_order`),
   KEY `idx_ai_image_files_related` (`related_file_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `ai_image_tasks`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -162,7 +186,7 @@ CREATE TABLE `ai_image_tasks` (
   KEY `idx_ai_image_tasks_platform_user_created` (`platform`,`user_id`,`created_at`),
   KEY `idx_ai_image_tasks_platform_status_created` (`platform`,`status`,`created_at`),
   KEY `idx_ai_image_tasks_agent_created` (`agent_id`,`created_at`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `ai_knowledge_bases`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -293,6 +317,29 @@ CREATE TABLE `ai_messages` (
   CONSTRAINT `fk_ai_messages_conversation` FOREIGN KEY (`conversation_id`) REFERENCES `ai_conversations` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
 ) ENGINE=InnoDB AUTO_INCREMENT=56 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='AI消息';
 /*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `ai_prompts`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `ai_prompts` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `slug` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `category` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `title` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `cover_url` varchar(1024) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `prompt` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `preview` varchar(512) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `tags_json` json DEFAULT NULL,
+  `source_url` varchar(1024) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `status` tinyint NOT NULL DEFAULT '1',
+  `is_del` tinyint NOT NULL DEFAULT '2',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_ai_prompts_slug` (`slug`),
+  KEY `idx_ai_prompts_category_status` (`category`,`status`,`is_del`,`updated_at`,`id`),
+  KEY `idx_ai_prompts_status_updated` (`status`,`is_del`,`updated_at`,`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=2380 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='AI提示词库';
+/*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `ai_provider_models`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
@@ -350,7 +397,7 @@ CREATE TABLE `ai_run_events` (
   KEY `idx_ai_run_events_type_created` (`event_type`,`created_at`,`id`) USING BTREE,
   CONSTRAINT `fk_ai_run_events_run` FOREIGN KEY (`run_id`) REFERENCES `ai_runs` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `chk_ai_run_events_type` CHECK ((`event_type` in (_utf8mb4'start',_utf8mb4'completed',_utf8mb4'failed',_utf8mb4'canceled',_utf8mb4'timeout')))
-) ENGINE=InnoDB AUTO_INCREMENT=45 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='AI运行监控事件';
+) ENGINE=InnoDB AUTO_INCREMENT=49 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='AI运行监控事件';
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `ai_runs`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -400,7 +447,7 @@ CREATE TABLE `ai_runs` (
   CONSTRAINT `fk_ai_runs_user_message` FOREIGN KEY (`user_message_id`) REFERENCES `ai_messages` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `chk_ai_runs_status` CHECK ((`status` in (_utf8mb4'running',_utf8mb4'success',_utf8mb4'failed',_utf8mb4'canceled',_utf8mb4'timeout'))),
   CONSTRAINT `chk_ai_runs_usage_status` CHECK ((`usage_status` in (_utf8mb4'pending',_utf8mb4'reported',_utf8mb4'unavailable')))
-) ENGINE=InnoDB AUTO_INCREMENT=23 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='AI运行监控记录';
+) ENGINE=InnoDB AUTO_INCREMENT=25 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='AI运行监控记录';
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `ai_text_tasks`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -640,7 +687,7 @@ CREATE TABLE `cron_task_log` (
   PRIMARY KEY (`id`) USING BTREE,
   KEY `idx_task_del_id` (`task_id`,`is_del`) USING BTREE,
   KEY `idx_name_del_id` (`task_name`,`is_del`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=92600 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='定时任务执行日志表';
+) ENGINE=InnoDB AUTO_INCREMENT=94345 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='定时任务执行日志表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `export_tasks`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -806,7 +853,7 @@ CREATE TABLE `operation_logs` (
   KEY `idx_action` (`action`) USING BTREE,
   KEY `idx_created_at` (`created_at`) USING BTREE,
   KEY `idx_del_created_id` (`is_del`,`created_at`,`id`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=102835 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='操作日志表';
+) ENGINE=InnoDB AUTO_INCREMENT=102918 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='操作日志表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `payment_callback_events`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -967,7 +1014,7 @@ CREATE TABLE `permissions` (
   KEY `idx_permissions_platform` (`platform`) USING BTREE,
   KEY `idx_permissions_parent_sort` (`parent_id`,`sort`) USING BTREE,
   KEY `idx_permissions_status_del_platform_type` (`is_del`,`status`,`platform`,`type`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=758 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='菜单权限表';
+) ENGINE=InnoDB AUTO_INCREMENT=788 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='菜单权限表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `role_permissions`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -982,7 +1029,7 @@ CREATE TABLE `role_permissions` (
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE KEY `uniq_role_permission` (`role_id`,`permission_id`) USING BTREE,
   KEY `idx_role_permissions_permission_del_role` (`permission_id`,`is_del`,`role_id`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=973 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='role permission pivot';
+) ENGINE=InnoDB AUTO_INCREMENT=1014 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='role permission pivot';
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `roles`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -1108,7 +1155,7 @@ CREATE TABLE `upload_driver` (
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE KEY `uniq_driver_bucket` (`driver`,`bucket`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=55 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=58 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `upload_rule`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -1123,7 +1170,7 @@ CREATE TABLE `upload_rule` (
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=51 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=54 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `upload_setting`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -1141,7 +1188,7 @@ CREATE TABLE `upload_setting` (
   UNIQUE KEY `uniq_driver_rule` (`driver_id`,`rule_id`) USING BTREE,
   KEY `idx_status` (`status`) USING BTREE,
   KEY `idx_rule` (`rule_id`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=57 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='上传设置：驱动+规则组合与启用状态';
+) ENGINE=InnoDB AUTO_INCREMENT=60 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='上传设置：驱动+规则组合与启用状态';
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `user_profiles`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -1186,7 +1233,7 @@ CREATE TABLE `user_sessions` (
   KEY `idx_expires_at` (`expires_at`) USING BTREE,
   KEY `idx_refresh_expires_at` (`refresh_expires_at`) USING BTREE,
   KEY `idx_active_stats` (`is_del`,`revoked_at`,`expires_at`,`platform`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=1105 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用户会话表';
+) ENGINE=InnoDB AUTO_INCREMENT=1122 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用户会话表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `user_wallets`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -1248,7 +1295,7 @@ CREATE TABLE `users_login_log` (
   KEY `idx_account_created` (`login_account`,`created_at` DESC) USING BTREE,
   KEY `idx_ip_created` (`ip`,`created_at` DESC) USING BTREE,
   KEY `idx_created` (`created_at` DESC) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=1155 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='登录日志';
+) ENGINE=InnoDB AUTO_INCREMENT=1172 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='登录日志';
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `wallet_transactions`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
