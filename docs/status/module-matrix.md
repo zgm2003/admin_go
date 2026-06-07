@@ -60,7 +60,7 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
   - `AI provider config / OpenAI first slice`
   - `AI agent config MVP`
   - `AI image playground gpt-image-2`
-  - `AI run monitor token-only MVP`
+  - `AI run monitor unified provider-attempt MVP`
   - `AI tool runtime MVP`
   - `AI knowledge base RAG MVP`
   - `realtime / WebSocket / AI conversation`
@@ -794,25 +794,26 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
     agent
   - upload runtime is Tencent COS-only
   - `bucket_domain` is stored as a bare host and runtime builds HTTPS public URLs
-  - Admin image generation is the first billed runtime caller.
+  - Admin image generation is a provider runtime caller and now records `ai_runs`; it does not restore old AI billing.
   - Canvas frontend integration is now tracked under `canvas_front_next / canvas platform API`; admin AI image remains independently supported.
 
-### AI run monitor token-only MVP
+### AI run monitor unified provider-attempt MVP
 
 - Backend:
   - implemented: active lifecycle tables are `ai_runs` and `ai_run_events`
-  - `aichat` creates one run per user message, writes lifecycle events `start/completed/failed/canceled/timeout`,
-    records prompt/completion/total tokens and duration, links persisted user/assistant messages, and never persists
-    WebSocket delta
+  - `internal/module/ai/run` owns one provider-attempt row for Admin chat, Canvas text, Admin/Canvas image, and Canvas video.
+    Chat rows may link persisted user/assistant messages; text/image/video rows use `source_type/source_id/input_snapshot`
+    instead of fake messages.
+  - run rows record `platform`, `modality`, `source_type`, `source_id`, `input_snapshot`, `usage_status`,
+    prompt/completion/total tokens, duration, and lifecycle events `start/completed/failed/canceled/timeout`; WebSocket
+    delta is never persisted
   - stream timeout governance is layered: online stream max/idle timeout and stale-run cron cleanup are separate
   - detail additionally reads `ai_tool_calls` and `ai_knowledge_retrievals`/`ai_knowledge_retrieval_hits` as
     separate audit blocks
-  - no daily aggregate table, billing amount, provider task ids, execution-step timeline, usage dumps, or snapshot
-    JSON
+  - no daily aggregate table, billing amount, raw provider usage dump, provider secrets, image bytes, or execution-step timeline
 - Frontend:
-  - adapted: `/ai/runs` uses Go REST typed client with `status`, `model_id/model_display_name`,
-    `duration_ms/duration_text`, `error_message`, lifecycle event `message`, `avg_duration_ms`, `tool_calls`, and
-    `knowledge_retrievals`
+  - adapted: `/ai/runs` uses Go REST typed client with platform/modality/source/usage filters, non-null source fields,
+    nullable chat message links, lifecycle event `message`, `avg_duration_ms`, `tool_calls`, and `knowledge_retrievals`
   - old status/model/duration/error/event-payload aliases and execution-step UI are removed
 - Tests:
   - `internal/shared/enum`, `internal/shared/dict`, `internal/module/ai/chat`, `internal/module/ai/run`,
@@ -825,8 +826,8 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
     aggregates, tool calls, and knowledge retrieval detail
 - Docs: AI run monitor spec/plan + AI knowledge RAG spec/plan + admin API contract + smoke matrix + backend architecture
 - Risk:
-  - token-only stats are done
-  - no billing, provider task replay, or daily aggregate table in this slice
+  - token/duration stats cover all recorded modalities
+  - no billing, raw provider usage replay, or daily aggregate table in this slice
 
 ### AI tool runtime MVP
 
