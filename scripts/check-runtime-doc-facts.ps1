@@ -511,7 +511,11 @@ function Get-MarkdownSummaryCount {
 }
 
 function Get-BackendRouteRegistrationCount {
-    $routeFiles = @(Get-ChildItem -LiteralPath 'admin_back_go/internal/module' -Recurse -File -Include 'route.go','routes.go','*_route.go' | Sort-Object FullName)
+    $routeFiles = @(
+        Get-ChildItem -LiteralPath 'admin_back_go/internal/module' -Recurse -File |
+            Where-Object { $_.Name -eq 'route.go' -or $_.Name -eq 'routes.go' -or $_.Name -like '*_route.go' } |
+            Sort-Object FullName
+    )
     $count = 0
     foreach ($file in $routeFiles) {
         $count += @(Select-String -LiteralPath $file.FullName -Pattern '\.(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD|Any)\(').Count
