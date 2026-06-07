@@ -63,6 +63,3 @@ docs/knowledge/admin-front-source-quality-inventory-2026-06-07.md:
 ## Boundary
 
 This only closes JsonEditor parse-error, empty-editor-rule, and touched visible-Chinese debt. It does not close the remaining `DownloadManager`, demo component, system setting parent-ref fallback, or general Admin Vue source-quality inventory rows.
-
-
-

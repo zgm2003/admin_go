@@ -277,5 +277,3 @@ Invoke-MySQLDumpNoData -Config $config -Path $sqlPath -VerifiedAt $verifiedAt
 Write-Host "Wrote $mdPath"
 Write-Host "Wrote $sqlPath"
 Write-Host "tables=$($tables.Count)"
-
-

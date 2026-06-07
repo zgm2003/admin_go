@@ -67,4 +67,3 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-agent-governance.ps1 -M
 ```
 
 Expected: all pass.
-

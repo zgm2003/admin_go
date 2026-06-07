@@ -50,4 +50,3 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-runtime-doc-facts.ps1 -
 git diff --check
 powershell -ExecutionPolicy Bypass -File .\scripts\check-agent-governance.ps1 -Mode working
 ```
-

@@ -46,6 +46,3 @@ docs/knowledge/admin-front-source-quality-inventory-2026-06-07.md:
 ## Boundary
 
 This only closes DIcon dynamic-module any/as-any debt. It does not close DIcon's explicit missing-icon null-state fallback rows or general Admin Vue source-quality inventory rows.
-
-
-

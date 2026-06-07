@@ -80,8 +80,3 @@ direct_external_http_candidates=0
 This closes only DownloadManager `download.ts` catch-any, failed-download silent direct-open fallback, and same-file filename logical-or fallback debt.
 
 The later dev test download cleanup closed the remaining catch-any inventory row in `admin_front_ts/src/views/Main/test/index.vue`. General Admin Vue `any` and fallback rows remain review debt.
-
-
-
-
-

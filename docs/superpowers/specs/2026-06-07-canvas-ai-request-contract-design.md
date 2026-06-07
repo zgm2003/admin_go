@@ -45,4 +45,3 @@ canvas frontend tests prove clients do not send model.
 contract docs and knowledge artifact state the same rule.
 runtime fact checker guards request structs, handler forwarding, artifact links, and known-issue closure.
 ```
-

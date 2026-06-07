@@ -45,6 +45,3 @@ docs/knowledge/admin-front-source-quality-inventory-2026-06-07.md:
 ## Boundary
 
 This only closes the request-error handling debt in forgot-password. The remaining `useForgotPassword.ts` logical-or rows are form validation predicates and remain inventory evidence for later review, not part of this error-message cleanup.
-
-
-

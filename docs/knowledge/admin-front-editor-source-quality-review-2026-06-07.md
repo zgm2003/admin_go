@@ -78,6 +78,3 @@ direct_external_http_candidates=0
 This closes only the wangEditor wrapper `any/as any` and upload URL fallback debt.
 
 Do not use this as permission to regex-sweep all remaining fallbacks. Remaining inventory rows must still be reviewed one narrow slice at a time.
-
-
-

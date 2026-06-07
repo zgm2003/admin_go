@@ -329,9 +329,3 @@ For each batch:
 ```text
 RED guard -> minimal code/docs change -> targeted tests/typecheck -> current-status/knowledge sync
 ```
-
-
-
-
-
-

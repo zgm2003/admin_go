@@ -327,9 +327,3 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-runtime-doc-facts.ps1 -
 ```
 
 The inventory commands guard selected manifest/source/schema/API-call artifact drift. `frontend-api-inventory-2026-06-07.md` is source inventory only; it does not prove served route behavior. `db-schema-ownership-map-2026-06-07.md` is source ownership mapping only; it does not prove migration history or runtime path coverage. `full-stack-module-map-2026-06-07.md` is a joined navigation map; its frontend join invariant prevents unknown-capability fallback, but it still is not runtime smoke. `backend-capability-manifest-2026-06-07.md` is source package ownership evidence; it does not prove canonical writers or import graph boundaries. `admin-front-source-quality-inventory-2026-06-07.md` is regex source-quality evidence for Admin Vue `any/as any/fallback/direct external HTTP` rows; it does not classify every fallback as a bug. The final live-schema command additionally re-exports live MySQL schema and compares the table count with this tracked snapshot.
-
-
-
-
-
-
