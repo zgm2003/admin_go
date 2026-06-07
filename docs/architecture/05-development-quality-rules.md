@@ -140,7 +140,7 @@ official vendor docs when the behavior is tool/provider-specific
 ```text
 业务上明确的默认值，例如新增根菜单 parent_id=0
 历史路径在当前运行时仍存在时，必须显式标注为待治理事实，不能作为新设计模板
-显式平台入口边界，例如 admin/app 分别在 `transport/{platform}` 表达，再调用同一 capability 的 module service
+显式平台入口边界，例如 admin/app/canvas 分别在 `transport/{platform}` 表达，再调用同一 capability 的 module service
 对外部不可信输入做严格校验后拒绝
 ```
 
@@ -154,7 +154,8 @@ official vendor docs when the behavior is tool/provider-specific
 /api/{scope}/v1/<resource>
 
 当前后台管理端：/api/admin/v1/<resource>
-未来用户应用端：/api/app/v1/<resource>
+当前用户应用端：/api/app/v1/<resource>
+当前 Canvas 端：/api/canvas/v1/<resource>
 ```
 
 方法语义固定：
@@ -199,9 +200,9 @@ Frontend API: list/detail/create/update/changeStatus/deleteOne/deleteBatch/pageI
 
 ## 多平台入口不复制业务模块
 
-admin/app/openapi/merchant 是业务 platform 入口，不是复制业务包的理由。新增端、平台、入口时先判断差异属于哪一层：
+admin/app/canvas/openapi/merchant 是业务 platform 入口，不是复制业务包的理由。新增端、平台、入口时先判断差异属于哪一层：
 
-不要把任何业务能力定义成长期 `admin-only`。当前只有 admin 入口，只是当前暴露面，不是能力边界；未来 app / openapi / merchant 等入口仍应在同一 capability 下扩展。
+不要把任何业务能力定义成长期 `admin-only`。当前只有 admin 入口，只是当前暴露面，不是能力边界；当前 canvas 入口、未来 app / openapi / merchant 等入口仍应在同一 capability 下扩展。
 
 | 差异类型 | 落位 |
 |---|---|
@@ -219,7 +220,9 @@ admin/app/openapi/merchant 是业务 platform 入口，不是复制业务包的�
 appai / appwallet / xxauth / adminai
 ```
 
-平台不是业务复制理由。新增平台不得默认新增 `xxxauth` / `xxxuser` / `xxxupload` 这类平台命名业务模块；`/api/app/v1` 这类路径差异优先通过 `transport/{platform}` 的 route/request/presenter 表达；认证会话走 auth 模块策略 + `auth_platforms` 表；业务能力进入 module service，共享能力进入 shared，技术资源进入 infra。
+平台不是业务复制理由。新增平台不得默认新增 `xxxauth` / `xxxuser` / `xxxupload` 这类平台命名业务模块；`/api/app/v1`、`/api/canvas/v1` 这类路径差异优先通过 `transport/{platform}` 的 route/request/presenter 表达；认证会话走 auth 模块策略 + `auth_platforms` 表；业务能力进入 module service，共享能力进入 shared，技术资源进入 infra。
+
+外部支付、第三方回调这类没有用户会话平台的 HTTP 入口可用 `transport/callback/`；`callback` 是回调表面命名例外，不是 platform，不得进入平台字典或 RBAC 平台枚举。
 
 ## 公共能力先归 shared
 
@@ -243,10 +246,12 @@ appai / appwallet / xxauth / adminai
 
 ```text
 module service 暴露业务候选项查询
-shared/dict 统一组装前端字典形态
+shared/dict 统一 option 类型、共享枚举派生函数和 common provider registry
 shared/setting 统一拥有仍属于 system_settings 的 typed key 默认值、范围和缓存失效写入
 transport/{platform} page-init 只声明需要哪些字典和业务 options
 ```
+
+当前 runtime 里很多 module service 仍直接调用 `dict.*Options()` 组装 page-init；这是事实，不是坏兜底。长期治理方向是把重复 common dict 读取收口到 `shared/dict.Service` provider 查询，但不准把尚不存在的 `dict.PageInit(ctx, names...)` 写成当前规则。
 
 当前已迁移 typed keys：
 
@@ -475,7 +480,7 @@ internal/shared/validate # Gin binding / go-playground validator 自定义 tag
 
 ```text
 handler 用 binding tag 拒绝明显非法入参
-模块 HTTP request struct 放在 `internal/module/<name>/request.go`
+模块 HTTP request struct 放在 `internal/module/<name>/transport/{platform}/request.go`
 service 再做业务规则校验
 dict 必须从 enum 派生，不准页面或模块各写一份 label/value
 validator tag 必须调用 enum.IsXxx，不准散落硬编码 oneof=...
@@ -584,7 +589,8 @@ worker 消费 task 后调用 service
 ```text
 业务所有权：internal/module/<name>/jobs.go
 系统任务：internal/jobs/system/*.go
-注册入口：internal/jobs/registry.go
+当前注册入口：internal/jobs/noop.go
+未来任务增多后的注册入口：internal/jobs/registry.go
 队列 lane：critical / default / low
 ```
 

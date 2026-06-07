@@ -53,9 +53,9 @@ Use these words strictly:
 | Realtime/WebSocket behavior | `docs/contracts/admin-realtime-v1.md`, `docs/status/current-status.md`, `docs/status/module-matrix.md`, realtime architecture docs, `docs/testing/smoke-matrix.md` | Served message shape beats planned contract text. |
 | Queue, cron, worker, async side effect | `docs/status/current-status.md`, `docs/status/module-matrix.md`, queue/scheduler architecture docs, smoke/test docs | Record idempotency, retry, and verification boundary. |
 | Frontend route, menu, permission, API adapter | `docs/status/current-status.md`, `docs/status/module-matrix.md`, API contract if the public shape changed, frontend/runtime docs | Do not document a route as usable until the served UI/API path works. |
-| Database schema or seed baseline | `docs/status/current-status.md`, `docs/status/module-matrix.md`, architecture docs, smoke/test docs | Schema text alone is not runtime proof. |
+| Database schema or seed baseline | `docs/db/mysql-live-schema-YYYY-MM-DD.md`, matching `.sql`, `docs/status/current-status.md`, `docs/status/module-matrix.md`, architecture docs, smoke/test docs | Schema text from migrations alone is not runtime proof; current table/column/index facts must come from live MySQL snapshot. |
 | Known bug, failing test, dirty WIP, or unfinished follow-up | `docs/status/known-issues.md`; update `docs/status/current-status.md` only with a short pointer if it affects current verification gaps | Do not write it as implemented/verified until the fix is committed and the relevant tests or runtime checks pass. |
-| Governance or agent workflow | `docs/README.md`, this document, `docs/testing/pre-push-gates.md`; `AGENTS.md` / `agents/README.md` only keep short references and role boundaries | Cold-start/onboarding list has one owner: `docs/README.md`. Do not maintain parallel reading lists. |
+| Governance or agent workflow | `docs/README.md`, this document, `docs/testing/pre-push-gates.md`, `docs/knowledge/*`; `AGENTS.md` / `agents/README.md` only keep short references and role boundaries | Cold-start/onboarding list has one owner: `docs/README.md`. Do not maintain parallel reading lists. |
 | Codex lifecycle hook behavior | `docs/architecture/08-codex-hooks.md`; `.codex/hooks.json` / `.codex/hooks/*.ps1` / `scripts/test-codex-hooks.ps1` when hook implementation changes; `docs/testing/pre-push-gates.md` | Hooks are conversation-time governance only; they must not be documented as runtime proof or smoke evidence. |
 | Spec/plan changes only | The relevant spec/plan | Spec/plan history does not override `current-status`. |
 
@@ -66,8 +66,8 @@ Use these words strictly:
 | Runtime behavior | Command, request, browser/runtime observation, log, or smoke output showing the decisive branch. | “Looks implemented” from source only. |
 | API contract | Served endpoint and payload match, or contract checker output. | Contract file changed without live or test evidence. |
 | Smoke | Exact smoke command and result. | Pre-push hook pass. |
-| Documentation-only change | `git diff --check` plus `scripts/check-agent-governance.ps1 -Mode working` and path/reference sanity. | No whitespace check. |
-| Governance check | `git diff --check` and the governance checker when present. | Auto-fixing files silently. |
+| Documentation-only change | `git diff --check` plus `scripts/check-runtime-doc-facts.ps1` plus `scripts/check-agent-governance.ps1 -Mode working` and path/reference sanity. | No whitespace check. |
+| Governance check | `git diff --check`, `scripts/check-runtime-doc-facts.ps1`, and the governance checker when present. | Auto-fixing files silently. |
 | Codex hook behavior | `scripts/test-codex-hooks.ps1` output when hook scripts exist plus `/hooks` review/trust note when hook config changed. | Assuming Codex loaded changed hooks without review. |
 
 Hook/checker do not auto-fix files. They report drift and fail only on defined blocking rules. A human must decide the documentation correction.

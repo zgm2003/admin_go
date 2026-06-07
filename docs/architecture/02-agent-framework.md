@@ -99,6 +99,55 @@ docs/architecture/07-documentation-governance.md
 
 agent 不准靠旧计划或聊天记录覆盖当前运行时事实；文档冲突时先按 governance 的真相源顺序判断。
 
+## Codex knowledge base
+
+项目知识库入口：
+
+```text
+docs/knowledge/README.md
+docs/knowledge/current-runtime-knowledge.md
+docs/knowledge/runtime-source-map.md
+docs/knowledge/db-schema-ownership-map-YYYY-MM-DD.md
+docs/knowledge/full-stack-module-map-YYYY-MM-DD.md
+docs/knowledge/backend-capability-manifest-YYYY-MM-DD.md
+docs/knowledge/admin-front-source-quality-inventory-YYYY-MM-DD.md
+docs/knowledge/canvas-ai-request-contract-review-YYYY-MM-DD.md
+docs/knowledge/codex-first-agent-operating-model.md
+```
+
+知识库只组织事实，不拥有事实。表结构必须来自 live MySQL snapshot：
+
+```text
+docs/db/mysql-live-schema-YYYY-MM-DD.md
+docs/db/mysql-live-schema-YYYY-MM-DD.sql
+scripts/export-live-mysql-schema.ps1
+scripts/export-runtime-inventory.ps1
+scripts/export-backend-route-inventory.ps1
+scripts/export-backend-route-contract-drift.ps1
+scripts/export-frontend-api-inventory.ps1
+scripts/export-frontend-backend-api-drift.ps1
+scripts/export-api-source-only-route-review.ps1
+scripts/export-db-schema-ownership-map.ps1
+scripts/export-full-stack-module-map.ps1
+scripts/export-backend-capability-manifest.ps1
+scripts/export-admin-front-source-quality-inventory.ps1
+scripts/check-runtime-doc-facts.ps1
+```
+
+任何 agent 引用表、字段、索引、外键时，优先链接 live schema snapshot；迁移文件只能说明历史，不能证明当前数据库。
+`check-runtime-doc-facts.ps1` 只校验选定 manifest / source route / schema artifact 与知识库的一致性；默认不连 DB，需显式 `-LiveSchema` 才会重新查 live MySQL。
+`export-runtime-inventory.ps1` 生成源码库存快照，帮助 agent 快速定位当前 Go module transport、Vue 管理端源码目录和 Canvas 页面/服务；它不是 served API smoke。
+`export-backend-route-inventory.ps1` 生成 Go 后端 route source inventory，包含 capability、surface、route file、line、method、inferred full path、callback exception 和 `route_meta.go` 权限/操作元信息；它也不是 served API smoke。
+`export-backend-route-contract-drift.ps1` 对比 Go route source inventory 与 contract/status/knowledge Markdown，输出 exact/prefix/source-doc 分类；prefix-only 不能冒充 exact contract。
+`export-frontend-api-inventory.ps1` 生成 Admin Vue / Canvas Next API call source inventory，区分 `/api/admin/v1`、`/api/canvas/v1`、外部 HTTP、blob/download、Next proxy、wrapper 和 parametric helper；它不证明浏览器 runtime 或 served route。
+`export-frontend-backend-api-drift.ps1` 对比 frontend exact backend API calls 与 backend route source inventory；`method-mismatch` 和 `no-backend-route` 是硬漂移，backend source-only rows 是 review backlog，不自动等于 bug。
+`export-api-source-only-route-review.ps1` 将 backend source-only rows 进一步分类；未知默认进入 owner-decision-required，不允许用“backend-only”兜底。
+`export-db-schema-ownership-map.ps1` 从最新 live MySQL schema artifact 出发，把每张 live table 映射到当前 Go source 的 model owner / reference owner；它是 source ownership map，不是 migration history，也不是 runtime path coverage。
+`export-full-stack-module-map.ps1` 将 backend route inventory、frontend API inventory、DB schema ownership map 和 source-only route review 按 capability 合并；frontend exact backend call 找不到后端 route 时必须失败，不允许写 unknown owner 兜底。
+`export-backend-capability-manifest.ps1` 将 backend capability 映射到当前 source dir、direct service/repository/model files、route surfaces、direct tests 和 live DB model-owned tables；纯 helper package 单独列出，不允许因为目录存在就兜底提升成业务 capability。
+`export-admin-front-source-quality-inventory.ps1` 扫描当前 `admin_front_ts/src/**/*.ts` 和 `*.vue`，在剥离注释后输出 `any/as any/Record<string, any>/catch(...: any)/||/??/optional-chain fallback/direct external HTTP` 候选行；它是 review inventory，不是自动修复清单，也不是构建失败条件。
+`canvas-ai-request-contract-review-YYYY-MM-DD.md` 记录 Canvas AI active request shape 和 provider/model 覆盖拒绝边界；它是手工审查 artifact，必须由 frontend tests、backend transports/tests 和 contract docs 支撑，不能替代 served-route smoke。
+
 ## Pre-push gate rules
 
 轻量 pre-push gate 的默认规则、strict gate、skip 规则和输出格式统一放在：

@@ -7,12 +7,12 @@
 后端长期目标是：
 
 ```text
-一套后端核心能力，一对多服务 admin / app / openapi / merchant 等前端或平台入口。
+一套后端核心能力，一对多服务 admin / app / canvas / openapi / merchant 等前端或平台入口。
 ```
 
 ## 架构词汇（与 docs/architecture/00-platform-and-module-rules.md 对齐）
 
-- `platform` 仅指业务平台：admin / app / openapi / merchant / miniapp
+- `platform` 仅指业务平台：admin / app / canvas / openapi / merchant / miniapp
 - `module` 业务能力归属：`internal/module/{capability}/`
 - `transport` 能力对某平台的 HTTP 表面：`internal/module/{capability}/transport/{platform}/`
 - `shared` 跨领域公共服务：dict / enum / validate / i18n / response / apperror / pagination / setting
@@ -24,7 +24,7 @@
 - `api/{platform}/` 顶层分包（弃用 DDD 风格四层）
 - "admin only" 作为能力定义（当前 admin 入口 ≠ admin-only）
 
-不要把任何业务能力定义成长期 `admin-only`。当前只有 admin 入口，只能说明当前先暴露 `admin` 平台；未来 app / openapi / merchant 等入口仍应在同一 capability 下扩展，而不是复制新业务模块。
+不要把任何业务能力定义成长期 `admin-only`。当前只有 admin 入口，只能说明当前先暴露 `admin` 平台；当前 canvas 入口、未来 app / openapi / merchant 等入口仍应在同一 capability 下扩展，而不是复制新业务模块。
 
 冷启动判断顺序固定：
 
@@ -122,6 +122,14 @@ docs/architecture/05-development-quality-rules.md
 ```
 
 没有验证证据，不准说“完成”；文档与运行时冲突时，以运行时为准并修正文档。
+
+知识库、manifest 版本、关键 route/source 或 schema artifact 口径被触碰时，收口验证必须包含：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\check-runtime-doc-facts.ps1
+```
+
+如果声明 MySQL live schema 已经重新核准，必须加 `-LiveSchema` 或重新运行 `scripts/export-live-mysql-schema.ps1` 并记录输出。
 
 ### 1. 尊重开源，不自嗨设计
 

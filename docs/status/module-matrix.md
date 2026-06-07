@@ -193,14 +193,14 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
 ### RBAC bootstrap
 
 - Backend:
-  - implemented: users/init exposes BUTTON-only buttonCodes
+  - implemented: users/me exposes router + BUTTON-only buttonCodes
   - PermissionCheck uses internal RouteAccessCodes so PAGE read routes remain protected without leaking PAGE code
     into frontend button visibility
 - Frontend: adapted: role editor labels PAGE grants as 页面访问 and maps it to real PAGE permission_id
 - Tests:
   - `internal/module/user`, `internal/module/permission`, `internal/module/role`, `internal/bootstrap`
   - frontend role matrix tests
-- Smoke: users/me + users/init
+- Smoke: users/me
 - Docs: architecture + contract
 - Risk: no multi-role model in phase one
 
@@ -646,7 +646,7 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
 - Smoke:
   - 2026-05-31 full smoke passed for payment config page-init/list, payment recharge page-init/list, payment ledger
     page-init/list with filters, payment wallets page-init/list with keyword filter, current-user wallet summary/transactions,
-    and users/init menu state
+    and users/me router/menu state
   - menu gate expects a single visible payment top-level entry with visible children `/payment/config`, `/payment/ledger`,
     and `/payment/wallets`; `/profile/wallet` and `/payment/recharge` are hidden routes
   - default smoke does not upload certs, call config test, create real paid orders, call real Alipay, write paid
@@ -686,7 +686,7 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
   - frontend wallet API/page Vitest + `vue-tsc`
 - Smoke:
   - 2026-05-31 full smoke passed for current-user wallet summary/transactions, payment ledger init/list,
-    payment wallets init/list, and users/init payment menu state
+    payment wallets init/list, and users/me payment router/menu state
   - default smoke does not call internal debit/credit
 - Docs: wallet recharge/debit-credit + payment-wallet redesign spec/plan + old AI billing retirement plan + admin API contract + smoke matrix
 - Risk:
@@ -720,7 +720,7 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
   - fallback hardening covers canonical `engine_type` only and invalid stored provider/model status fail-closed behavior
   - frontend AI provider API Vitest + `npm run build:check`
 - Smoke:
-  - basic/full smoke users/init gate requires providers/agents/knowledge/tools/runs/chat order and rejects retired
+  - basic/full smoke users/me gate requires providers/agents/knowledge/tools/runs/chat order and rejects retired
     goods/cine/model/agent/prompt entries
   - full smoke provider read gate requires `engine_type=openai`, health/model-sync statuses `unknown/ok/failed`, and no
     plaintext/encrypted key/raw/source/config leaks

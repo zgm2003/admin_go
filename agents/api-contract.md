@@ -71,4 +71,4 @@ handler:      List/Detail/Create/Update/ChangeStatus/DeleteOne/DeleteBatch/PageI
 frontend API: list/detail/create/update/changeStatus/deleteOne/deleteBatch/pageInit
 ```
 
-`init` 只允许作为明确 bootstrap contract，例如 `users/init`；普通后台页面的字典、枚举、筛选项初始化统一叫 `page-init` / `pageInit()`。
+当前登录用户 bootstrap 固定使用 `GET /api/{admin,app,canvas}/v1/users/me`；`users/init` 不再是例外。普通后台页面的字典、枚举、筛选项初始化统一叫 `page-init` / `pageInit()`。

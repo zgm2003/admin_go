@@ -22,26 +22,30 @@
 1. AGENTS.md
 2. docs/README.md
 3. docs/status/current-status.md
-4. docs/architecture/00-platform-and-module-rules.md
-5. docs/architecture/00-open-source-first.md
-6. docs/architecture/01-step-by-step-roadmap.md
-7. docs/architecture/02-agent-framework.md
-8. docs/architecture/03-technology-decision.md
-9. docs/architecture/04-go-backend-framework.md
-10. docs/architecture/05-development-quality-rules.md
-11. docs/architecture/06-admin-middleware-selection.md
-12. docs/architecture/06-realtime-and-distributed-boundary.md
-13. docs/architecture/07-documentation-governance.md
-14. docs/architecture/08-codex-hooks.md
-15. docs/contracts/admin-api-v1.md
-16. docs/contracts/admin-realtime-v1.md
-17. docs/testing/test-strategy.md
-18. docs/testing/pre-push-gates.md
-19. docs/testing/smoke-matrix.md
-20. docs/deployment/local.md
-21. docs/deployment/production.md
-22. docs/deployment/distributed-readiness.md
-23. docs/deployment/frontend-github-actions-scp.md
+4. docs/knowledge/README.md
+5. docs/knowledge/current-runtime-knowledge.md
+6. docs/knowledge/runtime-source-map.md
+7. docs/knowledge/codex-first-agent-operating-model.md
+8. docs/architecture/00-platform-and-module-rules.md
+9. docs/architecture/00-open-source-first.md
+10. docs/architecture/01-step-by-step-roadmap.md
+11. docs/architecture/02-agent-framework.md
+12. docs/architecture/03-technology-decision.md
+13. docs/architecture/04-go-backend-framework.md
+14. docs/architecture/05-development-quality-rules.md
+15. docs/architecture/06-admin-middleware-selection.md
+16. docs/architecture/06-realtime-and-distributed-boundary.md
+17. docs/architecture/07-documentation-governance.md
+18. docs/architecture/08-codex-hooks.md
+19. docs/contracts/admin-api-v1.md
+20. docs/contracts/admin-realtime-v1.md
+21. docs/testing/test-strategy.md
+22. docs/testing/pre-push-gates.md
+23. docs/testing/smoke-matrix.md
+24. docs/deployment/local.md
+25. docs/deployment/production.md
+26. docs/deployment/distributed-readiness.md
+27. docs/deployment/frontend-github-actions-scp.md
 ```
 
 按任务再读：
@@ -49,6 +53,8 @@
 ```text
 agents/*.md                              # agent 分工
 docs/open-source/*.md                    # 开源调研和取舍
+docs/knowledge/*.md                      # Codex 知识库；只组织事实，不覆盖 runtime/status/contracts
+docs/db/mysql-live-schema-*.md           # live MySQL schema snapshot；表结构引用优先看这里
 docs/deployment/*.md                     # 本地、生产、分布式 readiness、前端发布运行边界
 docs/superpowers/README.md               # Superpowers spec/plan/review/archive 入口和边界
 docs/superpowers/specs/*.md              # 只读与当前任务直接相关的 spec；不要扫全部旧 spec
@@ -146,7 +152,7 @@ admin_front_ts/docs/deployment/github-actions-scp.md   # 旧链接 stub，真实
 ```text
 后端：Go + Gin modular monolith
 前端：Vue 3 + TypeScript
-API：/api/admin/v1/...，以及 /api/app/v1/...
+API：/api/admin/v1/...、/api/app/v1/...、/api/canvas/v1/...
 Realtime：WebSocket-only，不新增 SSE
 异步：admin-worker + Asynq + gocron/v2；队列监控优先用官方 asynqmon 只读 UI
 认证/RBAC：core 已成型；后续是 Go/Vue runtime 的模块演进、产品补齐和 hardening
@@ -174,6 +180,8 @@ Windows 上 go test ./... 默认并发可能吃内存；优先用 GOMAXPROCS=2 +
 race detector 需要 gcc；如果报 cgo: C compiler "gcc" not found，不准声称 race 通过。
 前端 build 较重，除非发布门禁或触碰大范围构建配置，否则优先 targeted typecheck/lint/test。
 Documentation-only 默认跑 git diff --check + scripts/check-agent-governance.ps1 -Mode working。
+知识库、manifest 版本、关键 route/source 和 schema artifact 口径改动时，加跑 scripts/check-runtime-doc-facts.ps1；需要证明 live MySQL 仍匹配 tracked schema snapshot 时，加 `-LiveSchema`。
+源码库存变更或补知识库时，可先跑 scripts/export-runtime-inventory.ps1 生成 `docs/knowledge/runtime-inventory-YYYY-MM-DD.md`，再跑 fact/governance checks。
 ```
 
 ## 结束任务时必须更新

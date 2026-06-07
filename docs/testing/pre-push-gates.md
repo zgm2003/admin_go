@@ -10,10 +10,11 @@ The default pre-push gate is intentionally light:
 1. run the agent governance checker in `-Mode range`
 2. collect committed range paths from the root repo plus `admin_back_go` and `admin_front_ts`
 3. inside the checker, run root/subrepo range `git diff --check`, plus root working and cached `git diff --check`
-4. print changed files, evidence, risks, and next step
+4. run non-live runtime documentation fact checks for selected manifests/routes/schema artifacts
+5. print changed files, evidence, risks, and next step
 ```
 
-Pre-push must not require DB/Redis/backend/frontend to be online. Pre-push must not run full smoke by default.
+Pre-push must not require DB/Redis/backend/frontend to be online. Pre-push must not run full smoke by default. Runtime documentation fact checks in the default gate are non-live; run `scripts/check-runtime-doc-facts.ps1 -LiveSchema` explicitly when table truth must be rechecked against MySQL.
 
 Default gate catches whitespace drift and obvious governance/path drift. It does not prove the application works.
 
@@ -76,6 +77,7 @@ range diff check passed
 subrepo range diff check passed when the subrepo exists and has the resolved base
 working diff check passed
 cached diff check passed
+runtime documentation fact check passed
 no blocking governance violations found
 ```
 
@@ -93,6 +95,13 @@ Run the governance checker against the current workspace:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\check-agent-governance.ps1 -Mode working
+```
+
+Run the knowledge/runtime manifest fact checker directly:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\check-runtime-doc-facts.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\check-runtime-doc-facts.ps1 -LiveSchema
 ```
 
 Run the governance checker for the committed diff from the resolved base to `HEAD`. The committed diff includes root plus `admin_back_go` and `admin_front_ts` when those subrepos exist and have the resolved base. Dirty/staged files are reported separately; cached and working whitespace is still checked:

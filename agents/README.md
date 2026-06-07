@@ -31,3 +31,11 @@ reviewer.md         # 越界和验证审查
 新行为、行为变更、bugfix、refactor 默认先按 Superpowers 流程推进。实现阶段默认 TDD。
 
 Codex hooks 是过程内辅助，不是角色本身。hooks 提醒了规则，不代表任务已经验证完成。
+
+知识库和 manifest/source route/schema artifact 口径变更后，除 `git diff --check` 和 `scripts/check-agent-governance.ps1 -Mode working` 外，还要跑：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\check-runtime-doc-facts.ps1
+```
+
+如果任务声称 MySQL 表结构最新版已经核准，再加 `-LiveSchema`。

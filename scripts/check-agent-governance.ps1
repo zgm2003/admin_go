@@ -538,6 +538,17 @@ try {
         [void]$verification.Add("cached diff check: git diff --cached --check -- . ':(exclude)**/node_modules/**' passed")
     }
 
+    $runtimeDocFactsScript = Join-Path $repoRoot 'scripts/check-runtime-doc-facts.ps1'
+    if (Test-Path -LiteralPath $runtimeDocFactsScript) {
+        $runtimeDocFactsOutput = @(& powershell -ExecutionPolicy Bypass -File $runtimeDocFactsScript 2>&1)
+        if ($LASTEXITCODE -ne 0) {
+            [void]$blocking.Add('runtime documentation fact check failed')
+            foreach ($line in $runtimeDocFactsOutput) { Add-Unique $evidence "runtime-doc-facts: $line" }
+        } else {
+            [void]$verification.Add('runtime documentation fact check passed')
+        }
+    }
+
     $pathGovernancePaths = @(Merge-UniquePaths @($changedPaths, $workingDirtyPaths))
     foreach ($path in $pathGovernancePaths) {
         if ($path -match '^docs/superpowers/specs/([^/]+)$') {
@@ -676,7 +687,7 @@ try {
     foreach ($item in $verification) { Write-Host "- $item" }
 
     Write-Section 'Known risks'
-    Write-Host '- checker is path-based; it does not prove runtime behavior'
+    Write-Host '- checker is mostly path-based; runtime-doc-facts verifies selected manifests/routes/schema artifacts but does not prove full runtime behavior'
     Write-Host '- no DB/Redis/backend/frontend tests were run'
     Write-Host '- untracked file content is not covered by git diff --check until staged; only untracked path names are included in path governance'
     if ($Mode -eq 'range') { Write-Host '- range governance uses range changed files; dirty/untracked working paths are reported separately and are not part of the range diff' }

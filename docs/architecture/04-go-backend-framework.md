@@ -4,7 +4,7 @@
 
 `admin_back_go` 采用 **Gin modular monolith**，但架构口径从 2026-05-27 起明确为 **new-system-first / multi-platform-first**。
 
-不是 Java 式分层，也不是微服务，也不是闭门造车。它是一个新 Go 后端，要用一套核心能力服务 admin / app / openapi / merchant 等多个前端或平台入口。旧 PHP/Webman 项目只能作为设计参考，不是新项目的兼容包袱。
+不是 Java 式分层，也不是微服务，也不是闭门造车。它是一个新 Go 后端，要用一套核心能力服务 admin / app / canvas / openapi / merchant 等多个前端或平台入口。旧 PHP/Webman 项目只能作为设计参考，不是新项目的兼容包袱。
 
 一句话：
 
@@ -28,7 +28,7 @@ cmd -> bootstrap -> server -> module/{capability}/transport/{platform} -> module
 现有 RBAC 契约
 现有前端动态菜单和路由
 用户登录和 session
-多平台入口 admin/app/openapi/merchant
+多平台入口 admin/app/canvas/openapi/merchant
 WebSocket / AI streaming
 队列和定时任务
 业务领域能力渐进演进
@@ -86,7 +86,7 @@ internal/infra/                                     运行时技术资源层（�
 `transport/{platform}` 只表达 HTTP 表面差异：route prefix、request DTO、presenter、认证入口、权限入口、operation log 策略。
 module service 负责业务规则、状态变更、事务边界和领域错误，并只依赖 `shared` / `infra`。
 `shared` 负责 dict / enum / validate / i18n / setting / pagination / errors 等跨能力公共服务。
-`infra` 负责 DB / Redis / Queue / Storage / SDK / Logging 等运行时技术资源，不表达 admin/app/openapi/merchant 业务平台。
+`infra` 负责 DB / Redis / Queue / Storage / SDK / Logging 等运行时技术资源，不表达 admin/app/canvas/openapi/merchant 业务平台。
 
 当前已落地的 shared 边界：
 
@@ -133,21 +133,25 @@ transport/admin/route.go    # admin HTTP 路由注册
 transport/admin/handler.go  # admin HTTP 入参解析、调用 service、返回 response
 transport/app/route.go      # app HTTP 路由注册（有 app 表面时）
 transport/app/handler.go    # app HTTP 入参解析、调用 service、返回 response
+transport/canvas/route.go   # canvas HTTP 路由注册（有 canvas 表面时）
+transport/canvas/handler.go # canvas HTTP 入参解析、调用 service、返回 response
 ```
 
 ## 多平台规则
 
 参见 `docs/architecture/00-platform-and-module-rules.md`（R1-R8）。
 
-admin/app/openapi/merchant 是业务 platform，不是复制业务包的理由。
+admin/app/canvas/openapi/merchant 是业务 platform，不是复制业务包的理由。
 
-不要把任何业务能力定义成长期 `admin-only`。当前只有 admin 路由，只能说明当前暴露面先是 admin；未来 app / openapi / merchant 等入口仍应从同一 capability 扩展。
+不要把任何业务能力定义成长期 `admin-only`。当前只有 admin 路由，只能说明当前暴露面先是 admin；当前 canvas 路由、未来 app / openapi / merchant 等入口仍应从同一 capability 扩展。
 
 当前过渡期仍允许 service/repository/model/jobs 留在 module 根目录；active HTTP 路由、handler、request/presenter 等入口文件必须按 `internal/module/{capability}/transport/{platform}/` 收口。
 架构测试 `TestNoModuleRootHTTPSurface` 会拒绝 module 根目录下的 `route.go`、`handler.go`、`app_handler.go`、`platform_handler.go`、`app_route_test.go`、`platform_route.go`。
-admin/app 差异进入 transport 层；业务规则进入 module service；跨能力公共能力进入 shared；外部技术资源进入 infra。
+admin/app/canvas 差异进入 transport 层；业务规则进入 module service；跨能力公共能力进入 shared；外部技术资源进入 infra。
 
-admin user 和 app user 可以有不同 HTTP 表达，但底层用户核心实体、账号安全、profile 基础能力应通过同一 capability 复用，而不是复制两套业务。
+admin user、app user、canvas user 可以有不同 HTTP 表达，但底层用户核心实体、账号安全、profile 基础能力应通过同一 capability 复用，而不是复制多套业务。
+
+`transport/callback/` 是外部支付/第三方回调的 HTTP 表面命名例外，不是 business platform。它不能进入 platform 字典、权限平台枚举或用户 session platform。
 
 ## 调用方向
 
@@ -184,6 +188,7 @@ handler 直接查 DB/Redis
 /api/{scope}/v1/...
 当前 admin = /api/admin/v1/...
 当前 app   = /api/app/v1/...
+当前 canvas = /api/canvas/v1/...
 未来 openapi/merchant 按产品决策扩展
 ```
 
@@ -267,10 +272,11 @@ default  # 默认业务异步任务
 low      # 慢任务/批量任务，例如报表、导入导出、AI 后处理
 ```
 
-代码所有权按业务分。当前最小骨架只有 `internal/jobs/noop.go`；任务增多后按下面拆，不提前造空文件：
+代码所有权按业务分。当前注册入口是 `internal/jobs/noop.go`；任务增多后再按下面拆，不提前造空文件：
 
 ```text
-internal/jobs/registry.go        # 全局注册入口，保持薄，任务多了再拆
+internal/jobs/noop.go            # 当前全局注册入口，保持薄
+internal/jobs/registry.go        # 未来任务增多后的全局注册入口，可由 noop.go 演进/拆分
 internal/jobs/types.go           # 跨模块任务类型命名规则，任务多了再拆
 internal/jobs/system/*.go        # 系统级探针、维护任务，任务多了再拆
 internal/module/<name>/jobs.go   # 业务模块自己的 task 构造和 handler

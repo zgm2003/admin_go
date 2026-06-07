@@ -185,6 +185,19 @@ GET  /api/canvas/v1/ai/videos/:id
 GET  /api/canvas/v1/ai/videos/:id/content
 ```
 
+Retained Canvas payment/wallet基础域 routes, source-backed but not a Canvas AI free-generation dependency:
+
+```text
+GET  /api/canvas/v1/payment/recharges/page-init
+GET  /api/canvas/v1/payment/recharges
+POST /api/canvas/v1/payment/recharges
+POST /api/canvas/v1/payment/recharges/:id/pay
+GET  /api/canvas/v1/wallet/summary
+GET  /api/canvas/v1/wallet/transactions
+```
+
+这些 payment/wallet routes 只说明后端仍保留 Canvas 平台基础充值/钱包域边界；Canvas AI 生成、Canvas free-generation UI、Canvas RBAC 菜单不依赖这些 routes。不要把它们重新解释成 AI billing、余额扣款、充值弹窗或 Canvas 生成前置条件。
+
 Canvas auth keeps the browser session through refresh tokens. `login` returns user bootstrap data plus token metadata; `refresh` returns token metadata only and keeps the Canvas field name `token` instead of the admin-side `access_token`.
 
 ```ts
@@ -234,7 +247,22 @@ interface CanvasPromptListQuery {
 }
 ```
 
-Canvas image generation and edits are backend-managed async tasks. The browser submits only an `agent_id` and user content; provider/model secrets stay server-side.
+Canvas AI request bodies are agent-owned at the provider/model boundary. The browser submits only `agent_id` plus user content and generation params; provider/model secrets stay server-side. forbidden request fields: `model`, `provider`, `api_key`, `base_url`
+
+```ts
+interface CanvasChatCompletionBody {
+  agent_id: number
+  message: string
+}
+
+interface CanvasChatCompletionResponse {
+  id: string
+  object: 'chat.completion'
+  content: string
+}
+```
+
+Canvas image generation and edits are backend-managed async tasks.
 
 ```ts
 interface CanvasImageGenerationJSONBody {
@@ -258,6 +286,23 @@ interface CanvasImageCreateResponse {
 interface CanvasImageTaskResponse {
   task: { id: number; status: string; error_message?: string }
   outputs: Array<{ storage_url?: string; url?: string; b64_json?: string }>
+}
+```
+
+Canvas video generation accepts JSON from backend tests/tools and FormData from the active Next client. Both shapes use the same fields and the same forbidden provider/model override rule.
+
+```ts
+interface CanvasVideoGenerationBody {
+  agent_id: number
+  prompt: string
+  duration_seconds?: number
+  size?: string
+  resolution_name?: string
+}
+
+interface CanvasVideoCreateResponse {
+  id: number
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled'
 }
 ```
 
@@ -312,7 +357,7 @@ canvas profile 只暴露当前用户基础资料读取/保存；安全修改邮�
 Canvas PAGE 授权只通过 `permissions` + `router` 表达，供前端菜单/路由过滤；BUTTON 授权只通过 `buttonCodes` 表达，供按钮和动作 `can(code)` 判断。前端不得把 PAGE code 塞进 `buttonCodes`，也不得用 `permissionCodes` 合并 PAGE/BUTTON。
 Canvas free-generation surface does not expose wallet/recharge routes, menus, dialogs, balance display, recharge action, unit price, billing rule, debit, or refund concepts. Payment/wallet基础域仍可用于 admin/payment 合同，但不是 Canvas AI 生成依赖。
 prompts/assets 是 public list；后台 Vue CRUD UI 不在本切片。
-AI text/image/video 统一使用后端托管 provider；Canvas 前端只能提交 `agent_id`，不能提交或覆盖 provider model；模型来自已启用的 `ai_agents.model_id` 与 Canvas 专属场景。
+AI text/image/video 统一使用后端托管 provider；Canvas 前端只能提交 `agent_id`，不能提交或覆盖 provider model；客户端提交 `model`、`provider`、`api_key`、`base_url` 必须返回 bad request，不能静默忽略；模型来自已启用的 `ai_agents.model_id` 与 Canvas 专属场景。
 AI generation is free in this slice: 不查余额、不扣款、不退款、不写 `ai_billing_records`，也不要求 `/api/admin/v1/ai-billing-rules`。
 视频使用 `canvas_video_tasks.id` 作为 canvas task id，provider_task_id 绑定在 `canvas_video_tasks.provider_task_id`；status/content 读取必须按 `id + user_id + is_del=2` 校验 ownership。
 ```
@@ -333,6 +378,8 @@ BUTTON: canvas_access, canvas_prompt_read, canvas_asset_read, canvas_ai_image_ge
 Retired Canvas billing UI rows: canvas_wallet_page, canvas_recharge_page, canvas_wallet_read, canvas_recharge_add, canvas_recharge_pay
 ```
 
+Text generation uses the Canvas text agent scene from `/api/canvas/v1/settings`; there is no separate active Canvas text-generation BUTTON row in this contract.
+
 明确不新增：`canvas_users`、`canvas_credit_logs`、`canvas_settings`、`canvas_model_channels`、`canvas_projects`、`canvas_wallets`。
 
 ## Health / Readiness
@@ -342,11 +389,14 @@ Retired Canvas billing UI rows: canvas_wallet_page, canvas_recharge_page, canvas
 ```text
 GET /health
 GET /ready
+GET /api/admin/v1/ping
 ```
 
 `/health` 只证明进程活着，不访问 MySQL/Redis。
 
 `/ready` 返回统一响应，`data.checks` 当前固定包含：
+
+`/api/admin/v1/ping` 是后台命名空间内的轻量连通性探针，返回统一响应；它不是 DB/Redis readiness 证明。
 
 ```text
 database
@@ -3818,6 +3868,7 @@ Validation and safety:
 ```text
 GET /api/admin/v1/queue-monitor-ui
 GET /api/admin/v1/queue-monitor-ui/*
+ANY /api/admin/v1/queue-monitor-ui/*path
 ```
 
 规则：
@@ -3831,6 +3882,7 @@ cookie 认证只在该 UI 路径生效，并显式使用后台平台 `admin` 参
 Windows 本地开发时，asynqmon 内置静态 handler 会返回 `400 unexpected path prefix`；本项目复制官方 `ui/build` 静态文件并用薄 handler 服务首页和静态资源，`/api` 子路径仍使用官方 asynqmon handler。
 asynqmon 使用 ReadOnly=true；POST/DELETE 这类运行/删除/清空任务操作由 asynqmon 拒绝。
 前端队列监控页只做 iframe/新窗口薄包装，不复制完整任务列表和操作 UI。
+Go source uses `router.Any(UIPath+"/*path", handler.UI)` to let the embedded monitor serve its own nested static/API paths. This wildcard is part of the UI surface, not a JSON API mutation contract.
 ```
 
 ### JSON Summary
