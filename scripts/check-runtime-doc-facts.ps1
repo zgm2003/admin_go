@@ -524,7 +524,39 @@ function Get-RelativeUnixPath {
         [string]$BasePath,
         [string]$ChildPath
     )
-    return ([System.IO.Path]::GetRelativePath((Resolve-Path -LiteralPath $BasePath), (Resolve-Path -LiteralPath $ChildPath)) -replace '\\','/')
+    $baseResolved = (Resolve-Path -LiteralPath $BasePath).ProviderPath
+    $childResolved = (Resolve-Path -LiteralPath $ChildPath).ProviderPath
+    $getRelativePath = [System.IO.Path].GetMethods() |
+        Where-Object { $_.Name -eq 'GetRelativePath' -and $_.GetParameters().Count -eq 2 } |
+        Select-Object -First 1
+    if ($null -ne $getRelativePath) {
+        return ([string]$getRelativePath.Invoke($null, @($baseResolved, $childResolved)) -replace '\\','/')
+    }
+
+    $baseFull = [System.IO.Path]::GetFullPath($baseResolved).TrimEnd('\', '/')
+    $childFull = [System.IO.Path]::GetFullPath($childResolved).TrimEnd('\', '/')
+    $baseRoot = [System.IO.Path]::GetPathRoot($baseFull)
+    $childRoot = [System.IO.Path]::GetPathRoot($childFull)
+    if (-not [string]::Equals($baseRoot, $childRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
+        return ($childFull -replace '\\','/')
+    }
+
+    $baseParts = @($baseFull.Substring($baseRoot.Length).Trim('\', '/') -split '[\\/]' | Where-Object { $_ -ne '' })
+    $childParts = @($childFull.Substring($childRoot.Length).Trim('\', '/') -split '[\\/]' | Where-Object { $_ -ne '' })
+    $commonLength = 0
+    while (
+        $commonLength -lt $baseParts.Count -and
+        $commonLength -lt $childParts.Count -and
+        [string]::Equals($baseParts[$commonLength], $childParts[$commonLength], [System.StringComparison]::OrdinalIgnoreCase)
+    ) {
+        $commonLength++
+    }
+
+    $relativeParts = @()
+    for ($i = $commonLength; $i -lt $baseParts.Count; $i++) { $relativeParts += '..' }
+    for ($i = $commonLength; $i -lt $childParts.Count; $i++) { $relativeParts += $childParts[$i] }
+    if ($relativeParts.Count -eq 0) { return '.' }
+    return ($relativeParts -join '/')
 }
 
 function Read-DotEnvValue {
