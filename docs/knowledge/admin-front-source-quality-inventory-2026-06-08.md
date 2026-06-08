@@ -1,6 +1,6 @@
 # Admin Front Source Quality Inventory Snapshot
 
-Generated at: 2026-06-08 11:50:01 +08:00
+Generated at: 2026-06-08 23:25:12 +08:00
 
 This is a regex source inventory, not type-aware semantic proof. It is meant to expose current Admin Vue quality debt shape before narrow refactors; it is not a claim that every row is a bug.
 
@@ -9,15 +9,15 @@ This is a regex source inventory, not type-aware semantic proof. It is meant to 
 | Fact | Count |
 | --- | --- |
 | Source files scanned | `274` |
-| Findings found | `513` |
+| Findings found | `511` |
 | any candidates | `0` |
 | as any candidates | `0` |
 | Record<string, any> candidates | `0` |
 | catch(error: any) candidates | `0` |
-| logical-or fallback candidates | `322` |
+| logical-or fallback candidates | `320` |
 | nullish-coalescing fallback candidates | `125` |
 | optional-chain fallback candidates | `66` |
-| fallback candidates | `513` |
+| fallback candidates | `511` |
 | direct external HTTP candidates | `0` |
 
 ## Priority evidence
@@ -38,7 +38,6 @@ This is a regex source inventory, not type-aware semantic proof. It is meant to 
 | `admin_front_ts/src/views/Main/component/form/index.vue` | no regex finding in configured categories; keep only if another generated inventory owns this evidence |
 | `admin_front_ts/src/views/Main/component/display/index.vue` | no regex finding in configured categories; keep only if another generated inventory owns this evidence |
 | `admin_front_ts/src/views/Main/component/effect/components/ParticleBackground.vue` | L102 `logical-or-fallback` `if (mouse.x === null \|\| mouse.y === null) {` |
-| `admin_front_ts/src/api/ai/images.ts` | no regex finding in configured categories; keep only if another generated inventory owns this evidence |
 
 ## Top files by finding count
 
@@ -69,7 +68,7 @@ This is a regex source inventory, not type-aware semantic proof. It is meant to 
 
 | Kind | Count |
 | --- | ---: |
-| `logical-or-fallback` | `322` |
+| `logical-or-fallback` | `320` |
 | `nullish-fallback` | `125` |
 | `optional-chain-fallback` | `66` |
 
@@ -94,11 +93,9 @@ This is a regex source inventory, not type-aware semantic proof. It is meant to 
 | `nullish-fallback` | `admin_front_ts/src/api/ai/providers.ts` | `176` | `const driver = params.driver ?? params.engine_type ?? 'openai'` |
 | `nullish-fallback` | `admin_front_ts/src/api/ai/providers.ts` | `180` | `base_url: params.base_url ?? '',` |
 | `nullish-fallback` | `admin_front_ts/src/api/ai/providers.ts` | `200` | `const id = positiveID(params.id ?? 0, 'AI provider id')` |
-| `logical-or-fallback` | `admin_front_ts/src/api/ai/runs.ts` | `271` | `if (!Number.isInteger(id) \|\| id <= 0) throw new Error('AI run id must be a positive integer')` |
-| `logical-or-fallback` | `admin_front_ts/src/api/ai/runs.ts` | `316` | `return value === 'admin' \|\| value === 'app' \|\| value === 'canvas'` |
-| `logical-or-fallback` | `admin_front_ts/src/api/ai/runs.ts` | `320` | `return value === 'chat' \|\| value === 'text' \|\| value === 'image' \|\| value === 'video'` |
-| `logical-or-fallback` | `admin_front_ts/src/api/ai/runs.ts` | `324` | `return value === 'ai_chat_message' \|\| value === 'ai_text_task' \|\| value === 'ai_image_task' \|\| value === 'canvas_video_task'` |
-| `logical-or-fallback` | `admin_front_ts/src/api/ai/runs.ts` | `336` | `if (!response.dict \|\| typeof response.dict !== 'object') {` |
+| `logical-or-fallback` | `admin_front_ts/src/api/ai/runs.ts` | `247` | `if (!Number.isInteger(id) \|\| id <= 0) throw new Error('AI run id must be a positive integer')` |
+| `logical-or-fallback` | `admin_front_ts/src/api/ai/runs.ts` | `287` | `return value === 'admin' \|\| value === 'app' \|\| value === 'canvas'` |
+| `logical-or-fallback` | `admin_front_ts/src/api/ai/runs.ts` | `300` | `if (!response.dict \|\| typeof response.dict !== 'object') {` |
 | `logical-or-fallback` | `admin_front_ts/src/api/ai/tools.ts` | `118` | `if (!Number.isInteger(id) \|\| id <= 0) throw new Error(`${label} must be a positive integer`)` |
 | `nullish-fallback` | `admin_front_ts/src/api/ai/tools.ts` | `150` | `code_hint: params.code_hint ?? '',` |
 | `nullish-fallback` | `admin_front_ts/src/api/ai/tools.ts` | `162` | `const id = positiveID(params.id ?? 0, 'AI tool id')` |
@@ -270,17 +267,17 @@ This is a regex source inventory, not type-aware semantic proof. It is meant to 
 | `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/agents/components/AgentKnowledgeDialog/index.vue` | `68` | `if (!binding \|\| !option) return` |
 | `nullish-fallback` | `admin_front_ts/src/views/Main/ai/agents/components/AgentToolDialog/index.vue` | `37` | `const agentName = computed(() => props.agent?.name ?? '-')` |
 | `optional-chain-fallback` | `admin_front_ts/src/views/Main/ai/agents/components/AgentToolDialog/index.vue` | `37` | `const agentName = computed(() => props.agent?.name ?? '-')` |
-| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/agents/index.vue` | `151` | `label: model.display_name \|\| model.model_id,` |
-| `nullish-fallback` | `admin_front_ts/src/views/Main/ai/agents/index.vue` | `163` | `const list = grouped.get(model.provider_id) ?? []` |
-| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/agents/index.vue` | `164` | `list.push({ label: model.display_name \|\| model.model_id, value: model.model_id })` |
-| `nullish-fallback` | `admin_front_ts/src/views/Main/ai/agents/index.vue` | `170` | `children: grouped.get(provider.value) ?? [],` |
-| `nullish-fallback` | `admin_front_ts/src/views/Main/ai/agents/index.vue` | `194` | `system_prompt: row.system_prompt ?? '',` |
-| `nullish-fallback` | `admin_front_ts/src/views/Main/ai/agents/index.vue` | `195` | `avatar: row.avatar ?? '',` |
-| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/agents/index.vue` | `226` | `if (!providerID \|\| !modelID) {` |
-| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/agents/index.vue` | `276` | `<el-avatar :src="row.avatar \|\| undefined" :size="36">{{ row.name?.charAt(0) \|\| '?' }}</el-avatar>` |
-| `optional-chain-fallback` | `admin_front_ts/src/views/Main/ai/agents/index.vue` | `276` | `<el-avatar :src="row.avatar \|\| undefined" :size="36">{{ row.name?.charAt(0) \|\| '?' }}</el-avatar>` |
-| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/agents/index.vue` | `279` | `<el-text>{{ row.model_display_name \|\| row.model_id }}</el-text>` |
-| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/agents/index.vue` | `285` | `<el-tag :type="row.status === CommonEnum.YES ? 'success' : 'danger'">{{ row.status_name \|\| row.status }}</el-tag>` |
+| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/agents/index.vue` | `150` | `label: model.display_name \|\| model.model_id,` |
+| `nullish-fallback` | `admin_front_ts/src/views/Main/ai/agents/index.vue` | `162` | `const list = grouped.get(model.provider_id) ?? []` |
+| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/agents/index.vue` | `163` | `list.push({ label: model.display_name \|\| model.model_id, value: model.model_id })` |
+| `nullish-fallback` | `admin_front_ts/src/views/Main/ai/agents/index.vue` | `169` | `children: grouped.get(provider.value) ?? [],` |
+| `nullish-fallback` | `admin_front_ts/src/views/Main/ai/agents/index.vue` | `193` | `system_prompt: row.system_prompt ?? '',` |
+| `nullish-fallback` | `admin_front_ts/src/views/Main/ai/agents/index.vue` | `194` | `avatar: row.avatar ?? '',` |
+| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/agents/index.vue` | `225` | `if (!providerID \|\| !modelID) {` |
+| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/agents/index.vue` | `275` | `<el-avatar :src="row.avatar \|\| undefined" :size="36">{{ row.name?.charAt(0) \|\| '?' }}</el-avatar>` |
+| `optional-chain-fallback` | `admin_front_ts/src/views/Main/ai/agents/index.vue` | `275` | `<el-avatar :src="row.avatar \|\| undefined" :size="36">{{ row.name?.charAt(0) \|\| '?' }}</el-avatar>` |
+| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/agents/index.vue` | `278` | `<el-text>{{ row.model_display_name \|\| row.model_id }}</el-text>` |
+| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/agents/index.vue` | `284` | `<el-tag :type="row.status === CommonEnum.YES ? 'success' : 'danger'">{{ row.status_name \|\| row.status }}</el-tag>` |
 | `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/chat/components/AgentList/index.vue` | `59` | `:src="agent.avatar \|\| undefined"` |
 | `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/chat/components/AgentList/index.vue` | `62` | `{{ agent.name?.charAt(0) \|\| '?' }}` |
 | `optional-chain-fallback` | `admin_front_ts/src/views/Main/ai/chat/components/AgentList/index.vue` | `62` | `{{ agent.name?.charAt(0) \|\| '?' }}` |
@@ -401,14 +398,14 @@ This is a regex source inventory, not type-aware semantic proof. It is meant to 
 | `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/providers/index.vue` | `170` | `<el-tag :type="stateTagType(row.last_model_sync_status)">{{ row.last_model_sync_status \|\| 'unknown' }}</el-tag>` |
 | `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/providers/index.vue` | `172` | `<el-tag v-else :type="stateTagType(row.last_model_sync_status)">{{ row.last_model_sync_status \|\| 'unknown' }}</el-tag>` |
 | `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/providers/index.vue` | `175` | `<el-tag :type="row.status === 1 ? 'success' : 'danger'">{{ row.status_name \|\| row.status }}</el-tag>` |
-| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/runs/components/RunList/index.vue` | `76` | `if (!(error instanceof Error) \|\| error.message.trim() === '') {` |
-| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/runs/components/RunList/index.vue` | `243` | `Boolean(meta.run_request_id \|\| meta.provider_request_id)` |
-| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/runs/components/RunList/index.vue` | `250` | `if (value === null \|\| value === undefined) return '-'` |
-| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/runs/components/RunList/index.vue` | `428` | `<el-tag size="small" :type="eventTagType(detailData.status)">{{ event.event_type_name \|\| event.event_type }}</el-tag>` |
-| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/runs/components/RunList/index.vue` | `454` | `<el-tag size="small" :type="knowledgeRetrievalTagType(retrieval.status)">{{ retrieval.status_name \|\| retrieval.status }}</el-tag>` |
-| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/runs/components/RunList/index.vue` | `493` | `<span class="tool-call-name">{{ call.tool_name \|\| call.tool_code }}</span>` |
-| `nullish-fallback` | `admin_front_ts/src/views/Main/ai/runs/components/RunStats/index.vue` | `67` | `date_start: date_start ?? '',` |
-| `nullish-fallback` | `admin_front_ts/src/views/Main/ai/runs/components/RunStats/index.vue` | `68` | `date_end: date_end ?? '',` |
+| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/runs/components/RunList/index.vue` | `67` | `if (!(error instanceof Error) \|\| error.message.trim() === '') {` |
+| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/runs/components/RunList/index.vue` | `204` | `Boolean(meta.run_request_id \|\| meta.provider_request_id)` |
+| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/runs/components/RunList/index.vue` | `211` | `if (value === null \|\| value === undefined) return '-'` |
+| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/runs/components/RunList/index.vue` | `376` | `<el-tag size="small" :type="eventTagType(detailData.status)">{{ event.event_type_name \|\| event.event_type }}</el-tag>` |
+| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/runs/components/RunList/index.vue` | `402` | `<el-tag size="small" :type="knowledgeRetrievalTagType(retrieval.status)">{{ retrieval.status_name \|\| retrieval.status }}</el-tag>` |
+| `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/runs/components/RunList/index.vue` | `441` | `<span class="tool-call-name">{{ call.tool_name \|\| call.tool_code }}</span>` |
+| `nullish-fallback` | `admin_front_ts/src/views/Main/ai/runs/components/RunStats/index.vue` | `64` | `date_start: date_start ?? '',` |
+| `nullish-fallback` | `admin_front_ts/src/views/Main/ai/runs/components/RunStats/index.vue` | `65` | `date_end: date_end ?? '',` |
 | `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/tools/components/ToolFormDialog/index.vue` | `87` | `if (!parsed \|\| typeof parsed !== 'object' \|\| Array.isArray(parsed)) {` |
 | `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/tools/components/ToolList/index.vue` | `109` | `<el-tag :type="riskTagType(row.risk_level)">{{ row.risk_level_name \|\| row.risk_level }}</el-tag>` |
 | `logical-or-fallback` | `admin_front_ts/src/views/Main/ai/tools/components/ToolList/index.vue` | `115` | `<el-tag :type="row.status === CommonEnum.YES ? 'success' : 'danger'">{{ row.status_name \|\| row.status }}</el-tag>` |
@@ -604,6 +601,6 @@ Not proof: regex rows require owner review before refactor; existing debt does n
 ## Verification command
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\export-admin-front-source-quality-inventory.ps1 -OutputDate 2026-06-07
+powershell -ExecutionPolicy Bypass -File .\scripts\export-admin-front-source-quality-inventory.ps1 -OutputDate 2026-06-08
 powershell -ExecutionPolicy Bypass -File .\scripts\check-runtime-doc-facts.ps1 -LiveSchema
 ```

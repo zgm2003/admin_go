@@ -1,6 +1,6 @@
 # Runtime Inventory Snapshot
 
-Generated at: 2026-06-08 11:50:19 +08:00
+Generated at: 2026-06-08 23:24:57 +08:00
 
 This artifact is generated from current source manifests and directory structure. It is a navigation inventory, not runtime proof. Served API behavior, smoke/tests, and live MySQL schema still outrank this file.
 
@@ -132,6 +132,6 @@ These are route fragments found in module transport route files. They are useful
 ## Verification command
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\export-runtime-inventory.ps1 -OutputDate 2026-06-07
+powershell -ExecutionPolicy Bypass -File .\scripts\export-runtime-inventory.ps1 -OutputDate 2026-06-08
 powershell -ExecutionPolicy Bypass -File .\scripts\check-runtime-doc-facts.ps1 -LiveSchema
 ```

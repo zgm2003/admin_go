@@ -74,7 +74,7 @@ Observed inventory after refresh:
 source_files_scanned=280
 any_candidates=0
 as_any_candidates=0
-fallback_candidates=559
+fallback_candidates=555
 direct_external_http_candidates=0
 ```
 
@@ -82,4 +82,4 @@ direct_external_http_candidates=0
 
 This closes the currently tracked Admin Vue `any/as any/catch-any/direct external HTTP` source-quality inventory rows.
 
-It does not close the remaining `559` fallback candidates. Those rows remain review inventory and must be handled one narrow slice at a time.
+It does not close the remaining `555` fallback candidates. Those rows remain review inventory and must be handled one narrow slice at a time.

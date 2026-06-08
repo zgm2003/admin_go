@@ -905,10 +905,12 @@ try {
         Assert-Contains $failures $knowledgePath $qualityRunwayPath 'current runtime knowledge quality runway reference drift'
         Assert-Contains $failures $sourceMapPath $qualityRunwayPath 'runtime source map quality runway reference drift'
         Assert-Contains $failures $statusPath $qualityRunwayPath 'status quality runway reference drift'
-        Assert-Contains $failures $qualityRunwayPath 'Admin Vue source quality | `274` source files，`0` any，`0` as-any，`0` catch-any，`513` fallback，`0` direct external HTTP' 'quality runway Admin Vue baseline drift'
+        Assert-Contains $failures $qualityRunwayPath 'Admin Vue source quality | `274` source files，`0` any，`0` as-any，`0` catch-any，`511` fallback，`0` direct external HTTP' 'quality runway Admin Vue baseline drift'
         Assert-Contains $failures $qualityRunwayPath 'Go backend routes | `286` route registrations' 'quality runway Go route baseline drift'
         Assert-Contains $failures $qualityRunwayPath 'Live MySQL | live base tables = `55`' 'quality runway live schema baseline drift'
-        Assert-Contains $failures $qualityRunwayPath 'Admin Vue fallback = 513 尚未逐条审查' 'quality runway must not claim fallback completion'
+        Assert-Contains $failures $qualityRunwayPath 'Admin Vue fallback = 511 尚未逐条审查' 'quality runway must not claim fallback completion'
+        Assert-Contains $failures $qualityRunwayPath 'live MySQL schema 已有 2026-06-08 snapshot，但未来 schema 变更必须重新查 live' 'quality runway live schema snapshot date drift'
+        Assert-NotContains $failures $qualityRunwayPath 'live MySQL schema 已有 2026-06-07 snapshot' 'quality runway stale live schema snapshot date drift'
         Assert-Contains $failures $agentFrameworkPath 'docs/knowledge/current-runtime-knowledge.md' 'agent framework knowledge entry drift'
         Assert-Contains $failures $agentFrameworkPath 'docs/knowledge/runtime-source-map.md' 'agent framework source-map entry drift'
         Assert-Contains $failures $agentFrameworkPath 'docs/db/mysql-live-schema-YYYY-MM-DD.md' 'agent framework schema snapshot rule drift'
@@ -953,6 +955,8 @@ try {
         Assert-Contains $failures $knowledgePath $canvasAuthLogoutContractReviewPath 'current runtime knowledge Canvas auth logout contract review reference drift'
         Assert-Contains $failures $knowledgePath $adminUserStatusContractReviewPath 'current runtime knowledge Admin user status contract review reference drift'
         Assert-Contains $failures $knowledgePath $adminAIAgentTestContractReviewPath 'current runtime knowledge Admin AI agent test contract review reference drift'
+        Assert-Contains $failures $knowledgePath '`API-DRIFT-001` is resolved with `0` owner-decision-required rows in `docs/knowledge/api-source-only-route-review-2026-06-08.md`' 'current runtime knowledge API-DRIFT resolved status drift'
+        Assert-NotContains $failures $knowledgePath '`API-DRIFT-001` still has 1 owner-decision row' 'current runtime knowledge stale API-DRIFT open row drift'
         Assert-Contains $failures $knowledgePath $adminFrontDirectExternalHelperReviewPath 'current runtime knowledge Admin front direct external helper review reference drift'
         Assert-Contains $failures $knowledgePath $adminFrontHeaderBreadcrumbReviewPath 'current runtime knowledge Admin front Header breadcrumb review reference drift'
         Assert-Contains $failures $knowledgePath $adminFrontForgotPasswordErrorReviewPath 'current runtime knowledge Admin front forgot-password error review reference drift'
@@ -1248,6 +1252,8 @@ try {
         Assert-Contains $failures 'admin_front_ts/src/views/Main/ai/agents/index.vue' "userStore.can('ai_agent_test') && row.status === CommonEnum.YES" 'Admin AI agent test permission/status guard drift'
         Assert-Contains $failures 'admin_front_ts/tests/shared/ai/ai-agent-api.test.ts' 'request.post<AiAgentTestResult>' 'Admin AI agent test source guard missing'
         Assert-Contains $failures 'docs/status/known-issues.md' 'Status: resolved on 2026-06-07 after the Admin AI agent test frontend contract call.' 'API-DRIFT-001 resolved aggregate status drift'
+        Assert-Contains $failures 'docs/status/known-issues.md' '### API-DRIFT-001 Source-only API route owner decisions closed' 'API-DRIFT-001 known-issues resolved heading drift'
+        Assert-NotContains $failures 'docs/status/known-issues.md' 'Source-only API routes with owner decision still required' 'API-DRIFT-001 known-issues stale open heading drift'
         Assert-Contains $failures 'docs/status/known-issues.md' 'docs/knowledge/api-source-only-route-review-2026-06-07.md now reports 0 owner-decision-required rows and no ai-agents/:id/test row.' 'Admin AI agent test source-only resolved evidence drift'
         [void]$evidence.Add('admin_ai_agent_test_contract=covered')
 
@@ -1408,9 +1414,9 @@ try {
         if ($adminFrontDirectExternalCandidates -ne 0) {
             Add-Failure $failures "Admin front source quality inventory direct external HTTP count changed from expected 0 to $adminFrontDirectExternalCandidates"
         }
-        Assert-Contains $failures $knowledgePath 'Current counts are `274` source files scanned, `0` `any` candidates, `0` `as any` candidates, `0` `catch(error: any)` candidates, `513` fallback candidates, and `0` direct external HTTP candidates.' 'current runtime knowledge Admin front source-quality count drift'
-        Assert-Contains $failures $sourceMapPath 'Current inventory facts: `274` Admin Vue source files scanned, `0` `any` candidates, `0` `as any` candidates, `0` `catch(error: any)` candidates, `513` fallback candidates, and `0` direct external HTTP candidates.' 'runtime source map Admin front source-quality count drift'
-        Assert-Contains $failures $statusPath 'Admin Vue source-quality inventory is now `docs/knowledge/admin-front-source-quality-inventory-2026-06-08.md` with 274 source files and 513 fallback candidates' 'status Admin front source-quality count drift'
+        Assert-Contains $failures $knowledgePath 'Current counts are `274` source files scanned, `0` `any` candidates, `0` `as any` candidates, `0` `catch(error: any)` candidates, `511` fallback candidates, and `0` direct external HTTP candidates.' 'current runtime knowledge Admin front source-quality count drift'
+        Assert-Contains $failures $sourceMapPath 'Current inventory facts: `274` Admin Vue source files scanned, `0` `any` candidates, `0` `as any` candidates, `0` `catch(error: any)` candidates, `511` fallback candidates, and `0` direct external HTTP candidates.' 'runtime source map Admin front source-quality count drift'
+        Assert-Contains $failures $statusPath 'Admin Vue source-quality inventory is now `docs/knowledge/admin-front-source-quality-inventory-2026-06-08.md` with 274 source files and 511 fallback candidates' 'status Admin front source-quality count drift'
         Assert-Contains $failures $adminFrontSourceQualityPath 'This is a regex source inventory, not type-aware semantic proof.' 'Admin front source quality inventory scope disclaimer drift'
         foreach ($priorityPath in @(
             'admin_front_ts/src/views/Layout/components/Header/index.vue',
@@ -1663,6 +1669,10 @@ try {
         Assert-Contains $failures $statusPath 'docs/knowledge/admin-front-demo-any-source-quality-review-2026-06-07.md' 'status Admin demo any review drift'
         Assert-Contains $failures 'docs/knowledge/admin-front-demo-any-source-quality-review-2026-06-07.md' 'any candidates = 0' 'Admin demo any review any count drift'
         Assert-Contains $failures 'docs/knowledge/admin-front-demo-any-source-quality-review-2026-06-07.md' 'fallback candidates = 555' 'Admin demo any review fallback count drift'
+        Assert-Contains $failures 'docs/knowledge/admin-front-demo-any-source-quality-review-2026-06-07.md' 'fallback_candidates=555' 'Admin demo any review observed fallback output drift'
+        Assert-Contains $failures 'docs/knowledge/admin-front-demo-any-source-quality-review-2026-06-07.md' 'remaining `555` fallback candidates' 'Admin demo any review remaining fallback boundary drift'
+        Assert-NotContains $failures 'docs/knowledge/admin-front-demo-any-source-quality-review-2026-06-07.md' 'fallback_candidates=559' 'Admin demo any review stale observed fallback output drift'
+        Assert-NotContains $failures 'docs/knowledge/admin-front-demo-any-source-quality-review-2026-06-07.md' 'remaining `559` fallback candidates' 'Admin demo any review stale remaining fallback boundary drift'
         Assert-Contains $failures 'docs/knowledge/admin-front-demo-any-source-quality-review-2026-06-07.md' 'Demo any priority evidence = form/index.vue and display/index.vue have no configured source-quality finding; ParticleBackground has only the pointer null-state logical-or guard' 'Admin demo any review inventory evidence drift'
         Assert-Contains $failures 'admin_front_ts/tests/shared/form/form-demo-source-quality.test.ts' 'does not hide demo form, icon ref, or remote params behind any' 'Admin form demo source guard missing'
         Assert-Contains $failures 'admin_front_ts/tests/shared/display/display-demo-source-quality.test.ts' 'does not document passthrough table column props as any' 'Admin display demo source guard missing'

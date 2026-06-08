@@ -1,6 +1,6 @@
 # Frontend API Inventory Snapshot
 
-Generated at: 2026-06-08 11:48:54 +08:00
+Generated at: 2026-06-08 23:25:01 +08:00
 
 This artifact is generated from current frontend source. It is a source inventory, not served-route smoke and not browser runtime proof. It intentionally resolves only literal strings, same-file constants, simple string/template concatenation, and the shared admin API prefix. Computed URLs are classified instead of guessed.
 
@@ -85,13 +85,13 @@ This artifact is generated from current frontend source. It is a source inventor
 | `admin_front_ts` | `admin_front_ts/src/api/ai/providers.ts` | `218` | `request.post` | `POST /api/admin/v1/ai-providers/:param/sync-models` | ``${ADMIN_API_PREFIX}/ai-providers/${positiveID(params.id, 'AI provider id')}/sync-models`` | `admin-prefix` |
 | `admin_front_ts` | `admin_front_ts/src/api/ai/providers.ts` | `219` | `request.get` | `GET /api/admin/v1/ai-providers/:param/models` | ``${ADMIN_API_PREFIX}/ai-providers/${positiveID(params.id, 'AI provider id')}/models`` | `admin-prefix` |
 | `admin_front_ts` | `admin_front_ts/src/api/ai/providers.ts` | `222` | `request.put` | `PUT /api/admin/v1/ai-providers/:param/models` | ``${ADMIN_API_PREFIX}/ai-providers/${id}/models`` | `admin-prefix` |
-| `admin_front_ts` | `admin_front_ts/src/api/ai/runs.ts` | `354` | `request.get` | `GET /api/admin/v1/ai-runs/page-init` | ``${ADMIN_API_PREFIX}/ai-runs/page-init`` | `admin-prefix` |
-| `admin_front_ts` | `admin_front_ts/src/api/ai/runs.ts` | `359` | `request.get` | `GET /api/admin/v1/ai-runs` | ``${ADMIN_API_PREFIX}/ai-runs`` | `admin-prefix` |
-| `admin_front_ts` | `admin_front_ts/src/api/ai/runs.ts` | `360` | `request.get` | `GET /api/admin/v1/ai-runs/:param` | ``${ADMIN_API_PREFIX}/ai-runs/${positiveID(params.id)}`` | `admin-prefix` |
-| `admin_front_ts` | `admin_front_ts/src/api/ai/runs.ts` | `361` | `request.get` | `GET /api/admin/v1/ai-runs/stats` | ``${ADMIN_API_PREFIX}/ai-runs/stats`` | `admin-prefix` |
-| `admin_front_ts` | `admin_front_ts/src/api/ai/runs.ts` | `362` | `request.get` | `GET /api/admin/v1/ai-runs/stats/by-date` | ``${ADMIN_API_PREFIX}/ai-runs/stats/by-date`` | `admin-prefix` |
-| `admin_front_ts` | `admin_front_ts/src/api/ai/runs.ts` | `363` | `request.get` | `GET /api/admin/v1/ai-runs/stats/by-agent` | ``${ADMIN_API_PREFIX}/ai-runs/stats/by-agent`` | `admin-prefix` |
-| `admin_front_ts` | `admin_front_ts/src/api/ai/runs.ts` | `364` | `request.get` | `GET /api/admin/v1/ai-runs/stats/by-user` | ``${ADMIN_API_PREFIX}/ai-runs/stats/by-user`` | `admin-prefix` |
+| `admin_front_ts` | `admin_front_ts/src/api/ai/runs.ts` | `315` | `request.get` | `GET /api/admin/v1/ai-runs/page-init` | ``${ADMIN_API_PREFIX}/ai-runs/page-init`` | `admin-prefix` |
+| `admin_front_ts` | `admin_front_ts/src/api/ai/runs.ts` | `320` | `request.get` | `GET /api/admin/v1/ai-runs` | ``${ADMIN_API_PREFIX}/ai-runs`` | `admin-prefix` |
+| `admin_front_ts` | `admin_front_ts/src/api/ai/runs.ts` | `321` | `request.get` | `GET /api/admin/v1/ai-runs/:param` | ``${ADMIN_API_PREFIX}/ai-runs/${positiveID(params.id)}`` | `admin-prefix` |
+| `admin_front_ts` | `admin_front_ts/src/api/ai/runs.ts` | `322` | `request.get` | `GET /api/admin/v1/ai-runs/stats` | ``${ADMIN_API_PREFIX}/ai-runs/stats`` | `admin-prefix` |
+| `admin_front_ts` | `admin_front_ts/src/api/ai/runs.ts` | `323` | `request.get` | `GET /api/admin/v1/ai-runs/stats/by-date` | ``${ADMIN_API_PREFIX}/ai-runs/stats/by-date`` | `admin-prefix` |
+| `admin_front_ts` | `admin_front_ts/src/api/ai/runs.ts` | `324` | `request.get` | `GET /api/admin/v1/ai-runs/stats/by-agent` | ``${ADMIN_API_PREFIX}/ai-runs/stats/by-agent`` | `admin-prefix` |
+| `admin_front_ts` | `admin_front_ts/src/api/ai/runs.ts` | `325` | `request.get` | `GET /api/admin/v1/ai-runs/stats/by-user` | ``${ADMIN_API_PREFIX}/ai-runs/stats/by-user`` | `admin-prefix` |
 | `admin_front_ts` | `admin_front_ts/src/api/ai/tools.ts` | `155` | `request.delete` | `DELETE /api/admin/v1/ai-tools/:param` | ``${ADMIN_API_PREFIX}/ai-tools/${id}`` | `admin-prefix` |
 | `admin_front_ts` | `admin_front_ts/src/api/ai/tools.ts` | `158` | `request.get` | `GET /api/admin/v1/ai-tools/page-init` | ``${ADMIN_API_PREFIX}/ai-tools/page-init`` | `admin-prefix` |
 | `admin_front_ts` | `admin_front_ts/src/api/ai/tools.ts` | `159` | `request.get` | `GET /api/admin/v1/ai-tools/generate/page-init` | ``${ADMIN_API_PREFIX}/ai-tools/generate/page-init`` | `admin-prefix` |
@@ -327,6 +327,6 @@ Not guessed: arbitrary runtime URL variables, blob download URLs, Next proxy tar
 ## Verification command
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\export-frontend-api-inventory.ps1 -OutputDate 2026-06-07
+powershell -ExecutionPolicy Bypass -File .\scripts\export-frontend-api-inventory.ps1 -OutputDate 2026-06-08
 powershell -ExecutionPolicy Bypass -File .\scripts\check-runtime-doc-facts.ps1 -LiveSchema
 ```

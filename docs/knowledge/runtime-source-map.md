@@ -136,7 +136,7 @@ docs/knowledge/admin-front-source-quality-inventory-2026-06-08.md
 docs/architecture/09-codex-first-quality-runway.md
 ```
 
-Current inventory facts: `274` Admin Vue source files scanned, `0` `any` candidates, `0` `as any` candidates, `0` `catch(error: any)` candidates, `513` fallback candidates, and `0` direct external HTTP candidates. This is regex review evidence, not type-aware proof and not permission to sweep-replace code.
+Current inventory facts: `274` Admin Vue source files scanned, `0` `any` candidates, `0` `as any` candidates, `0` `catch(error: any)` candidates, `511` fallback candidates, and `0` direct external HTTP candidates. This is regex review evidence, not type-aware proof and not permission to sweep-replace code.
 
 `ADMIN-FRONT-HARDENING-012` is resolved for upload demo media-list typing: `upload/index.vue` now uses `ref<UploadMediaItem[]>([])`, and `UpMediaList.vue` shares that model through `components/media.ts`; `tests/shared/upload/upload-demo-source-quality.test.ts` guards the slice. `docs/knowledge/admin-front-upload-demo-source-quality-review-2026-06-07.md` records the decision.
 

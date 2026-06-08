@@ -238,7 +238,7 @@ try {
     Add-Line $lines '## Verification command'
     Add-Line $lines ''
     Add-Line $lines '```powershell'
-    Add-Line $lines 'powershell -ExecutionPolicy Bypass -File .\scripts\export-runtime-inventory.ps1 -OutputDate 2026-06-07'
+    Add-Line $lines "powershell -ExecutionPolicy Bypass -File .\scripts\export-runtime-inventory.ps1 -OutputDate $OutputDate"
     Add-Line $lines 'powershell -ExecutionPolicy Bypass -File .\scripts\check-runtime-doc-facts.ps1 -LiveSchema'
     Add-Line $lines '```'
 

@@ -6,7 +6,7 @@
 
 ## Current open issues
 
-No current open issue is tracked in this file after the 2026-06-08 Admin AI interaction retirement. Do not treat this as “all quality debt closed”; `any/as any/catch(error: any)/direct external HTTP` candidates are currently zero, while the remaining `513` fallback rows stay in `docs/knowledge/admin-front-source-quality-inventory-2026-06-08.md` as review inventory.
+No current open issue is tracked in this file after the 2026-06-08 Admin AI interaction retirement. Do not treat this as “all quality debt closed”; `any/as any/catch(error: any)/direct external HTTP` candidates are currently zero, while the remaining `511` fallback rows stay in `docs/knowledge/admin-front-source-quality-inventory-2026-06-08.md` as review inventory.
 
 ## Recently resolved
 
@@ -20,7 +20,7 @@ Evidence:
 admin_front_ts/src/api/ai/images.ts is absent.
 admin_front_ts/tests/shared/ai/admin-ai-interaction-retirement.test.ts guards the retired Admin AI interaction surface.
 docs/knowledge/admin-front-ai-image-payload-source-quality-review-2026-06-07.md records the source decision and inventory result.
-docs/knowledge/admin-front-source-quality-inventory-2026-06-08.md now reports 274 source files and 513 fallback candidates after removing Admin 图片工作台/素材管理 source.
+docs/knowledge/admin-front-source-quality-inventory-2026-06-08.md now reports 274 source files and 511 fallback candidates after removing Admin 图片工作台/素材管理 source.
 ```
 
 Boundary:
@@ -260,7 +260,7 @@ This only closes the direct external random-image helper. It does not close the 
 If a future random/background image feature is required, define an explicit owner and contract; do not reintroduce a browser-side external fallback helper.
 ```
 
-### API-DRIFT-001 Source-only API routes with owner decision still required
+### API-DRIFT-001 Source-only API route owner decisions closed
 
 Status: resolved on 2026-06-07 after the Admin AI agent test frontend contract call.
 
