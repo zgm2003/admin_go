@@ -736,8 +736,8 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
   - active table is `ai_agents`
   - REST is `/api/admin/v1/ai-agents`
   - create/update require name, provider-owned enabled `model_id`, scenes, and status
-  - list supports scene search for `chat`, `agent_generate`, and `image_generate`
-  - options defaults to enabled `chat` scene agents and accepts `scene=image_generate` for the image playground
+  - list supports scene search for `chat`, `agent_generate`, `canvas_text_generate`, `canvas_image_generate`, and `canvas_video_generate`; the retired non-Canvas image scene is rejected
+  - options defaults to enabled `chat` scene agents and accepts Canvas scene filters only for Canvas runtime selectors
   - service stores only MVP metadata: `model_display_name`, `scenes_json`, optional `system_prompt`, and optional
     `avatar`
   - old app/binding naming is not the active contract
@@ -746,13 +746,13 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
 - Frontend:
   - adapted: `src/api/ai/agents.ts` uses Go REST only, page route is `/ai/agents`, search supports
     name/scene/provider/status, form uses name input, model cascader, scene `el-select-v2` multiple default `chat`
-    and includes `工具生成` / `图片生成`, status select, system prompt textarea, `UpMedia` avatar, tool configuration, and
+    and includes `工具生成` plus Canvas text/image/video scene options, status select, system prompt textarea, `UpMedia` avatar, tool configuration, and
     knowledge-base binding dialog
 - Tests:
   - `internal/module/ai/agent`, `internal/bootstrap`, `internal/server`
   - frontend `tests/shared/ai/ai-agent-api.test.ts`, `vue-tsc`, `npm run build:check`
 - Smoke:
-  - full smoke read gate now asserts `scene_arr`, `provider_model_options`, `image_generate` scene-filter
+  - full smoke read gate now asserts `scene_arr`, `provider_model_options`, Canvas scene-filter
     list/options, optional tool binding, optional knowledge binding, and list MVP fields `model_id` / `scenes` /
     `system_prompt` / `avatar` without code/type/key/config leaks
 - Docs: admin API contract + smoke matrix + backend architecture
@@ -760,7 +760,7 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
   - config MVP is done
   - chat page consumes option avatar/system_prompt and agent config page now owns tool/knowledge usage binding
   - Old AI billing rules are retired; AI agent config now owns runtime scene/model selection only.
-  - Canvas frontend integration is now tracked under `canvas_front_next / canvas platform API`; admin AI image remains independently supported.
+  - Canvas frontend integration is now tracked under `canvas_front_next / canvas platform API`; Admin AI image interaction is retired.
 
 ### AI prompt/asset convergence and Canvas asset ownership
 
@@ -827,7 +827,7 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
 - Smoke:
   - live DB migration/query, backend full tests, Next test/typecheck/build, full-admin-smoke, and root governance gates passed on 2026-05-31 for the baseline slice.
   - 2026-06-01 parity verification rebuilt Docker backend, checked `/health` and `/ready`, confirmed protected `/api/canvas/v1/profile` baseline behavior, and passed Next targeted tests/typecheck/build; `/api/canvas/v1/payment/recharges*` is retired from the Canvas AI surface in this slice.
-  - 2026-06-01 agent-scene hardening passed backend `go test ./...`, Canvas Next Vitest/typecheck/build, and live DB inspection confirmed baseline `chat` and `image_generate` agents existed before this free-generation scene split; the new slice requires `canvas_*` scene assertions instead.
+  - 2026-06-01 agent-scene hardening passed backend `go test ./...`, Canvas Next Vitest/typecheck/build, and live DB inspection; the current slice requires only `canvas_*` image/video/text scene assertions for Canvas generation.
 - Docs:
   - canvas spec/plan, current-status, module matrix, admin API contract, and smoke matrix.
 - Risk:
