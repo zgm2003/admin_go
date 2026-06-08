@@ -2181,11 +2181,12 @@ interface AiRunDetailResponse extends AiRunItem {
 }
 ```
 
-Non-chat rows return `user_message: null` and `assistant_message: null` by design. The UI must render `source_type/source_id/input_snapshot/usage_status` instead of inventing fake chat messages.
+Non-chat rows return `user_message: null` and `assistant_message: null` by design. Admin Vue renders `input_snapshot` and keeps `source_type/source_id/usage_status` typed in the API layer instead of inventing fake chat messages.
+Admin Vue run monitor must not expose `modality`, `source_type`, `source_id`, or `usage_status` as visible filters, list columns, or detail fields; those fields remain API facts for compatibility and audit consumers.
 
 Stats summary:
 
-Stats endpoints accept the same date/agent/provider/user filters as the list plus `platform`, `modality`, and `source_type`. They intentionally do not expose billing cost or raw provider usage aggregation.
+Stats endpoints accept the same date/agent/provider/user filters as the list plus `platform`, `modality`, and `source_type`. Admin Vue keeps only date/agent/provider/user visible in the statistics tab. They intentionally do not expose billing cost or raw provider usage aggregation.
 
 ```ts
 interface AiRunStatsSummary {
