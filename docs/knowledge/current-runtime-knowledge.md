@@ -1,8 +1,8 @@
 # Current Runtime Knowledge
 
-更新时间：2026-06-07
+更新时间：2026-06-08
 
-本文是 Codex 快速理解当前项目的知识库，不是状态证明。状态证明看 `docs/status/current-status.md`，接口看 `docs/contracts/*`，表结构看 `docs/db/mysql-live-schema-2026-06-07.md` 和同名 `.sql`，表到 Go source owner 的映射看 `docs/knowledge/db-schema-ownership-map-2026-06-07.md`，跨后端路由/前端 API/live DB ownership 的模块地图看 `docs/knowledge/full-stack-module-map-2026-06-07.md`，Go backend capability 源码归属看 `docs/knowledge/backend-capability-manifest-2026-06-07.md`，Admin Vue `any/as any/fallback/direct external HTTP` 债务库存看 `docs/knowledge/admin-front-source-quality-inventory-2026-06-07.md`，后续 Go/Vue/Next/DB 质量递进路线看 `docs/architecture/09-codex-first-quality-runway.md`，Admin direct external helper 删除口径看 `docs/knowledge/admin-front-direct-external-helper-review-2026-06-07.md`，Admin Header breadcrumb source-quality 口径看 `docs/knowledge/admin-front-header-breadcrumb-source-quality-review-2026-06-07.md`，Admin forgot-password request-error source-quality 口径看 `docs/knowledge/admin-front-forgot-password-error-source-quality-review-2026-06-07.md`，Admin JsonEditor source-quality 口径看 `docs/knowledge/admin-front-json-editor-source-quality-review-2026-06-07.md`，Admin DIcon source-quality 口径看 `docs/knowledge/admin-front-dicon-source-quality-review-2026-06-07.md`，Admin wangEditor source-quality 口径看 `docs/knowledge/admin-front-editor-source-quality-review-2026-06-07.md`，Admin DownloadManager source-quality 口径看 `docs/knowledge/admin-front-download-manager-source-quality-review-2026-06-07.md`，Admin dev test 下载页 source-quality 口径看 `docs/knowledge/admin-front-dev-test-download-source-quality-review-2026-06-07.md`，Admin useValidator source-quality 口径看 `docs/knowledge/admin-front-validator-source-quality-review-2026-06-07.md`，Admin upload demo source-quality 口径看 `docs/knowledge/admin-front-upload-demo-source-quality-review-2026-06-07.md`，Admin demo any 清零口径看 `docs/knowledge/admin-front-demo-any-source-quality-review-2026-06-07.md`，Admin AI image payload source-quality 口径看 `docs/knowledge/admin-front-ai-image-payload-source-quality-review-2026-06-07.md`，Canvas AI 请求契约看 `docs/knowledge/canvas-ai-request-contract-review-2026-06-07.md`，Canvas RBAC 权限码口径看 `docs/knowledge/canvas-rbac-permission-contract-review-2026-06-07.md`，Canvas 资产页路由口径看 `docs/knowledge/canvas-asset-route-contract-review-2026-06-07.md`，Canvas logout 契约口径看 `docs/knowledge/canvas-auth-logout-contract-review-2026-06-07.md`，Admin 用户状态契约口径看 `docs/knowledge/admin-user-status-contract-review-2026-06-07.md`。
+本文是 Codex 快速理解当前项目的知识库，不是状态证明。状态证明看 `docs/status/current-status.md`，接口看 `docs/contracts/*`，表结构看 `docs/db/mysql-live-schema-2026-06-08.md` 和同名 `.sql`，表到 Go source owner 的映射看 `docs/knowledge/db-schema-ownership-map-2026-06-08.md`，跨后端路由/前端 API/live DB ownership 的模块地图看 `docs/knowledge/full-stack-module-map-2026-06-08.md`，Go backend capability 源码归属看 `docs/knowledge/backend-capability-manifest-2026-06-08.md`，Admin Vue `any/as any/fallback/direct external HTTP` 债务库存看 `docs/knowledge/admin-front-source-quality-inventory-2026-06-08.md`，后续 Go/Vue/Next/DB 质量递进路线看 `docs/architecture/09-codex-first-quality-runway.md`，Admin direct external helper 删除口径看 `docs/knowledge/admin-front-direct-external-helper-review-2026-06-07.md`，Admin Header breadcrumb source-quality 口径看 `docs/knowledge/admin-front-header-breadcrumb-source-quality-review-2026-06-07.md`，Admin forgot-password request-error source-quality 口径看 `docs/knowledge/admin-front-forgot-password-error-source-quality-review-2026-06-07.md`，Admin JsonEditor source-quality 口径看 `docs/knowledge/admin-front-json-editor-source-quality-review-2026-06-07.md`，Admin DIcon source-quality 口径看 `docs/knowledge/admin-front-dicon-source-quality-review-2026-06-07.md`，Admin wangEditor source-quality 口径看 `docs/knowledge/admin-front-editor-source-quality-review-2026-06-07.md`，Admin DownloadManager source-quality 口径看 `docs/knowledge/admin-front-download-manager-source-quality-review-2026-06-07.md`，Admin dev test 下载页 source-quality 口径看 `docs/knowledge/admin-front-dev-test-download-source-quality-review-2026-06-07.md`，Admin useValidator source-quality 口径看 `docs/knowledge/admin-front-validator-source-quality-review-2026-06-07.md`，Admin upload demo source-quality 口径看 `docs/knowledge/admin-front-upload-demo-source-quality-review-2026-06-07.md`，Admin demo any 清零口径看 `docs/knowledge/admin-front-demo-any-source-quality-review-2026-06-07.md`，Canvas AI 请求契约看 `docs/knowledge/canvas-ai-request-contract-review-2026-06-07.md`，Canvas RBAC 权限码口径看 `docs/knowledge/canvas-rbac-permission-contract-review-2026-06-07.md`，Canvas 资产页路由口径看 `docs/knowledge/canvas-asset-route-contract-review-2026-06-07.md`，Canvas logout 契约口径看 `docs/knowledge/canvas-auth-logout-contract-review-2026-06-07.md`，Admin 用户状态契约口径看 `docs/knowledge/admin-user-status-contract-review-2026-06-07.md`。
 
 ## Workspace map
 
@@ -37,7 +37,7 @@ These values are copied from `go.mod` / `package.json`, not memory:
 
 ## Codex-first quality runway
 
-`docs/architecture/09-codex-first-quality-runway.md` is the current operating route for future hardening slices. It records the current verified generated baseline (`298` Go routes, `277` exact frontend/backend route matches, `57` live MySQL tables, Admin Vue `0` any / `542` fallback candidates) and forces future work through narrow docs/source/API/DB/runtime slices instead of broad sweeps.
+`docs/architecture/09-codex-first-quality-runway.md` is the current operating route for future hardening slices. It records the current verified generated baseline (`298` Go routes, `277` exact frontend/backend route matches, `57` live MySQL tables, Admin Vue `0` any / `513` fallback candidates) and forces future work through narrow docs/source/API/DB/runtime slices instead of broad sweeps.
 
 ## Backend: Go modular monolith
 
@@ -128,9 +128,7 @@ Do not overstate this as “the whole frontend has no any/fallback.” The verif
 
 
 
-`ADMIN-FRONT-HARDENING-014` is resolved for AI image create-task optional payload normalization: `tests/shared/ai/ai-image-api.test.ts` guards `src/api/ai/images.ts` against `payload.* || undefined` and truthy mask ID checks. `optionalImageEnum(...)` keeps blank enum omission explicit, and `optionalPositiveID(...)` makes invalid mask IDs fail closed. The refreshed source-quality inventory reports `542` fallback candidates. `docs/knowledge/admin-front-ai-image-payload-source-quality-review-2026-06-07.md` records the decision.
-
-`ADMIN-FRONT-HARDENING-013` is resolved for remaining tracked demo any rows: `tests/shared/form/form-demo-source-quality.test.ts`, `tests/shared/display/display-demo-source-quality.test.ts`, and `tests/shared/effect/particle-background-source-quality.test.ts` guard `form/index.vue`, `display/index.vue`, and `ParticleBackground.vue` against `any` and hidden numeric fallbacks. The refreshed source-quality inventory reports `0` `any` candidates, `0` `as any`, `0` `catch(error: any)`, `542` fallback candidates, and `0` direct external HTTP candidates. `docs/knowledge/admin-front-demo-any-source-quality-review-2026-06-07.md` records the decision.
+`ADMIN-FRONT-HARDENING-013` is resolved for remaining tracked demo any rows: `tests/shared/form/form-demo-source-quality.test.ts`, `tests/shared/display/display-demo-source-quality.test.ts`, and `tests/shared/effect/particle-background-source-quality.test.ts` guard `form/index.vue`, `display/index.vue`, and `ParticleBackground.vue` against `any` and hidden numeric fallbacks. The refreshed source-quality inventory reports `0` `any` candidates, `0` `as any`, `0` `catch(error: any)`, `513` fallback candidates, and `0` direct external HTTP candidates. `docs/knowledge/admin-front-demo-any-source-quality-review-2026-06-07.md` records the decision.
 Current open frontend gaps are tracked in `docs/status/known-issues.md`. After the demo any cleanup, no open issue is tracked there; `any/as any/catch(error: any)/direct external HTTP` candidates are currently zero, and the remaining `542` fallback rows stay as review inventory.
 
 `ADMIN-FRONT-HARDENING-012` is resolved for upload demo media-list typing: `tests/shared/upload/upload-demo-source-quality.test.ts` guards `src/views/Main/component/upload/index.vue` against `ref<any[]>`; the page and `UpMediaList.vue` now share `UploadMediaItem` from `components/media.ts`. `docs/knowledge/admin-front-upload-demo-source-quality-review-2026-06-07.md` records the decision.
@@ -159,7 +157,7 @@ Admin user status is an active frontend contract call. `UsersListApi.changeStatu
 
 Admin AI agent test is an active frontend contract call. `AiAgentApi.test()` calls `POST /api/admin/v1/ai-agents/:id/test`, and the AI agent list action is visible only for enabled rows with `ai_agent_test`. `docs/knowledge/admin-ai-agent-test-contract-review-2026-06-07.md` records the source evidence.
 
-`docs/knowledge/admin-front-source-quality-inventory-2026-06-07.md` is the current regex source inventory for Admin Vue quality debt. Current counts are `280` source files scanned, `0` `any` candidates, `0` `as any` candidates, `0` `catch(error: any)` candidates, `542` fallback candidates, and `0` direct external HTTP candidates. Treat those rows as review evidence, not automatic fixes and not a build failure by themselves.
+`docs/knowledge/admin-front-source-quality-inventory-2026-06-08.md` is the current regex source inventory for Admin Vue quality debt. Current counts are `274` source files scanned, `0` `any` candidates, `0` `as any` candidates, `0` `catch(error: any)` candidates, `513` fallback candidates, and `0` direct external HTTP candidates. Treat those rows as review evidence, not automatic fixes and not a build failure by themselves.
 
 ## Canvas frontend: Next app
 
@@ -186,6 +184,7 @@ The browser uses relative `/api/canvas/v1/*` URLs. Next route proxy `src/app/api
 - Public settings uses `/api/canvas/v1/settings`.
 - Prompts/assets use `/api/canvas/v1/prompts` and `/api/canvas/v1/assets`.
 - Image generation uses `/api/canvas/v1/ai/images*`.
+- Admin AI interaction retirement: `/api/admin/v1/ai-images*`, `/api/admin/v1/ai-assets*`, `/ai/image-playground`, and `/ai/assets` are not active runtime surfaces; Canvas assets are current-user-owned through `ai_assets.user_id`, and no public asset library exists.
 - Video generation uses `/api/canvas/v1/ai/videos*`.
 - Chat/text generation uses `/api/canvas/v1/ai/chat/completions`.
 
@@ -239,11 +238,11 @@ Current open gaps are tracked in `docs/status/known-issues.md`. `CANVAS-DOC-001`
 Current verified DB snapshot:
 
 ```text
-docs/db/mysql-live-schema-2026-06-07.md   # table/column/index/count inventory
-docs/db/mysql-live-schema-2026-06-07.sql  # full live DDL from mysqldump --no-data
-docs/knowledge/db-schema-ownership-map-2026-06-07.md  # live table -> Go model/reference owner source map
-docs/knowledge/full-stack-module-map-2026-06-07.md     # backend route + frontend API + DB ownership module map
-docs/knowledge/backend-capability-manifest-2026-06-07.md  # Go capability -> source/service/repository/model/table/transport
+docs/db/mysql-live-schema-2026-06-08.md   # table/column/index/count inventory
+docs/db/mysql-live-schema-2026-06-08.sql  # full live DDL from mysqldump --no-data
+docs/knowledge/db-schema-ownership-map-2026-06-08.md  # live table -> Go model/reference owner source map
+docs/knowledge/full-stack-module-map-2026-06-08.md     # backend route + frontend API + DB ownership module map
+docs/knowledge/backend-capability-manifest-2026-06-08.md  # Go capability -> source/service/repository/model/table/transport
 ```
 
 The snapshot was generated from `admin_back_go/.env` `MYSQL_DSN` against live MySQL `DATABASE() = admin` on `127.0.0.1:3307`.
@@ -252,21 +251,20 @@ The ownership map starts from that live schema artifact and maps each live table
 Current ownership-map facts:
 
 ```text
-Live tables reviewed = 57
+Live tables reviewed = 55
 go-model = 55
-live-schema-only = 2
-live-schema-only tables = canvas_assets, canvas_prompts
-legacy-table decision = retained as safe migration window; no drop migration in this plan
+live-schema-only = 0
+legacy-table decision = canvas_prompts / canvas_assets backed up and dropped by 20260608_ai_prompt_asset_drop_legacy.sql
 ```
 
 Refresh command:
 
 ```powershell
 cd E:\admin_go
-powershell -ExecutionPolicy Bypass -File .\scripts\export-live-mysql-schema.ps1
-powershell -ExecutionPolicy Bypass -File .\scripts\export-db-schema-ownership-map.ps1 -OutputDate 2026-06-07
-powershell -ExecutionPolicy Bypass -File .\scripts\export-full-stack-module-map.ps1 -OutputDate 2026-06-07
-powershell -ExecutionPolicy Bypass -File .\scripts\export-backend-capability-manifest.ps1 -OutputDate 2026-06-07
+powershell -ExecutionPolicy Bypass -File .\scripts\export-live-mysql-schema.ps1 -OutputDate 2026-06-08
+powershell -ExecutionPolicy Bypass -File .\scripts\export-db-schema-ownership-map.ps1 -OutputDate 2026-06-08
+powershell -ExecutionPolicy Bypass -File .\scripts\export-full-stack-module-map.ps1 -OutputDate 2026-06-08
+powershell -ExecutionPolicy Bypass -File .\scripts\export-backend-capability-manifest.ps1 -OutputDate 2026-06-08
 ```
 
 ## Generated runtime inventory
@@ -274,43 +272,43 @@ powershell -ExecutionPolicy Bypass -File .\scripts\export-backend-capability-man
 Current generated inventory:
 
 ```text
-docs/knowledge/runtime-inventory-2026-06-07.md
-docs/knowledge/backend-route-inventory-2026-06-07.md
-docs/knowledge/backend-route-contract-drift-2026-06-07.md
-docs/knowledge/frontend-api-inventory-2026-06-07.md
-docs/knowledge/frontend-backend-api-drift-2026-06-07.md
-docs/knowledge/api-source-only-route-review-2026-06-07.md
-docs/knowledge/db-schema-ownership-map-2026-06-07.md
-docs/knowledge/full-stack-module-map-2026-06-07.md
-docs/knowledge/backend-capability-manifest-2026-06-07.md
-docs/knowledge/admin-front-source-quality-inventory-2026-06-07.md
+docs/knowledge/runtime-inventory-2026-06-08.md
+docs/knowledge/backend-route-inventory-2026-06-08.md
+docs/knowledge/backend-route-contract-drift-2026-06-08.md
+docs/knowledge/frontend-api-inventory-2026-06-08.md
+docs/knowledge/frontend-backend-api-drift-2026-06-08.md
+docs/knowledge/api-source-only-route-review-2026-06-08.md
+docs/knowledge/db-schema-ownership-map-2026-06-08.md
+docs/knowledge/full-stack-module-map-2026-06-08.md
+docs/knowledge/backend-capability-manifest-2026-06-08.md
+docs/knowledge/admin-front-source-quality-inventory-2026-06-08.md
 ```
 
 Refresh command:
 
 ```powershell
 cd E:\admin_go
-powershell -ExecutionPolicy Bypass -File .\scripts\export-runtime-inventory.ps1 -OutputDate 2026-06-07
-powershell -ExecutionPolicy Bypass -File .\scripts\export-backend-route-inventory.ps1 -OutputDate 2026-06-07
-powershell -ExecutionPolicy Bypass -File .\scripts\export-backend-route-contract-drift.ps1 -OutputDate 2026-06-07
-powershell -ExecutionPolicy Bypass -File .\scripts\export-frontend-api-inventory.ps1 -OutputDate 2026-06-07
-powershell -ExecutionPolicy Bypass -File .\scripts\export-frontend-backend-api-drift.ps1 -OutputDate 2026-06-07
-powershell -ExecutionPolicy Bypass -File .\scripts\export-api-source-only-route-review.ps1 -OutputDate 2026-06-07
-powershell -ExecutionPolicy Bypass -File .\scripts\export-db-schema-ownership-map.ps1 -OutputDate 2026-06-07
-powershell -ExecutionPolicy Bypass -File .\scripts\export-full-stack-module-map.ps1 -OutputDate 2026-06-07
-powershell -ExecutionPolicy Bypass -File .\scripts\export-backend-capability-manifest.ps1 -OutputDate 2026-06-07
-powershell -ExecutionPolicy Bypass -File .\scripts\export-admin-front-source-quality-inventory.ps1 -OutputDate 2026-06-07
+powershell -ExecutionPolicy Bypass -File .\scripts\export-runtime-inventory.ps1 -OutputDate 2026-06-08
+powershell -ExecutionPolicy Bypass -File .\scripts\export-backend-route-inventory.ps1 -OutputDate 2026-06-08
+powershell -ExecutionPolicy Bypass -File .\scripts\export-backend-route-contract-drift.ps1 -OutputDate 2026-06-08
+powershell -ExecutionPolicy Bypass -File .\scripts\export-frontend-api-inventory.ps1 -OutputDate 2026-06-08
+powershell -ExecutionPolicy Bypass -File .\scripts\export-frontend-backend-api-drift.ps1 -OutputDate 2026-06-08
+powershell -ExecutionPolicy Bypass -File .\scripts\export-api-source-only-route-review.ps1 -OutputDate 2026-06-08
+powershell -ExecutionPolicy Bypass -File .\scripts\export-db-schema-ownership-map.ps1 -OutputDate 2026-06-08
+powershell -ExecutionPolicy Bypass -File .\scripts\export-full-stack-module-map.ps1 -OutputDate 2026-06-08
+powershell -ExecutionPolicy Bypass -File .\scripts\export-backend-capability-manifest.ps1 -OutputDate 2026-06-08
+powershell -ExecutionPolicy Bypass -File .\scripts\export-admin-front-source-quality-inventory.ps1 -OutputDate 2026-06-08
 ```
 
-`backend-route-inventory-2026-06-07.md` is route source inventory only. It currently records `298` Go route registrations, `0` unresolved path expressions, `1` callback exception registration, and `0` unmatched `route_meta` keys. Do not treat it as served endpoint proof; smoke/runtime behavior still wins.
-`backend-route-contract-drift-2026-06-07.md` compares those `298` route registrations with current contract/status/knowledge Markdown. Current result: `298` contract-exact, `0` contract-prefix-only, `0` source-docs-only, `0` undocumented-exact. Prefix-only is not exact contract coverage.
-`frontend-api-inventory-2026-06-07.md` is frontend source inventory only. It currently records `293` frontend API call expressions, `252` exact Admin backend calls, `25` exact Canvas backend calls, `3` external HTTP calls, and `0` unresolved expressions. It separates blob/download, wrapper, and proxy calls so they do not become false backend contract drift.
-`frontend-backend-api-drift-2026-06-07.md` compares exact frontend backend API calls with backend route source inventory. Current result: `277` exact frontend backend calls compared, `277` route-match, `0` method-mismatch, `0` no-backend-route. It also records `19` admin/canvas backend source routes not referenced by exact frontend calls; those are review evidence, not automatic bugs.
-`api-source-only-route-review-2026-06-07.md` classifies those `19` source-only routes: `4` runtime/system, `3` queue-monitor, `6` retained Canvas payment/wallet, `6` frontend-parametric upload delete helper, and `0` owner-decision-required routes.
-`db-schema-ownership-map-2026-06-07.md` maps the `57` live MySQL tables to current Go model/reference owner candidates. Current result: `55` tables have Go model ownership and `2` tables are live-schema-only: `canvas_assets` and `canvas_prompts`, both retained only as the safe migration window for the AI prompt/asset convergence plan.
-`full-stack-module-map-2026-06-07.md` joins backend route inventory, frontend API inventory, DB schema ownership, and source-only review by capability. Current result: `298` backend route registrations joined, `277` frontend exact backend calls assigned, `0` unassigned exact frontend calls, `57` live DB tables mapped, and `0` owner-decision-required routes preserved.
-`backend-capability-manifest-2026-06-07.md` maps Go backend capabilities to current source directories, direct service/repository/model files, route surfaces, direct tests, and live DB model-owned tables. Current result: `37` capabilities, `298` route registrations covered, and `4` helper packages not promoted to capability (`ai/internal/canvasrequest`, `auth/verifycode`, `payment/serialno`, `queuemonitor/asynqmonui`).
-`admin-front-source-quality-inventory-2026-06-07.md` maps Admin Vue source-quality candidates under `admin_front_ts/src`. Current result: `280` source files scanned, `0` `any` candidates, `0` `as any` candidates, `0` `catch(error: any)` candidates, `542` fallback candidates, and `0` direct external HTTP candidates. It strips comments before scanning and keeps `Header/index.vue`, `SearchDialog.vue`, `useForgotPassword.ts`, `JsonEditor/index.vue`, `DIcon/index.vue`, `Editor.vue`, `DownloadManager/src/download.ts`, `views/Main/component/download/index.vue`, `views/Main/test/index.vue`, and `useValidator.ts` as priority evidence; `Header/index.vue`, `JsonEditor/index.vue`, `Editor.vue`, `views/Main/component/download/index.vue`, and `views/Main/test/index.vue` now have no configured source-quality finding, `DIcon/index.vue` no longer has any/as-any findings but still records explicit missing-icon null-state fallback rows, `DownloadManager/src/download.ts` now has no configured source-quality finding, `useForgotPassword.ts` now only has validation predicate logical-or rows, `useValidator.ts` now only has a validation predicate logical-or row, and `upload/index.vue` now has no configured source-quality finding, but do not turn this inventory into a regex replacement sweep.
+`backend-route-inventory-2026-06-08.md` is route source inventory only. It currently records `286` Go route registrations, `0` unresolved path expressions, `1` callback exception registration, and `0` unmatched `route_meta` keys. Do not treat it as served endpoint proof; smoke/runtime behavior still wins.
+`backend-route-contract-drift-2026-06-08.md` compares those `286` route registrations with current contract/status/knowledge Markdown. Current result: `286` contract-exact, `0` contract-prefix-only, `0` source-docs-only, `0` undocumented-exact. Prefix-only is not exact contract coverage.
+`frontend-api-inventory-2026-06-08.md` is frontend source inventory only. It currently records `280` frontend API call expressions, `240` Admin backend calls, `25` Canvas backend calls, `3` external HTTP calls, and `0` unresolved expressions. It separates blob/download, wrapper, and proxy calls so they do not become false backend contract drift.
+`frontend-backend-api-drift-2026-06-08.md` compares exact frontend backend API calls with backend route source inventory. Current result: `265` exact frontend backend calls compared, `265` route-match, `0` method-mismatch, `0` no-backend-route. It also records `19` admin/canvas backend source routes not referenced by exact frontend calls; those are review evidence, not automatic bugs.
+`api-source-only-route-review-2026-06-08.md` classifies those `19` source-only routes: `4` runtime/system, `3` queue-monitor, `6` retained Canvas payment/wallet, `6` frontend-parametric upload delete helper, and `0` owner-decision-required routes.
+`db-schema-ownership-map-2026-06-08.md` maps the `55` live MySQL tables to current Go model/reference owner candidates. Current result: `55` tables have Go model ownership and `0` tables are live-schema-only after the legacy Canvas prompt/asset tables were retired.
+`full-stack-module-map-2026-06-08.md` joins backend route inventory, frontend API inventory, DB schema ownership, and source-only review by capability. Current result: `286` backend route registrations joined, `265` frontend exact backend calls assigned, `0` unassigned exact frontend calls, `55` live DB tables mapped, and `0` owner-decision-required routes preserved.
+`backend-capability-manifest-2026-06-08.md` maps Go backend capabilities to current source directories, direct service/repository/model files, route surfaces, direct tests, and live DB model-owned tables. Current result: `37` capabilities, `286` route registrations covered, and `4` helper packages not promoted to capability (`ai/internal/canvasrequest`, `auth/verifycode`, `payment/serialno`, `queuemonitor/asynqmonui`).
+`admin-front-source-quality-inventory-2026-06-08.md` maps Admin Vue source-quality candidates under `admin_front_ts/src`. Current result: `274` source files scanned, `0` `any` candidates, `0` `as any` candidates, `0` `catch(error: any)` candidates, `513` fallback candidates, and `0` direct external HTTP candidates. It strips comments before scanning and keeps `Header/index.vue`, `SearchDialog.vue`, `useForgotPassword.ts`, `JsonEditor/index.vue`, `DIcon/index.vue`, `Editor.vue`, `DownloadManager/src/download.ts`, `views/Main/component/download/index.vue`, `views/Main/test/index.vue`, and `useValidator.ts` as priority evidence; `Header/index.vue`, `JsonEditor/index.vue`, `Editor.vue`, `views/Main/component/download/index.vue`, and `views/Main/test/index.vue` now have no configured source-quality finding, `DIcon/index.vue` no longer has any/as-any findings but still records explicit missing-icon null-state fallback rows, `DownloadManager/src/download.ts` now has no configured source-quality finding, `useForgotPassword.ts` now only has validation predicate logical-or rows, `useValidator.ts` now only has a validation predicate logical-or row, and `upload/index.vue` now has no configured source-quality finding, but do not turn this inventory into a regex replacement sweep.
 
 ## Quality hardening order
 

@@ -96,9 +96,10 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-contract.ps1
 | current profile update | `PUT /api/admin/v1/profile` | bearer token; operation log only, no user-manager button permission |
 | wallet current-user read | `GET /api/admin/v1/wallet/summary`, `GET /api/admin/v1/wallet/transactions` | bearer token; current-user ownership only; no `consume` HTTP route in the active product contract |
 | payment wallet admin read | `GET /api/admin/v1/payment/ledger/page-init`, `GET /api/admin/v1/payment/ledger`, `GET /api/admin/v1/payment/wallets/page-init`, `GET /api/admin/v1/payment/wallets` | bearer token + `payment_ledger_list` or `payment_wallet_list` |
-| AI sidecar provider/agent/tool/knowledge/prompt/asset management | ai-providers/ai-agents/ai-tools/ai-knowledge-bases/ai-knowledge-documents/ai-prompts/ai-assets write routes | bearer token; mutation routes use explicit `ai_provider_*`, `ai_agent_*`, `ai_tool_*`, `ai_knowledge_*`, `ai_knowledge_document_*`, `ai_prompt_*`, and `ai_asset_*` route permissions and OperationLog metadata; secret fields are write-only/masked |
+| AI sidecar provider/agent/tool/knowledge/prompt management | ai-providers/ai-agents/ai-tools/ai-knowledge-bases/ai-knowledge-documents/ai-prompts write routes | bearer token; mutation routes use explicit `ai_provider_*`, `ai_agent_*`, `ai_tool_*`, `ai_knowledge_*`, `ai_knowledge_document_*`, and `ai_prompt_*` route permissions and OperationLog metadata; secret fields are write-only/masked |
 | Retired old AI billing system | `/api/admin/v1/ai-billing-rules*`, `ai_billing_rules`, `ai_billing_records`, `ai_billing_rule_edit` | retired/deleted from active contract; AI generation is free in this slice and must not debit wallet balance or require billing rules |
 | AI sidecar runtime current-user | ai-conversations current-user CRUD, ai-conversations/:id/messages list/send, and ai-runs read monitor | bearer token; current-user ownership where applicable; message send requires an enabled chat-scene AI agent + provider and must fail explicitly when not configured |
+| Retired Admin AI interaction surfaces | `/api/admin/v1/ai-images*`, `/api/admin/v1/ai-assets*`, `/ai/image-playground`, `/ai/assets`, `ai_image_playground_page`, `ai_asset_*`, `ai_image_task_add`, `ai_image_task_del` | not mounted in active Admin runtime; permissions are soft-deleted by `20260608_admin_ai_interaction_retirement.sql`; only historical migrations, rollback backups, or negative tests may mention them |
 | Retired AI legacy routes | legacy model/tool/prompt/agent/knowledge-base routes | not mounted in active Go runtime; only backup/rollback SQL, historical specs, or negative router tests may mention exact old route strings |
 
 ## App Auth Baseline
@@ -157,7 +158,7 @@ interface AppSendCodeBody {
 
 状态：implemented and verified in Go backend + `canvas_front_next`; live DB/full smoke baseline passed on 2026-05-31. Old Canvas wallet/recharge UI and old AI billing are retired from the active Canvas contract.
 
-Route ownership：`/api/canvas/v1/auth/*` -> `internal/module/auth/transport/canvas`；`/api/canvas/v1/users/me` -> `internal/module/user/transport/canvas`；`/api/canvas/v1/profile` -> `internal/module/profile/transport/canvas`；`/api/canvas/v1/prompts` -> `internal/module/ai/prompt/transport/canvas`；`/api/canvas/v1/assets` -> `internal/module/ai/asset/transport/canvas`；`/api/canvas/v1/settings` -> `internal/module/canvas/transport/canvas`；`/api/canvas/v1/ai/chat/*` -> `internal/module/ai/chat/transport/canvas`；`/api/canvas/v1/ai/images/*` -> `internal/module/ai/image/transport/canvas`；`/api/canvas/v1/ai/videos*` -> `internal/module/ai/video/transport/canvas`。Canvas AI URLs 保持不变；运行时 owner 不再回落到 `internal/module/canvas`。
+Route ownership：`/api/canvas/v1/auth/*` -> `internal/module/auth/transport/canvas`；`/api/canvas/v1/users/me` -> `internal/module/user/transport/canvas`；`/api/canvas/v1/profile` -> `internal/module/profile/transport/canvas`；`/api/canvas/v1/prompts` -> `internal/module/ai/prompt/transport/canvas`；`/api/canvas/v1/assets` -> current-user-owned `internal/module/ai/asset/transport/canvas`；`/api/canvas/v1/settings` -> `internal/module/canvas/transport/canvas`；`/api/canvas/v1/ai/chat/*` -> `internal/module/ai/chat/transport/canvas`；`/api/canvas/v1/ai/images/*` -> `internal/module/ai/image/transport/canvas`；`/api/canvas/v1/ai/videos*` -> `internal/module/ai/video/transport/canvas`。Canvas AI URLs 保持不变；运行时 owner 不再回落到 `internal/module/canvas`。
 
 `canvas_front_next` 是独立 Next.js 前端，所有安全、provider 和公共库数据都通过 Go 后端 `/api/canvas/v1/*`。Next 前端不保存 provider API key/base_url，不调用旧 `infinite-canvas` 后端。旧 AI billing 已从 Canvas 生成链路退休；payment/wallet 基础充值域保留给非本切片能力，但 AI 生成不扣余额。
 
@@ -246,7 +247,7 @@ interface CanvasPromptListQuery {
   page_size?: number
   keyword?: string
   category?: string
-  tag?: string[] // repeated query param, AND-matched against canvas_prompts.tags_json
+  tag?: string[] // repeated query param, AND-matched against ai_prompts.tags_json
 }
 ```
 
@@ -359,17 +360,19 @@ canvas bearer 请求默认 platform=canvas。
 canvas profile 只暴露当前用户基础资料读取/保存；安全修改邮箱/手机号/密码仍不在 canvas profile slice。
 Canvas PAGE 授权只通过 `permissions` + `router` 表达，供前端菜单/路由过滤；BUTTON 授权只通过 `buttonCodes` 表达，供按钮和动作 `can(code)` 判断。前端不得把 PAGE code 塞进 `buttonCodes`，也不得用 `permissionCodes` 合并 PAGE/BUTTON。
 Canvas free-generation surface does not expose wallet/recharge routes, menus, dialogs, balance display, recharge action, unit price, billing rule, debit, or refund concepts. Payment/wallet基础域仍可用于 admin/payment 合同，但不是 Canvas AI 生成依赖。
-prompts/assets 是 public list；后台 Vue CRUD UI 不在本切片。
+prompts are shared/public read lists where configured; assets are not public. Canvas `/api/canvas/v1/assets` is “我的素材” only and every list/create/update/delete is scoped to the current Canvas user through `ai_assets.user_id`. Admin Vue does not manage assets in the active contract.
 AI text/image/video 统一使用后端托管 provider；Canvas 前端只能提交 `agent_id`，不能提交或覆盖 provider model；客户端提交 `model`、`provider`、`api_key`、`base_url` 必须返回 bad request，不能静默忽略；模型来自已启用的 `ai_agents.model_id` 与 Canvas 专属场景。
 AI generation is free in this slice: 不查余额、不扣款、不退款、不写 `ai_billing_records`，也不要求 `/api/admin/v1/ai-billing-rules`。
 视频使用 `canvas_video_tasks.id` 作为 canvas task id，provider_task_id 绑定在 `canvas_video_tasks.provider_task_id`；status/content 读取必须按 `id + user_id + is_del=2` 校验 ownership。
 ```
 
-新增业务表仅允许：
+当前 Canvas AI 持久化表仅允许：
 
 ```text
-canvas_prompts
-canvas_assets
+ai_prompts
+ai_assets        # current-user-owned Canvas assets; no public library / no user_id=0 shared semantics
+ai_image_tasks
+ai_image_files
 canvas_video_tasks
 ```
 
@@ -1920,7 +1923,7 @@ type EmptyResponse = {}
 
 Rules:
 
-- table: `ai_prompts`; legacy `canvas_prompts` is not dropped by this Admin contract
+- table: `ai_prompts`; legacy `canvas_prompts` was retired by backend migration `20260608_ai_prompt_asset_drop_legacy.sql`
 - `slug`, `title`, and `prompt` are required for create/update
 - invalid route IDs, batch IDs, and status values fail explicitly
 - response `msg` uses `ai.prompt.*` i18n keys for errors and mutation success messages
@@ -2014,7 +2017,7 @@ type AIAssetDetailResponse = AIAssetItem
 
 Rules:
 
-- table: `ai_assets`; legacy `canvas_assets` is not dropped by this Admin contract
+- table: `ai_assets`; legacy `canvas_assets` was retired by backend migration `20260608_ai_prompt_asset_drop_legacy.sql`
 - `slug`, `type`, and `title` are required for create/update
 - allowed `type` values are exactly `text`, `image`, and `video`
 - invalid route IDs, batch IDs, status values, and asset types fail explicitly

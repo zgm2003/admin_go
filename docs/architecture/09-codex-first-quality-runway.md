@@ -1,6 +1,6 @@
 # Codex-first Quality Runway
 
-日期：2026-06-07
+日期：2026-06-08
 
 本文回答一个问题：后续 Codex 继续做质量提升时，应该按什么顺序推进，才不会把 Go/Vue/Next/DB 写成互相漂移的几套系统。
 
@@ -10,8 +10,8 @@
 docs/status/current-status.md
 docs/knowledge/current-runtime-knowledge.md
 docs/knowledge/runtime-source-map.md
-docs/db/mysql-live-schema-2026-06-07.md
-docs/knowledge/admin-front-source-quality-inventory-2026-06-07.md
+docs/db/mysql-live-schema-2026-06-08.md
+docs/knowledge/admin-front-source-quality-inventory-2026-06-08.md
 scripts/check-runtime-doc-facts.ps1
 ```
 
@@ -33,11 +33,11 @@ scripts/check-runtime-doc-facts.ps1
 
 | 面 | 当前事实 | 证据 |
 | --- | --- | --- |
-| Go backend routes | `298` route registrations，contract drift 当前无 undocumented/source-docs-only 阻断 | `docs/knowledge/backend-route-inventory-2026-06-07.md`, `docs/knowledge/backend-route-contract-drift-2026-06-07.md` |
-| Frontend/backend API drift | `277` exact frontend backend calls compared，`277` route-match，owner-decision-required = `0` | `docs/knowledge/frontend-backend-api-drift-2026-06-07.md`, `docs/knowledge/api-source-only-route-review-2026-06-07.md` |
-| Live MySQL | live base tables = `57`，schema artifact 来自 MySQL live 查验 | `docs/db/mysql-live-schema-2026-06-07.md`, `docs/db/mysql-live-schema-2026-06-07.sql` |
-| DB ownership | `57` live tables reviewed，`55` go-model，`2` live-schema-only tables (`canvas_assets`, `canvas_prompts`) | `docs/knowledge/db-schema-ownership-map-2026-06-07.md` |
-| Admin Vue source quality | `280` source files，`0` any，`0` as-any，`0` catch-any，`542` fallback，`0` direct external HTTP | `docs/knowledge/admin-front-source-quality-inventory-2026-06-07.md` |
+| Go backend routes | `286` route registrations，contract drift 当前无 undocumented/source-docs-only 阻断 | `docs/knowledge/backend-route-inventory-2026-06-08.md`, `docs/knowledge/backend-route-contract-drift-2026-06-08.md` |
+| Frontend/backend API drift | `265` exact frontend backend calls compared，`265` route-match，owner-decision-required = `0` | `docs/knowledge/frontend-backend-api-drift-2026-06-08.md`, `docs/knowledge/api-source-only-route-review-2026-06-08.md` |
+| Live MySQL | live base tables = `55`，schema artifact 来自 MySQL live 查验 | `docs/db/mysql-live-schema-2026-06-08.md`, `docs/db/mysql-live-schema-2026-06-08.sql` |
+| DB ownership | `55` live tables reviewed，`55` go-model，`0` live-schema-only tables | `docs/knowledge/db-schema-ownership-map-2026-06-08.md` |
+| Admin Vue source quality | `280` source files，`0` any，`0` as-any，`0` catch-any，`542` fallback，`0` direct external HTTP | `docs/knowledge/admin-front-source-quality-inventory-2026-06-08.md` |
 | Canvas Next route/RBAC facts | `/assets` 是唯一资产页；`canvas_ai_text_generate` 是 soft-deleted orphan；logout 先 revoke backend | `docs/knowledge/canvas-asset-route-contract-review-2026-06-07.md`, `docs/knowledge/canvas-rbac-permission-contract-review-2026-06-07.md`, `docs/knowledge/canvas-auth-logout-contract-review-2026-06-07.md` |
 
 ## 递进规则
@@ -148,7 +148,7 @@ runtime-source-map / current-runtime-knowledge if route/page fact changed
 ```powershell
 cd E:\admin_go
 powershell -ExecutionPolicy Bypass -File .\scripts\export-live-mysql-schema.ps1
-powershell -ExecutionPolicy Bypass -File .\scripts\export-db-schema-ownership-map.ps1 -OutputDate 2026-06-07
+powershell -ExecutionPolicy Bypass -File .\scripts\export-db-schema-ownership-map.ps1 -OutputDate 2026-06-08
 powershell -ExecutionPolicy Bypass -File .\scripts\check-runtime-doc-facts.ps1 -LiveSchema
 ```
 

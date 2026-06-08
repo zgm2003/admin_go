@@ -1,6 +1,6 @@
 # Runtime Source Map
 
-更新时间：2026-06-07
+更新时间：2026-06-08
 
 本文是源码级导航图，不是运行时验收报告。它回答“当前代码最新版在哪里”，不替代 `docs/status/current-status.md`、`docs/contracts/*`、smoke/test 输出或 live MySQL schema。
 
@@ -13,11 +13,11 @@ canvas_front_next/src source tree
 admin_back_go/go.mod
 admin_front_ts/package.json
 canvas_front_next/package.json
-docs/db/mysql-live-schema-2026-06-07.md
-docs/knowledge/db-schema-ownership-map-2026-06-07.md
-docs/knowledge/full-stack-module-map-2026-06-07.md
-docs/knowledge/backend-capability-manifest-2026-06-07.md
-docs/knowledge/admin-front-source-quality-inventory-2026-06-07.md
+docs/db/mysql-live-schema-2026-06-08.md
+docs/knowledge/db-schema-ownership-map-2026-06-08.md
+docs/knowledge/full-stack-module-map-2026-06-08.md
+docs/knowledge/backend-capability-manifest-2026-06-08.md
+docs/knowledge/admin-front-source-quality-inventory-2026-06-08.md
 docs/architecture/09-codex-first-quality-runway.md
 docs/knowledge/admin-front-direct-external-helper-review-2026-06-07.md
 docs/knowledge/admin-front-header-breadcrumb-source-quality-review-2026-06-07.md
@@ -127,17 +127,16 @@ docs/knowledge/admin-ai-agent-test-contract-review-2026-06-07.md
 
 
 
-`ADMIN-FRONT-HARDENING-014` is resolved for `src/api/ai/images.ts` create-task optional payload normalization. The source guard is `tests/shared/ai/ai-image-api.test.ts`, and the current source-quality inventory now reports `542` fallback candidates. `docs/knowledge/admin-front-ai-image-payload-source-quality-review-2026-06-07.md` records the decision.
 
 `ADMIN-FRONT-HARDENING-013` is resolved for remaining tracked demo any rows: `form/index.vue`, `display/index.vue`, and `ParticleBackground.vue` are guarded by form/display/effect source-quality tests. Current source-quality inventory now reports `0` `any` candidates; fallback rows remain review inventory. `docs/knowledge/admin-front-demo-any-source-quality-review-2026-06-07.md` records the decision.
 Source-quality inventory:
 
 ```text
-docs/knowledge/admin-front-source-quality-inventory-2026-06-07.md
+docs/knowledge/admin-front-source-quality-inventory-2026-06-08.md
 docs/architecture/09-codex-first-quality-runway.md
 ```
 
-Current inventory facts: `280` Admin Vue source files scanned, `0` `any` candidates, `0` `as any` candidates, `0` `catch(error: any)` candidates, `542` fallback candidates, and `0` direct external HTTP candidates. This is regex review evidence, not type-aware proof and not permission to sweep-replace code.
+Current inventory facts: `274` Admin Vue source files scanned, `0` `any` candidates, `0` `as any` candidates, `0` `catch(error: any)` candidates, `513` fallback candidates, and `0` direct external HTTP candidates. This is regex review evidence, not type-aware proof and not permission to sweep-replace code.
 
 `ADMIN-FRONT-HARDENING-012` is resolved for upload demo media-list typing: `upload/index.vue` now uses `ref<UploadMediaItem[]>([])`, and `UpMediaList.vue` shares that model through `components/media.ts`; `tests/shared/upload/upload-demo-source-quality.test.ts` guards the slice. `docs/knowledge/admin-front-upload-demo-source-quality-review-2026-06-07.md` records the decision.
 
@@ -243,17 +242,19 @@ Current `page.tsx` routes under `canvas_front_next/src/app`:
 
 `/asset-library` is not part of current source inventory or active RBAC contract. Do not reintroduce it as a route alias or frontend fallback.
 
+Admin AI interaction retirement: Admin Vue no longer ships image playground or asset management source/API files; Go no longer mounts `/api/admin/v1/ai-images*` or `/api/admin/v1/ai-assets*`; Canvas assets remain `/api/canvas/v1/assets` and are scoped by `ai_assets.user_id`.
+
 ## MySQL source of truth
 
 Current schema artifact:
 
 ```text
-docs/db/mysql-live-schema-2026-06-07.md
-docs/db/mysql-live-schema-2026-06-07.sql
-docs/knowledge/db-schema-ownership-map-2026-06-07.md
-docs/knowledge/full-stack-module-map-2026-06-07.md
-docs/knowledge/backend-capability-manifest-2026-06-07.md
-docs/knowledge/admin-front-source-quality-inventory-2026-06-07.md
+docs/db/mysql-live-schema-2026-06-08.md
+docs/db/mysql-live-schema-2026-06-08.sql
+docs/knowledge/db-schema-ownership-map-2026-06-08.md
+docs/knowledge/full-stack-module-map-2026-06-08.md
+docs/knowledge/backend-capability-manifest-2026-06-08.md
+docs/knowledge/admin-front-source-quality-inventory-2026-06-08.md
 docs/architecture/09-codex-first-quality-runway.md
 docs/knowledge/admin-front-direct-external-helper-review-2026-06-07.md
 docs/knowledge/admin-front-header-breadcrumb-source-quality-review-2026-06-07.md
@@ -267,10 +268,10 @@ docs/knowledge/admin-user-status-contract-review-2026-06-07.md
 docs/knowledge/admin-ai-agent-test-contract-review-2026-06-07.md
 ```
 
-Verified table count in the snapshot: `57`.
-The DB schema ownership map is derived from the live schema artifact plus current Go source references. It records `57` live tables reviewed, `55` `go-model` tables, and two `live-schema-only` tables: `canvas_assets` and `canvas_prompts`. Those two legacy tables are retained only as the AI prompt/asset safe migration window; this plan does not drop them.
-The full-stack module map joins route inventory, frontend API inventory, DB ownership, and source-only review at capability level. It records `298` backend route registrations joined, `277` frontend exact backend calls assigned, `0` unassigned exact frontend calls, and `57` live DB tables mapped.
-The backend capability manifest records `37` Go capabilities, `298` backend route registrations covered, and `4` helper packages that are not promoted to capability: `ai/internal/canvasrequest`, `auth/verifycode`, `payment/serialno`, and `queuemonitor/asynqmonui`.
+Verified table count in the snapshot: `55`.
+The DB schema ownership map is derived from the live schema artifact plus current Go source references. It records `55` live tables reviewed, `55` `go-model` tables, and `0` `live-schema-only` tables after `canvas_prompts` / `canvas_assets` were retired by the 2026-06-08 cleanup migration.
+The full-stack module map joins route inventory, frontend API inventory, DB ownership, and source-only review at capability level. It records `286` backend route registrations joined, `265` frontend exact backend calls assigned, `0` unassigned exact frontend calls, and `55` live DB tables mapped.
+The backend capability manifest records `37` Go capabilities, `286` backend route registrations covered, and `4` helper packages that are not promoted to capability: `ai/internal/canvasrequest`, `auth/verifycode`, `payment/serialno`, and `queuemonitor/asynqmonui`.
 
 Key active tables present in the DDL artifact:
 
@@ -283,8 +284,8 @@ auth_platforms
 ai_agents
 ai_providers
 ai_provider_models
-canvas_prompts
-canvas_assets
+ai_prompts
+ai_assets
 canvas_video_tasks
 payment_configs
 payment_recharges
@@ -298,32 +299,32 @@ wallet_transactions
 Generated inventory snapshot:
 
 ```text
-docs/knowledge/runtime-inventory-2026-06-07.md
-docs/knowledge/backend-route-inventory-2026-06-07.md
-docs/knowledge/backend-route-contract-drift-2026-06-07.md
-docs/knowledge/frontend-api-inventory-2026-06-07.md
-docs/knowledge/frontend-backend-api-drift-2026-06-07.md
-docs/knowledge/api-source-only-route-review-2026-06-07.md
-docs/knowledge/db-schema-ownership-map-2026-06-07.md
-docs/knowledge/full-stack-module-map-2026-06-07.md
-docs/knowledge/backend-capability-manifest-2026-06-07.md
+docs/knowledge/runtime-inventory-2026-06-08.md
+docs/knowledge/backend-route-inventory-2026-06-08.md
+docs/knowledge/backend-route-contract-drift-2026-06-08.md
+docs/knowledge/frontend-api-inventory-2026-06-08.md
+docs/knowledge/frontend-backend-api-drift-2026-06-08.md
+docs/knowledge/api-source-only-route-review-2026-06-08.md
+docs/knowledge/db-schema-ownership-map-2026-06-08.md
+docs/knowledge/full-stack-module-map-2026-06-08.md
+docs/knowledge/backend-capability-manifest-2026-06-08.md
 ```
 
 Run:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\export-runtime-inventory.ps1 -OutputDate 2026-06-07
-powershell -ExecutionPolicy Bypass -File .\scripts\export-backend-route-inventory.ps1 -OutputDate 2026-06-07
-powershell -ExecutionPolicy Bypass -File .\scripts\export-backend-route-contract-drift.ps1 -OutputDate 2026-06-07
-powershell -ExecutionPolicy Bypass -File .\scripts\export-frontend-api-inventory.ps1 -OutputDate 2026-06-07
-powershell -ExecutionPolicy Bypass -File .\scripts\export-frontend-backend-api-drift.ps1 -OutputDate 2026-06-07
-powershell -ExecutionPolicy Bypass -File .\scripts\export-api-source-only-route-review.ps1 -OutputDate 2026-06-07
-powershell -ExecutionPolicy Bypass -File .\scripts\export-db-schema-ownership-map.ps1 -OutputDate 2026-06-07
-powershell -ExecutionPolicy Bypass -File .\scripts\export-full-stack-module-map.ps1 -OutputDate 2026-06-07
-powershell -ExecutionPolicy Bypass -File .\scripts\export-backend-capability-manifest.ps1 -OutputDate 2026-06-07
-powershell -ExecutionPolicy Bypass -File .\scripts\export-admin-front-source-quality-inventory.ps1 -OutputDate 2026-06-07
+powershell -ExecutionPolicy Bypass -File .\scripts\export-runtime-inventory.ps1 -OutputDate 2026-06-08
+powershell -ExecutionPolicy Bypass -File .\scripts\export-backend-route-inventory.ps1 -OutputDate 2026-06-08
+powershell -ExecutionPolicy Bypass -File .\scripts\export-backend-route-contract-drift.ps1 -OutputDate 2026-06-08
+powershell -ExecutionPolicy Bypass -File .\scripts\export-frontend-api-inventory.ps1 -OutputDate 2026-06-08
+powershell -ExecutionPolicy Bypass -File .\scripts\export-frontend-backend-api-drift.ps1 -OutputDate 2026-06-08
+powershell -ExecutionPolicy Bypass -File .\scripts\export-api-source-only-route-review.ps1 -OutputDate 2026-06-08
+powershell -ExecutionPolicy Bypass -File .\scripts\export-db-schema-ownership-map.ps1 -OutputDate 2026-06-08
+powershell -ExecutionPolicy Bypass -File .\scripts\export-full-stack-module-map.ps1 -OutputDate 2026-06-08
+powershell -ExecutionPolicy Bypass -File .\scripts\export-backend-capability-manifest.ps1 -OutputDate 2026-06-08
+powershell -ExecutionPolicy Bypass -File .\scripts\export-admin-front-source-quality-inventory.ps1 -OutputDate 2026-06-08
 powershell -ExecutionPolicy Bypass -File .\scripts\check-runtime-doc-facts.ps1
 powershell -ExecutionPolicy Bypass -File .\scripts\check-runtime-doc-facts.ps1 -LiveSchema
 ```
 
-The inventory commands guard selected manifest/source/schema/API-call artifact drift. `frontend-api-inventory-2026-06-07.md` is source inventory only; it does not prove served route behavior. `db-schema-ownership-map-2026-06-07.md` is source ownership mapping only; it does not prove migration history or runtime path coverage. `full-stack-module-map-2026-06-07.md` is a joined navigation map; its frontend join invariant prevents unknown-capability fallback, but it still is not runtime smoke. `backend-capability-manifest-2026-06-07.md` is source package ownership evidence; it does not prove canonical writers or import graph boundaries. `admin-front-source-quality-inventory-2026-06-07.md` is regex source-quality evidence for Admin Vue `any/as any/fallback/direct external HTTP` rows; it does not classify every fallback as a bug. The final live-schema command additionally re-exports live MySQL schema and compares the table count with this tracked snapshot.
+The inventory commands guard selected manifest/source/schema/API-call artifact drift. `frontend-api-inventory-2026-06-08.md` is source inventory only; it does not prove served route behavior. `db-schema-ownership-map-2026-06-08.md` is source ownership mapping only; it does not prove migration history or runtime path coverage. `full-stack-module-map-2026-06-08.md` is a joined navigation map; its frontend join invariant prevents unknown-capability fallback, but it still is not runtime smoke. `backend-capability-manifest-2026-06-08.md` is source package ownership evidence; it does not prove canonical writers or import graph boundaries. `admin-front-source-quality-inventory-2026-06-08.md` is regex source-quality evidence for Admin Vue `any/as any/fallback/direct external HTTP` rows; it does not classify every fallback as a bug. The final live-schema command additionally re-exports live MySQL schema and compares the table count with this tracked snapshot.

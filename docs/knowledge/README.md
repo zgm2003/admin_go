@@ -16,16 +16,16 @@
 | --- | --- | --- |
 | `docs/knowledge/current-runtime-knowledge.md` | Go / Vue / Canvas 当前 runtime 地图 | 当前代码、status、contracts、MySQL live schema |
 | `docs/knowledge/runtime-source-map.md` | Go / Vue / Canvas 源码级导航和模块/页面库存 | 当前源码树 + manifest + schema artifact |
-| `docs/knowledge/runtime-inventory-2026-06-07.md` | 由脚本生成的当前源码 inventory 快照 | `scripts/export-runtime-inventory.ps1` + 当前源码树 |
-| `docs/knowledge/backend-route-inventory-2026-06-07.md` | 由脚本生成的 Go 后端 route source inventory | `scripts/export-backend-route-inventory.ps1` + 当前 route source + `route_meta.go` |
-| `docs/knowledge/backend-route-contract-drift-2026-06-07.md` | Go route inventory 对 contract/status/knowledge docs 的漂移报告 | `scripts/export-backend-route-contract-drift.ps1` + route inventory + Markdown docs |
-| `docs/knowledge/frontend-api-inventory-2026-06-07.md` | Admin Vue / Canvas Next API call source inventory | `scripts/export-frontend-api-inventory.ps1` + 当前前端源码 |
-| `docs/knowledge/frontend-backend-api-drift-2026-06-07.md` | 前端 exact API calls 对 Go route source inventory 的漂移报告 | `scripts/export-frontend-backend-api-drift.ps1` + backend/frontend inventories |
-| `docs/knowledge/api-source-only-route-review-2026-06-07.md` | backend admin/canvas source-only routes 分类审查 | `scripts/export-api-source-only-route-review.ps1` + frontend/backend API drift |
-| `docs/knowledge/db-schema-ownership-map-2026-06-07.md` | live MySQL 表到当前 Go source model/reference owner 的映射 | `scripts/export-db-schema-ownership-map.ps1` + latest live schema artifact |
-| `docs/knowledge/full-stack-module-map-2026-06-07.md` | backend route / frontend API / live DB ownership 的模块级合成地图 | `scripts/export-full-stack-module-map.ps1` + generated source artifacts |
-| `docs/knowledge/backend-capability-manifest-2026-06-07.md` | Go backend capability 到 source/service/repository/model/table/transport 的 manifest | `scripts/export-backend-capability-manifest.ps1` + route/schema ownership artifacts |
-| `docs/knowledge/admin-front-source-quality-inventory-2026-06-07.md` | Admin Vue `any/as any/fallback/direct external HTTP` 债务源码库存 | `scripts/export-admin-front-source-quality-inventory.ps1` + 当前 `admin_front_ts/src` |
+| `docs/knowledge/runtime-inventory-2026-06-08.md` | 由脚本生成的当前源码 inventory 快照 | `scripts/export-runtime-inventory.ps1` + 当前源码树 |
+| `docs/knowledge/backend-route-inventory-2026-06-08.md` | 由脚本生成的 Go 后端 route source inventory | `scripts/export-backend-route-inventory.ps1` + 当前 route source + `route_meta.go` |
+| `docs/knowledge/backend-route-contract-drift-2026-06-08.md` | Go route inventory 对 contract/status/knowledge docs 的漂移报告 | `scripts/export-backend-route-contract-drift.ps1` + route inventory + Markdown docs |
+| `docs/knowledge/frontend-api-inventory-2026-06-08.md` | Admin Vue / Canvas Next API call source inventory | `scripts/export-frontend-api-inventory.ps1` + 当前前端源码 |
+| `docs/knowledge/frontend-backend-api-drift-2026-06-08.md` | 前端 exact API calls 对 Go route source inventory 的漂移报告 | `scripts/export-frontend-backend-api-drift.ps1` + backend/frontend inventories |
+| `docs/knowledge/api-source-only-route-review-2026-06-08.md` | backend admin/canvas source-only routes 分类审查 | `scripts/export-api-source-only-route-review.ps1` + frontend/backend API drift |
+| `docs/knowledge/db-schema-ownership-map-2026-06-08.md` | live MySQL 表到当前 Go source model/reference owner 的映射 | `scripts/export-db-schema-ownership-map.ps1` + latest live schema artifact |
+| `docs/knowledge/full-stack-module-map-2026-06-08.md` | backend route / frontend API / live DB ownership 的模块级合成地图 | `scripts/export-full-stack-module-map.ps1` + generated source artifacts |
+| `docs/knowledge/backend-capability-manifest-2026-06-08.md` | Go backend capability 到 source/service/repository/model/table/transport 的 manifest | `scripts/export-backend-capability-manifest.ps1` + route/schema ownership artifacts |
+| `docs/knowledge/admin-front-source-quality-inventory-2026-06-08.md` | Admin Vue `any/as any/fallback/direct external HTTP` 债务源码库存 | `scripts/export-admin-front-source-quality-inventory.ps1` + 当前 `admin_front_ts/src` |
 | `docs/knowledge/admin-front-direct-external-helper-review-2026-06-07.md` | Admin Vue direct external random-image helper 删除口径 | 当前 Admin Vue source search + guard test + generated inventories |
 | `docs/knowledge/admin-front-header-breadcrumb-source-quality-review-2026-06-07.md` | Admin Vue Header breadcrumb route-walk 类型/兜底清理口径 | 当前 Header source + Vitest source guard + source-quality inventory |
 | `docs/knowledge/admin-front-forgot-password-error-source-quality-review-2026-06-07.md` | Admin Vue forgot-password request-error fail-closed 清理口径 | 当前 useForgotPassword source + Vitest source/behavior guard + source-quality inventory |
@@ -37,7 +37,6 @@
 | `docs/knowledge/admin-front-validator-source-quality-review-2026-06-07.md` | Admin Vue useValidator validator input any / message fallback 清理口径 | 当前 useValidator source + Vitest source guard + source-quality inventory |
 | `docs/knowledge/admin-front-upload-demo-source-quality-review-2026-06-07.md` | Admin Vue upload demo media-list any 清理口径 | 当前 upload demo source + Vitest source guard + source-quality inventory |
 | `docs/knowledge/admin-front-demo-any-source-quality-review-2026-06-07.md` | Admin Vue demo any 清零口径（form/display/ParticleBackground） | 当前 demo source + Vitest source guard + source-quality inventory |
-| `docs/knowledge/admin-front-ai-image-payload-source-quality-review-2026-06-07.md` | Admin Vue AI image create-task payload fallback 清理口径 | 当前 AI image API source + Vitest source guard + source-quality inventory |
 | `docs/knowledge/canvas-ai-request-contract-review-2026-06-07.md` | Canvas AI `agent_id` 请求契约和 provider/model 覆盖拒绝证据 | 当前 Canvas frontend service/tests + Go Canvas AI transports/tests |
 | `docs/knowledge/canvas-rbac-permission-contract-review-2026-06-07.md` | Canvas RBAC `buttonCodes` 权限码口径；确认 `canvas_ai_text_generate` 是死前端类型漂移 | 当前 Canvas frontend RBAC registry/tests + Go migration/route metadata + live MySQL permissions rows |
 | `docs/knowledge/canvas-asset-route-contract-review-2026-06-07.md` | Canvas 资产页路由口径；确认 `/assets` 是唯一顶层资产页，`/asset-library` 是死页 | 当前 Canvas frontend route registry/tests + generated inventory + live MySQL permissions rows |
@@ -45,24 +44,24 @@
 | `docs/knowledge/admin-user-status-contract-review-2026-06-07.md` | Admin 用户状态契约口径；确认用户列表启停必须调用专用 status route | 当前 Admin Vue user API/page/tests + Go user transport/service/route metadata |
 | `docs/knowledge/admin-ai-agent-test-contract-review-2026-06-07.md` | Admin AI 智能体测试契约口径；确认智能体列表测试动作必须调用专用 test route | 当前 Admin Vue AI agent API/page/tests + Go AI agent transport/service/route metadata |
 | `docs/knowledge/codex-first-agent-operating-model.md` | 本项目最贴合的 Codex-first agent 工作法 | `agents/`、Superpowers、governance scripts |
-| `docs/db/mysql-live-schema-2026-06-07.md` | live MySQL 表、列、索引、行数快照 | `information_schema` + `COUNT(*)` |
-| `docs/db/mysql-live-schema-2026-06-07.sql` | live MySQL 全 DDL artifact | `mysqldump --no-data` |
+| `docs/db/mysql-live-schema-2026-06-08.md` | live MySQL 表、列、索引、行数快照 | `information_schema` + `COUNT(*)` |
+| `docs/db/mysql-live-schema-2026-06-08.sql` | live MySQL 全 DDL artifact | `mysqldump --no-data` |
 
 ## 事实校验
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\check-runtime-doc-facts.ps1
 powershell -ExecutionPolicy Bypass -File .\scripts\check-runtime-doc-facts.ps1 -LiveSchema
-powershell -ExecutionPolicy Bypass -File .\scripts\export-runtime-inventory.ps1 -OutputDate 2026-06-07
-powershell -ExecutionPolicy Bypass -File .\scripts\export-backend-route-inventory.ps1 -OutputDate 2026-06-07
-powershell -ExecutionPolicy Bypass -File .\scripts\export-backend-route-contract-drift.ps1 -OutputDate 2026-06-07
-powershell -ExecutionPolicy Bypass -File .\scripts\export-frontend-api-inventory.ps1 -OutputDate 2026-06-07
-powershell -ExecutionPolicy Bypass -File .\scripts\export-frontend-backend-api-drift.ps1 -OutputDate 2026-06-07
-powershell -ExecutionPolicy Bypass -File .\scripts\export-api-source-only-route-review.ps1 -OutputDate 2026-06-07
-powershell -ExecutionPolicy Bypass -File .\scripts\export-db-schema-ownership-map.ps1 -OutputDate 2026-06-07
-powershell -ExecutionPolicy Bypass -File .\scripts\export-full-stack-module-map.ps1 -OutputDate 2026-06-07
-powershell -ExecutionPolicy Bypass -File .\scripts\export-backend-capability-manifest.ps1 -OutputDate 2026-06-07
-powershell -ExecutionPolicy Bypass -File .\scripts\export-admin-front-source-quality-inventory.ps1 -OutputDate 2026-06-07
+powershell -ExecutionPolicy Bypass -File .\scripts\export-runtime-inventory.ps1 -OutputDate 2026-06-08
+powershell -ExecutionPolicy Bypass -File .\scripts\export-backend-route-inventory.ps1 -OutputDate 2026-06-08
+powershell -ExecutionPolicy Bypass -File .\scripts\export-backend-route-contract-drift.ps1 -OutputDate 2026-06-08
+powershell -ExecutionPolicy Bypass -File .\scripts\export-frontend-api-inventory.ps1 -OutputDate 2026-06-08
+powershell -ExecutionPolicy Bypass -File .\scripts\export-frontend-backend-api-drift.ps1 -OutputDate 2026-06-08
+powershell -ExecutionPolicy Bypass -File .\scripts\export-api-source-only-route-review.ps1 -OutputDate 2026-06-08
+powershell -ExecutionPolicy Bypass -File .\scripts\export-db-schema-ownership-map.ps1 -OutputDate 2026-06-08
+powershell -ExecutionPolicy Bypass -File .\scripts\export-full-stack-module-map.ps1 -OutputDate 2026-06-08
+powershell -ExecutionPolicy Bypass -File .\scripts\export-backend-capability-manifest.ps1 -OutputDate 2026-06-08
+powershell -ExecutionPolicy Bypass -File .\scripts\export-admin-front-source-quality-inventory.ps1 -OutputDate 2026-06-08
 ```
 
 默认模式校验 `go.mod`、`package.json`、关键 API source route、tracked schema artifact、DB schema ownership map、full-stack module map 和 backend capability manifest 是否仍与知识库一致；`-LiveSchema` 会重新查 live MySQL 并比较当前表数量。

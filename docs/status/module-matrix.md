@@ -762,55 +762,45 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
   - Old AI billing rules are retired; AI agent config now owns runtime scene/model selection only.
   - Canvas frontend integration is now tracked under `canvas_front_next / canvas platform API`; admin AI image remains independently supported.
 
-### AI prompt/asset library convergence
+### AI prompt/asset convergence and Canvas asset ownership
 
 - Backend:
   - implemented: prompt ownership is `internal/module/ai/prompt`, with Admin transport `/api/admin/v1/ai-prompts` and Canvas transport preserving `/api/canvas/v1/prompts`.
-  - implemented: asset ownership is `internal/module/ai/asset`, with Admin transport `/api/admin/v1/ai-assets` and Canvas transport preserving `GET/POST/PUT/DELETE /api/canvas/v1/assets`.
-  - active tables are `ai_prompts` and `ai_assets`; live legacy `canvas_prompts` / `canvas_assets` remain only as safe migration-window tables and are not dropped by this plan.
-  - retired Admin image favorite public surface is not part of the active image workspace API.
+  - implemented: asset ownership is `internal/module/ai/asset`, but only Canvas exposes `GET/POST/PUT/DELETE /api/canvas/v1/assets`; Admin `/api/admin/v1/ai-assets*` transport/routes/menu permissions are retired.
+  - `ai_assets.user_id` is the ownership boundary. Canvas handlers derive `user_id` from the authenticated Canvas token and repository writes/updates/deletes are guarded by `id + user_id + is_del`.
+  - active tables are `ai_prompts` and user-owned `ai_assets`; legacy `canvas_prompts` / `canvas_assets` were backed up and dropped by `20260608_ai_prompt_asset_drop_legacy.sql`.
+  - no public/shared asset library exists; do not use `user_id=0` as a shared-library convention.
 - Frontend:
-  - Admin Vue prompt/asset pages are implemented under `src/views/Main/ai/prompts` and `src/views/Main/ai/assets` using Search + AppTable + AppDialog + useCrudTable, with typed clients in `src/api/ai/prompts.ts` and `src/api/ai/assets.ts`.
-  - Canvas Next asset store is backend-backed; `localStorage` / Zustand `persist` is not the primary asset persistence path.
+  - Admin Vue keeps prompt management under `src/views/Main/ai/prompts` and typed client `src/api/ai/prompts.ts`; Admin asset management page/API files are removed.
+  - Canvas Next asset picker only shows “我的素材”; `fetchAssetLibrary` / `library` tab / `/asset-library` route aliases are negative-guarded.
   - Canvas image 403 handling uses structured auth/RBAC classification and keeps provider/business 403 as local image workflow errors.
 - Tests:
-  - backend `go test ./... -count=1 -p=1` with `GOMAXPROCS=2`, Admin Vue `npm test` + `npm run typecheck`, Canvas Next `npm run test` + `npm run typecheck` passed for Task 9.
-  - backend contract, basic smoke, and full smoke passed after the convergence commits.
+  - backend targeted AI asset/canvas/image/server/bootstrap/architecture tests, Admin Vue `npm test` + `npm run typecheck`, and Canvas Next `npm test` + `npm run typecheck` cover this slice.
 - Docs:
-  - admin API contract, generated route/API/schema/module artifacts, current-status, and this module matrix are refreshed in Task 9.
-- Risk / future gap:
-  - C1 remains open by design: Canvas “我的素材” writes global `ai_assets` without user owner or mutation-permission isolation. Add a separate architecture/spec slice before introducing multi-tenant visibility or per-user ownership semantics.
-  - Do not claim `canvas_prompts` / `canvas_assets` are dropped until a later backend migration applies and live schema is refreshed.
+  - admin API contract, generated route/API/schema/module artifacts, current-status, and this module matrix are refreshed on 2026-06-08.
+- Risk:
+  - existing historical `ai_assets` rows without an owner are soft-deleted by migration; runtime must not query them as public assets.
+  - Legacy `canvas_prompts` / `canvas_assets` retirement is verified by the 2026-06-08 backend cleanup migration and refreshed live schema.
 
-### AI image playground gpt-image-2
+### AI image generation
 
 - Backend:
-  - implemented/in progress: Admin image playground and Canvas image generation are one AI image capability owned by `internal/module/ai/image`
-  - active tables are `ai_image_tasks` and `ai_image_files`; platform ownership is expressed by the task `platform` column
-  - retired tables `admin_ai_image_tasks`, `admin_ai_image_files`, `canvas_image_tasks`, `canvas_image_files`, `ai_image_assets`, and `ai_image_task_assets` are copied into the single tables then dropped by `20260607_ai_image_single_capability_convergence.sql`
-  - active Admin transport is `internal/module/ai/image/transport/admin`; active Canvas transport is `internal/module/ai/image/transport/canvas`
-  - Admin route group remains `/api/admin/v1/ai-images`; Canvas route group remains `/api/canvas/v1/ai/images`
-  - image generation is asynchronous through the AI image task handler; `ai_runs.source_type` is `ai_image_task` for Admin and Canvas image attempts
-  - Admin service accepts agents with `scene=image_generate`; Canvas service accepts agents with `scene=canvas_image_generate`; both share repository/service/model ownership and are separated by `platform`
-  - generated b64 outputs are archived to COS and remote URL outputs are kept as task-owned output files
-  - OperationLog route metadata skips request/response payload capture for prompt/image safety
+  - implemented: `internal/module/ai/image` owns image generation runtime for Canvas. Active HTTP surface is Canvas `GET/POST/DELETE /api/canvas/v1/ai/images*`; Admin `/api/admin/v1/ai-images*` transport/routes/menu permissions are retired.
+  - active tables remain `ai_image_tasks` and `ai_image_files`; platform/user ownership is expressed by task `platform` / `user_id` columns.
+  - retired split tables `admin_ai_image_tasks`, `admin_ai_image_files`, `canvas_image_tasks`, `canvas_image_files`, `ai_image_assets`, and `ai_image_task_assets` are copied into the single tables then dropped by `20260607_ai_image_single_capability_convergence.sql`.
+  - image generation is asynchronous through the AI image task handler; `ai_runs.source_type` remains `ai_image_task` for image provider attempts.
+  - Canvas service accepts agents with `scene=canvas_image_generate`; generated b64 outputs are archived to COS and remote URL outputs are kept as task-owned output files.
 - Frontend:
-  - adapted: `/ai/image-playground` resolves to `src/views/Main/ai/image-playground/index.vue` and now uses a Canvas-style three-panel studio: records, composer, result
-  - adapted: uploads reference/mask images via existing COS-only upload-token runtime, sends task-owned `input_files`/`mask_file` metadata with `POST /api/admin/v1/ai-images`, lists history, selects inline result details, reuses prompts/files, deletes selected records, retries failed results, saves generated outputs to assets, adds outputs to references, and downloads outputs
-  - removed: `POST /api/admin/v1/ai-images/assets`, global asset registration DTOs, provider/model/API-key UI, IndexedDB/localStorage source of truth, and the old table-plus-bottom-composer layout
-  - Canvas image history is read/deleted through backend `GET/DELETE /api/canvas/v1/ai/images`; browser cache is not used as business persistence
+  - Admin Vue 图片工作台 page/API/tests are removed; Admin is a management console, not an interaction studio.
+  - Canvas image history is read/deleted through backend `GET/DELETE /api/canvas/v1/ai/images`; browser cache is not used as business persistence.
 - Tests:
-  - `internal/module/ai/image`, `internal/infra/storage/cos`, `internal/bootstrap`, `internal/jobs`, `internal/server`, `internal/architecture`
-  - frontend `src/api/ai/images.ts`, `src/views/Main/ai/image-playground/*`, `tests/shared/ai/ai-image-api.test.ts`, `tests/shared/ai/ai-image-complete-split.test.ts`, `vue-tsc`; Canvas Next `src/services/api/image-complete-split.test.ts`
+  - `internal/module/ai/image`, `internal/bootstrap`, `internal/server`, `internal/architecture`, plus Canvas Next image/asset boundary tests.
 - Smoke:
-  - full smoke probes `ai-agents?scene=image_generate`, `ai-agents/options?scene=image_generate`, `ai-images/page-init`, `ai-images` list, and optional detail when a task exists
-  - actual provider generation needs configured agent + worker + COS
-- Docs: AI image single capability spec/plan + admin API contract + smoke matrix
+  - Admin smoke no longer probes `ai-images*`; Canvas image live generation still requires configured agent + worker + COS/provider fixtures.
+- Docs: current status, admin API contract, smoke matrix, and generated artifacts refreshed on 2026-06-08.
 - Risk:
-  - no multi-model selector, no custom provider UI, no provider-key browser storage, no IndexedDB primary store
-  - real image generation requires an enabled queue worker, Tencent COS upload config, and a valid image agent
-  - upload runtime is Tencent COS-only
-  - `bucket_domain` is stored as a bare host and runtime builds HTTPS public URLs
+  - do not delete `ai_image_tasks`, `ai_image_files`, or `ai_runs.source_type=ai_image_task`; only the Admin interactive HTTP/UI surface was retired.
+  - real Canvas image generation requires an enabled queue worker, Tencent COS upload config, and a valid Canvas image agent.
 
 ## Canvas frontend runtime
 
@@ -842,7 +832,7 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
   - canvas spec/plan, current-status, module matrix, admin API contract, and smoke matrix.
 - Risk:
   - live provider credentials/model availability still determines real text/image/video generation success; provider calls are backend-owned and fail closed without billing refund side effects.
-  - current Canvas prompt/asset active tables are `ai_prompts` and `ai_assets`; live `canvas_prompts` / `canvas_assets` are retained only as safe migration-window legacy tables. Canvas video remains in `canvas_video_tasks`; Canvas image history is stored in `ai_image_tasks` / `ai_image_files` with `platform=canvas`; do not add `canvas_users`, `canvas_credit_logs`, `canvas_settings`, `canvas_projects`, or `canvas_wallets` without a new spec.
+  - current Canvas prompt/asset active tables are `ai_prompts` and `ai_assets`; legacy `canvas_prompts` / `canvas_assets` are no longer live tables after the 2026-06-08 cleanup. Canvas video remains in `canvas_video_tasks`; Canvas image history is stored in `ai_image_tasks` / `ai_image_files` with `platform=canvas`; do not add `canvas_users`, `canvas_credit_logs`, `canvas_settings`, `canvas_projects`, or `canvas_wallets` without a new spec.
 
 ## Removed / retired scope
 

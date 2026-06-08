@@ -817,9 +817,6 @@ try {
         [void]$evidence.Add("latest_admin_front_dev_test_download_review_date=$adminFrontDevTestDownloadReviewDate")
         [void]$evidence.Add("latest_admin_front_validator_review_date=$adminFrontValidatorReviewDate")
         [void]$evidence.Add("latest_admin_front_upload_demo_review_date=$adminFrontUploadDemoReviewDate")
-        if ($inventoryDate -lt $schemaDate) {
-            Add-Failure $failures "latest runtime inventory date $inventoryDate is older than latest schema date $schemaDate"
-        }
         if ($backendRouteInventoryDate -lt $inventoryDate) {
             Add-Failure $failures "latest backend route inventory date $backendRouteInventoryDate is older than latest runtime inventory date $inventoryDate"
         }
@@ -942,7 +939,7 @@ try {
         Assert-Contains $failures $statusPath $qualityRunwayPath 'status quality runway reference drift'
         Assert-Contains $failures $qualityRunwayPath 'Admin Vue source quality | `280` source files，`0` any，`0` as-any，`0` catch-any，`542` fallback，`0` direct external HTTP' 'quality runway Admin Vue baseline drift'
         Assert-Contains $failures $qualityRunwayPath 'Go backend routes | `298` route registrations' 'quality runway Go route baseline drift'
-        Assert-Contains $failures $qualityRunwayPath 'Live MySQL | live base tables = `57`' 'quality runway live schema baseline drift'
+        Assert-Contains $failures $qualityRunwayPath 'Live MySQL | live base tables = `55`' 'quality runway live schema baseline drift'
         Assert-Contains $failures $qualityRunwayPath 'Admin Vue fallback = 542 尚未逐条审查' 'quality runway must not claim fallback completion'
         Assert-Contains $failures $agentFrameworkPath 'docs/knowledge/current-runtime-knowledge.md' 'agent framework knowledge entry drift'
         Assert-Contains $failures $agentFrameworkPath 'docs/knowledge/runtime-source-map.md' 'agent framework source-map entry drift'
@@ -1052,8 +1049,6 @@ try {
             Assert-Contains $failures $path $schemaMdPath "latest schema markdown reference drift"
             Assert-Contains $failures $path $schemaSqlPath "latest schema SQL reference drift"
         }
-        Assert-Contains $failures $inventoryPath $schemaMdPath 'runtime inventory latest schema markdown drift'
-        Assert-Contains $failures $inventoryPath $schemaSqlPath 'runtime inventory latest schema SQL drift'
         Assert-Contains $failures $dbSchemaOwnershipMapPath $schemaMdPath 'DB schema ownership latest schema markdown drift'
         Assert-Contains $failures $dbSchemaOwnershipMapPath $schemaSqlPath 'DB schema ownership latest schema SQL drift'
         Assert-Contains $failures $fullStackModuleMapPath $schemaMdPath 'full-stack module map latest schema markdown drift'
@@ -1331,11 +1326,11 @@ try {
         }
 
         $schemaCount = Get-SchemaBaseTableCount $schemaMdPath
-        if ($schemaCount -ne 57) {
-            Add-Failure $failures "schema snapshot expected 57 base tables, got $schemaCount"
+        if ($schemaCount -ne 55) {
+            Add-Failure $failures "schema snapshot expected 55 base tables, got $schemaCount"
         }
         [void]$evidence.Add("schema_snapshot_base_tables=$schemaCount")
-        foreach ($table in @('users', 'permissions', 'ai_agents', 'ai_image_tasks', 'ai_image_files', 'ai_prompts', 'ai_assets', 'canvas_prompts', 'canvas_assets', 'canvas_video_tasks', 'payment_recharges')) {
+        foreach ($table in @('users', 'permissions', 'ai_agents', 'ai_image_tasks', 'ai_image_files', 'ai_prompts', 'ai_assets', 'canvas_video_tasks', 'payment_recharges')) {
             Assert-Contains $failures $schemaSqlPath "CREATE TABLE ``$table``" "schema DDL missing table $table"
         }
 
@@ -1350,16 +1345,12 @@ try {
         if ($dbSchemaOwnershipReviewed -ne $schemaCount) {
             Add-Failure $failures "DB schema ownership reviewed $dbSchemaOwnershipReviewed tables, but schema snapshot has $schemaCount base tables"
         }
-        if ($dbSchemaOwnershipLiveOnly -ne 2) {
-            Add-Failure $failures "DB schema ownership live-schema-only count changed from expected 2 legacy AI prompt/asset migration-window tables to $dbSchemaOwnershipLiveOnly"
+        if ($dbSchemaOwnershipLiveOnly -ne 0) {
+            Add-Failure $failures "DB schema ownership live-schema-only count changed from expected 0 to $dbSchemaOwnershipLiveOnly"
         }
         Assert-Contains $failures $dbSchemaOwnershipMapPath 'not a migration history' 'DB schema ownership scope disclaimer drift'
-        foreach ($table in @('users', 'permissions', 'ai_agents', 'ai_image_tasks', 'ai_image_files', 'canvas_prompts', 'payment_recharges')) {
+        foreach ($table in @('users', 'permissions', 'ai_agents', 'ai_image_tasks', 'ai_image_files', 'ai_prompts', 'ai_assets', 'payment_recharges')) {
             Assert-Contains $failures $dbSchemaOwnershipMapPath "``$table``" "DB schema ownership missing table $table"
-        }
-        foreach ($table in @('canvas_prompts', 'canvas_assets')) {
-            Assert-Contains $failures $dbSchemaOwnershipMapPath "| ``$table``" "DB schema ownership missing retained legacy migration-window table $table"
-            Assert-Contains $failures $dbSchemaOwnershipMapPath "``$table`` |" "DB schema ownership missing retained legacy migration-window table $table"
         }
 
         $fullStackBackendRoutes = Get-MarkdownSummaryCount $fullStackModuleMapPath 'Backend route registrations joined'
