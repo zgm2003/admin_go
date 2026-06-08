@@ -1,6 +1,6 @@
 # Full-stack Module Map Snapshot
 
-Generated at: 2026-06-08 11:48:59 +08:00
+Generated at: 2026-06-08 14:56:05 +08:00
 
 Backend route inventory: `docs/knowledge/backend-route-inventory-2026-06-08.md`
 Frontend API inventory: `docs/knowledge/frontend-api-inventory-2026-06-08.md`

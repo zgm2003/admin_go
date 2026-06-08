@@ -1,6 +1,6 @@
 # Backend Capability Manifest Snapshot
 
-Generated at: 2026-06-08 11:49:00 +08:00
+Generated at: 2026-06-08 14:56:06 +08:00
 
 Backend route inventory: `docs/knowledge/backend-route-inventory-2026-06-08.md`
 DB schema ownership map: `docs/knowledge/db-schema-ownership-map-2026-06-08.md`

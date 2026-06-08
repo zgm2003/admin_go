@@ -788,7 +788,7 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
   - implemented: `internal/module/ai/image` owns image generation runtime for Canvas. Active HTTP surface is Canvas `GET/POST/DELETE /api/canvas/v1/ai/images*`; Admin `/api/admin/v1/ai-images*` transport/routes/menu permissions are retired.
   - active tables remain `ai_image_tasks` and `ai_image_files`; platform/user ownership is expressed by task `platform` / `user_id` columns.
   - retired split tables `admin_ai_image_tasks`, `admin_ai_image_files`, `canvas_image_tasks`, `canvas_image_files`, `ai_image_assets`, and `ai_image_task_assets` are copied into the single tables then dropped by `20260607_ai_image_single_capability_convergence.sql`.
-  - image generation is asynchronous through the AI image task handler; `ai_runs.source_type` remains `ai_image_task` for image provider attempts.
+  - image generation is asynchronous through the AI image task handler; provider attempts are recorded by `ai_runs` without source polymorphism.
   - Canvas service accepts agents with `scene=canvas_image_generate`; generated b64 outputs are archived to COS and remote URL outputs are kept as task-owned output files.
 - Frontend:
   - Admin Vue 图片工作台 page/API/tests are removed; Admin is a management console, not an interaction studio.
@@ -799,7 +799,7 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
   - Admin smoke no longer probes `ai-images*`; Canvas image live generation still requires configured agent + worker + COS/provider fixtures.
 - Docs: current status, admin API contract, smoke matrix, and generated artifacts refreshed on 2026-06-08.
 - Risk:
-  - do not delete `ai_image_tasks`, `ai_image_files`, or `ai_runs.source_type=ai_image_task`; only the Admin interactive HTTP/UI surface was retired.
+  - do not delete `ai_image_tasks` or `ai_image_files`; only the Admin interactive HTTP/UI surface was retired, and `ai_runs` stays a narrow provider-attempt log.
   - real Canvas image generation requires an enabled queue worker, Tencent COS upload config, and a valid Canvas image agent.
 
 ## Canvas frontend runtime
@@ -812,7 +812,7 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
   - implemented: `permissions/page-init` default platform dictionary includes `admin/app/canvas`; canvas RBAC gates live in `permissions.platform='canvas'` and are not copied into an admin menu tree.
   - planned cleanup: Canvas PAGE rows stay focused on free-generation pages (`canvas_page`, `canvas_image_page`, `canvas_video_page`, `canvas_prompts_page`, `canvas_assets_page`, `canvas_profile_page`) and BUTTON rows stay focused on generation/assets/prompts (`canvas_access`, `canvas_prompt_read`, `canvas_asset_read`, `canvas_ai_image_generate`, `canvas_ai_video_generate`); old wallet/recharge Canvas rows are retired with the old AI billing surface. Canvas auth login `data.user` and `/api/canvas/v1/users/me` return the canonical users/me payload (`user_id`, `username`, `avatar`, `role_name`, `permissions`, `router`, `buttonCodes`) instead of permission alias fields.
   - implemented: `/api/*/auth/login-config` returns `allow_register`; Canvas uses it with login types and slide captcha, and no `/api/canvas/v1/auth/register` route is exposed.
-  - implemented: text/image/video generation use backend-managed provider config for free; old `ai_billing_records(platform=canvas)` charge/refund/audit is deleted; image tasks use `ai_image_tasks/ai_image_files` with `platform=canvas`; video binds upstream task id to `canvas_video_tasks.provider_task_id` and reads status/content by task ownership (`id + user_id + is_del=2`).
+  - implemented: text/image/video generation use backend-managed provider config for free; old `ai_billing_records(platform=canvas)` charge/refund/audit is deleted; image tasks use `ai_image_tasks/ai_image_files` with `platform=canvas`; video binds upstream task id to `canvas_video_tasks.provider_task_id`, stores the AI run binding in `canvas_video_tasks.run_id`, and reads status/content by task ownership (`id + user_id + is_del=2`).
   - implemented: `/api/canvas/v1/settings` exposes selectable AI runtime through `agents.text|image|video` derived from enabled `ai_agents` Canvas-specific scene bindings (`canvas_text_generate`, `canvas_image_generate`, `canvas_video_generate`); old billing-scene metadata is removed and must not be treated as a model source.
   - not implemented in this slice: cloud-synced `canvas_projects`, per-user asset ownership/visibility, and mutation-permission isolation for Canvas “我的素材”.
 - Frontend:

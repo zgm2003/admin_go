@@ -1,5 +1,5 @@
 -- MySQL live schema snapshot
--- Verified at: 2026-06-08 11:48:45 +08:00
+-- Verified at: 2026-06-08 14:55:44 +08:00
 -- Truth source: live MySQL DATABASE() = admin on 127.0.0.1:3307
 -- Generated via mysqldump --no-data. Secrets are not included.
 
@@ -130,7 +130,7 @@ CREATE TABLE `ai_conversations` (
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`) USING BTREE,
   KEY `idx_ai_conversations_user_agent_del_last_message` (`user_id`,`agent_id`,`is_del`,`last_message_at`,`id`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='AI会话';
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='AI会话';
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `ai_image_files`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -279,7 +279,7 @@ CREATE TABLE `ai_knowledge_retrieval_hits` (
   PRIMARY KEY (`id`) USING BTREE,
   KEY `idx_ai_knowledge_hits_retrieval` (`retrieval_id`,`status`,`rank_no`) USING BTREE,
   KEY `idx_ai_knowledge_hits_chunk` (`chunk_id`,`is_del`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=25 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='AI知识库检索命中';
+) ENGINE=InnoDB AUTO_INCREMENT=31 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='AI知识库检索命中';
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `ai_knowledge_retrievals`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -299,7 +299,7 @@ CREATE TABLE `ai_knowledge_retrievals` (
   PRIMARY KEY (`id`) USING BTREE,
   KEY `idx_ai_knowledge_retrievals_run` (`run_id`,`is_del`,`created_at`) USING BTREE,
   KEY `idx_ai_knowledge_retrievals_status` (`status`,`is_del`,`created_at`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='AI知识库检索记录';
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='AI知识库检索记录';
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `ai_messages`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -317,7 +317,7 @@ CREATE TABLE `ai_messages` (
   PRIMARY KEY (`id`) USING BTREE,
   KEY `idx_ai_messages_conversation_del_id` (`conversation_id`,`is_del`,`id`) USING BTREE,
   CONSTRAINT `fk_ai_messages_conversation` FOREIGN KEY (`conversation_id`) REFERENCES `ai_conversations` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE=InnoDB AUTO_INCREMENT=56 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='AI消息';
+) ENGINE=InnoDB AUTO_INCREMENT=60 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='AI消息';
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `ai_prompts`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -399,7 +399,7 @@ CREATE TABLE `ai_run_events` (
   KEY `idx_ai_run_events_type_created` (`event_type`,`created_at`,`id`) USING BTREE,
   CONSTRAINT `fk_ai_run_events_run` FOREIGN KEY (`run_id`) REFERENCES `ai_runs` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `chk_ai_run_events_type` CHECK ((`event_type` in (_utf8mb4'start',_utf8mb4'completed',_utf8mb4'failed',_utf8mb4'canceled',_utf8mb4'timeout')))
-) ENGINE=InnoDB AUTO_INCREMENT=51 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='AI运行监控事件';
+) ENGINE=InnoDB AUTO_INCREMENT=55 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='AI运行监控事件';
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `ai_runs`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -407,9 +407,6 @@ DROP TABLE IF EXISTS `ai_runs`;
 CREATE TABLE `ai_runs` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '运行ID',
   `platform` varchar(32) NOT NULL,
-  `modality` varchar(32) NOT NULL,
-  `source_type` varchar(64) NOT NULL,
-  `source_id` bigint unsigned NOT NULL,
   `conversation_id` int unsigned DEFAULT NULL COMMENT 'ai_conversations.id; chat rows only',
   `request_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '客户端本轮请求ID',
   `user_message_id` bigint unsigned DEFAULT NULL COMMENT '本轮用户消息ID; chat rows only',
@@ -424,7 +421,6 @@ CREATE TABLE `ai_runs` (
   `prompt_tokens` int unsigned NOT NULL DEFAULT '0' COMMENT '输入token',
   `completion_tokens` int unsigned NOT NULL DEFAULT '0' COMMENT '输出token',
   `total_tokens` int unsigned NOT NULL DEFAULT '0' COMMENT '总token',
-  `usage_status` varchar(16) NOT NULL,
   `duration_ms` int unsigned DEFAULT NULL COMMENT '运行耗时毫秒，终态后写入',
   `error_message` varchar(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '失败/取消/超时原因',
   `started_at` datetime DEFAULT NULL COMMENT '开始调用模型时间',
@@ -432,7 +428,6 @@ CREATE TABLE `ai_runs` (
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`) USING BTREE,
-  UNIQUE KEY `uk_ai_runs_source_request` (`source_type`,`source_id`,`request_id`),
   UNIQUE KEY `uk_ai_runs_conversation_request` (`conversation_id`,`request_id`) USING BTREE,
   UNIQUE KEY `uk_ai_runs_user_message` (`user_message_id`) USING BTREE,
   KEY `idx_ai_runs_created` (`created_at`,`id`) USING BTREE,
@@ -442,14 +437,11 @@ CREATE TABLE `ai_runs` (
   KEY `idx_ai_runs_provider_created` (`provider_id`,`created_at`,`id`) USING BTREE,
   KEY `idx_ai_runs_conversation_created` (`conversation_id`,`created_at`,`id`) USING BTREE,
   KEY `fk_ai_runs_assistant_message` (`assistant_message_id`) USING BTREE,
-  KEY `idx_ai_runs_platform_modality_created` (`platform`,`modality`,`created_at`,`id`),
-  KEY `idx_ai_runs_source` (`source_type`,`source_id`,`created_at`,`id`),
   CONSTRAINT `fk_ai_runs_assistant_message` FOREIGN KEY (`assistant_message_id`) REFERENCES `ai_messages` (`id`) ON DELETE SET NULL ON UPDATE RESTRICT,
   CONSTRAINT `fk_ai_runs_conversation` FOREIGN KEY (`conversation_id`) REFERENCES `ai_conversations` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `fk_ai_runs_user_message` FOREIGN KEY (`user_message_id`) REFERENCES `ai_messages` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
-  CONSTRAINT `chk_ai_runs_status` CHECK ((`status` in (_utf8mb4'running',_utf8mb4'success',_utf8mb4'failed',_utf8mb4'canceled',_utf8mb4'timeout'))),
-  CONSTRAINT `chk_ai_runs_usage_status` CHECK ((`usage_status` in (_utf8mb4'pending',_utf8mb4'reported',_utf8mb4'unavailable')))
-) ENGINE=InnoDB AUTO_INCREMENT=26 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='AI运行监控记录';
+  CONSTRAINT `chk_ai_runs_status` CHECK ((`status` in (_utf8mb4'running',_utf8mb4'success',_utf8mb4'failed',_utf8mb4'canceled',_utf8mb4'timeout')))
+) ENGINE=InnoDB AUTO_INCREMENT=28 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='AI运行监控记录';
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `ai_text_tasks`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -569,6 +561,7 @@ CREATE TABLE `canvas_video_tasks` (
   `size` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
   `resolution_name` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
   `provider_task_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `run_id` bigint unsigned DEFAULT NULL,
   `status` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'pending',
   `error_message` varchar(1024) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
   `is_del` tinyint NOT NULL DEFAULT '2',
@@ -577,7 +570,8 @@ CREATE TABLE `canvas_video_tasks` (
   `finished_at` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_canvas_video_tasks_user_status` (`user_id`,`status`,`is_del`,`created_at`,`id`),
-  KEY `idx_canvas_video_tasks_provider_task` (`provider_id`,`provider_task_id`)
+  KEY `idx_canvas_video_tasks_provider_task` (`provider_id`,`provider_task_id`),
+  KEY `idx_canvas_video_tasks_run_id` (`run_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='无限画布视频生成任务';
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `client_versions`;
@@ -642,7 +636,7 @@ CREATE TABLE `cron_task_log` (
   PRIMARY KEY (`id`) USING BTREE,
   KEY `idx_task_del_id` (`task_id`,`is_del`) USING BTREE,
   KEY `idx_name_del_id` (`task_name`,`is_del`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=94979 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='定时任务执行日志表';
+) ENGINE=InnoDB AUTO_INCREMENT=95484 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='定时任务执行日志表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `export_tasks`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -808,7 +802,7 @@ CREATE TABLE `operation_logs` (
   KEY `idx_action` (`action`) USING BTREE,
   KEY `idx_created_at` (`created_at`) USING BTREE,
   KEY `idx_del_created_id` (`is_del`,`created_at`,`id`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=103002 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='操作日志表';
+) ENGINE=InnoDB AUTO_INCREMENT=103007 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='操作日志表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `payment_callback_events`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;

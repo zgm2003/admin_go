@@ -1806,7 +1806,7 @@ Rules:
 - Admin retired surface is documented only by the “Retired Admin AI interaction surfaces” row near the top of this contract. Do not add active Admin image routes back to this section.
 - `internal/module/ai/image` continues to own `ai_image_tasks` and `ai_image_files`.
 - Canvas image generation/history remains under `/api/canvas/v1/ai/images*`, with task ownership expressed by `platform = canvas` and `user_id`.
-- `ai_runs.source_type = ai_image_task` remains the unified provider-attempt monitor source type for Canvas image tasks.
+- `ai_runs` records Canvas image provider attempts without storing image task source fields; image task identity remains in `ai_image_tasks`.
 - Old split/global image tables are retired by the convergence migration; do not reintroduce `admin_ai_image_*`, `canvas_image_*`, or standalone image asset registration tables.
 
 ## AI Prompts / Prompt Library
@@ -2010,7 +2010,7 @@ Runtime rules:
 
 ## AI Runs Monitor
 
-状态：implemented unified provider-attempt monitor for chat/text/image/video.
+状态：implemented provider-attempt monitor for chat/text/image/video. `ai_runs` is intentionally narrow; it does not own domain task identity.
 
 ```text
 GET /api/admin/v1/ai-runs/page-init
@@ -2026,13 +2026,16 @@ Rules:
 
 - lifecycle tables: `ai_runs`, `ai_run_events`; there is no daily aggregate table in this MVP
 - tool execution audit is owned by `ai_tool_calls` and appears only on run detail as `tool_calls`; lifecycle events stay in `ai_run_events`
-- one `ai_runs` row represents one provider attempt across Admin chat, Canvas text, Admin/Canvas image, or Canvas video
-- run source is explicit: `platform`, `modality`, `source_type`, `source_id`, and `input_snapshot` identify the domain source; chat rows may also link `conversation_id`, `user_message_id`, and `assistant_message_id`
+- one `ai_runs` row represents one provider attempt across Admin chat, Canvas text, Canvas image, or Canvas video
+- `ai_runs` stores only provider-attempt facts: `platform`, `request_id`, user/agent/provider/model snapshots, `input_snapshot`, status, token counts, duration, error, timestamps, and nullable chat message links
+- `ai_runs` must not contain `modality`, `source_type`, `source_id`, or `usage_status`; task identity belongs to the owning domain task table
+- Canvas video stores the run binding on `canvas_video_tasks.run_id`; image/text tasks are task-domain data and do not need polymorphic source fields in `ai_runs`
+- chat rows may link `conversation_id`, `user_message_id`, and `assistant_message_id`; non-chat rows return `user_message: null` and `assistant_message: null` by design
 - status is string-based runtime state: `running`, `success`, `failed`, `canceled`, `timeout`; there is no fake `pending` state
-- provider usage evidence is string-based: `pending` while running, then `reported` only when provider usage was parsed, or `unavailable` when the terminal provider path did not provide usage
+- token totals are written only from provider result handling; missing provider usage keeps token fields at zero rather than adding a separate usage-status column
 - event types are lifecycle-only: `start`, `completed`, `failed`, `canceled`, `timeout`; WebSocket delta is not persisted as events
 - stats aggregate only `ai_runs` token and duration fields: total runs, success rate, failed terminal count, prompt/completion/total tokens, and average duration
-- no billing amount, provider raw usage dump, provider secrets, image bytes, or execution-step timeline is persisted; Canvas free-generation still does not write `ai_billing_records`
+- no billing amount, provider raw usage dump, provider secrets, image bytes, domain source polymorphism, or execution-step timeline is persisted; Canvas free-generation still does not write `ai_billing_records`
 - these read routes are bearer-token protected and must not expose prompt secrets, encrypted API keys, raw provider credentials, or hidden provider payloads
 
 `GET /api/admin/v1/ai-runs/page-init` returns:
@@ -2042,9 +2045,6 @@ interface AiRunInitResponse {
   dict: {
     status_arr: Array<{ label: string; value: 'running' | 'success' | 'failed' | 'canceled' | 'timeout' }>
     platform_arr: Array<{ label: string; value: 'admin' | 'app' | 'canvas' }>
-    modality_arr: Array<{ label: string; value: 'chat' | 'text' | 'image' | 'video' }>
-    source_type_arr: Array<{ label: string; value: 'ai_chat_message' | 'ai_text_task' | 'ai_image_task' | 'canvas_video_task' }>
-    usage_status_arr: Array<{ label: string; value: 'pending' | 'reported' | 'unavailable' }>
     agentArr: Array<{ label: string; value: number }>
     providerArr: Array<{ label: string; value: number }>
   }
@@ -2058,9 +2058,6 @@ interface AiRunListQuery {
   current_page?: number
   page_size?: number
   platform?: 'admin' | 'app' | 'canvas'
-  modality?: 'chat' | 'text' | 'image' | 'video'
-  source_type?: 'ai_chat_message' | 'ai_text_task' | 'ai_image_task' | 'canvas_video_task'
-  usage_status?: 'pending' | 'reported' | 'unavailable'
   status?: 'running' | 'success' | 'failed' | 'canceled' | 'timeout'
   user_id?: number
   request_id?: string
@@ -2083,11 +2080,7 @@ interface AiRunItem {
   provider_id: number
   provider_name: string
   platform: 'admin' | 'app' | 'canvas'
-  modality: 'chat' | 'text' | 'image' | 'video'
-  source_type: 'ai_chat_message' | 'ai_text_task' | 'ai_image_task' | 'canvas_video_task'
-  source_id: number
   input_snapshot: string
-  usage_status: 'pending' | 'reported' | 'unavailable'
   conversation_id: number | null
   conversation_title: string
   status: 'running' | 'success' | 'failed' | 'canceled' | 'timeout'
@@ -2129,7 +2122,10 @@ interface AiRunDetailResponse extends AiRunItem {
     id: number
     seq: number
     event_type: 'start' | 'completed' | 'failed' | 'canceled' | 'timeout'
+    event_type_name: string
     message: string
+    elapsed_ms: number | null
+    elapsed_text: string
     created_at: string
   }>
   knowledge_retrievals: Array<{
@@ -2181,12 +2177,11 @@ interface AiRunDetailResponse extends AiRunItem {
 }
 ```
 
-Non-chat rows return `user_message: null` and `assistant_message: null` by design. Admin Vue renders `input_snapshot` and keeps `source_type/source_id/usage_status` typed in the API layer instead of inventing fake chat messages.
-Admin Vue run monitor must not expose `modality`, `source_type`, `source_id`, or `usage_status` as visible filters, list columns, or detail fields; those fields remain API facts for compatibility and audit consumers.
+Admin Vue renders `platform`, `input_snapshot`, status, token, duration, event, RAG, and tool-call facts. It must not reintroduce `modality`, `source_type`, `source_id`, or `usage_status` in API types, filters, list columns, or detail fields.
 
 Stats summary:
 
-Stats endpoints accept the same date/agent/provider/user filters as the list plus `platform`, `modality`, and `source_type`. Admin Vue keeps only date/agent/provider/user visible in the statistics tab. They intentionally do not expose billing cost or raw provider usage aggregation.
+Stats endpoints accept the same date/platform/agent/provider/user filters as the list. They intentionally do not expose billing cost, source polymorphism, or raw provider usage aggregation.
 
 ```ts
 interface AiRunStatsSummary {
