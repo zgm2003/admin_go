@@ -37,7 +37,7 @@ These values are copied from `go.mod` / `package.json`, not memory:
 
 ## Codex-first quality runway
 
-`docs/architecture/09-codex-first-quality-runway.md` is the current operating route for future hardening slices. It records the current verified generated baseline (`298` Go routes, `277` exact frontend/backend route matches, `57` live MySQL tables, Admin Vue `0` any / `513` fallback candidates) and forces future work through narrow docs/source/API/DB/runtime slices instead of broad sweeps.
+`docs/architecture/09-codex-first-quality-runway.md` is the current operating route for future hardening slices. It records the current verified generated baseline (`286` Go routes, `265` exact frontend/backend route matches, `55` live MySQL tables, Admin Vue `0` any / `513` fallback candidates) and forces future work through narrow docs/source/API/DB/runtime slices instead of broad sweeps.
 
 ## Backend: Go modular monolith
 
@@ -129,7 +129,7 @@ Do not overstate this as “the whole frontend has no any/fallback.” The verif
 
 
 `ADMIN-FRONT-HARDENING-013` is resolved for remaining tracked demo any rows: `tests/shared/form/form-demo-source-quality.test.ts`, `tests/shared/display/display-demo-source-quality.test.ts`, and `tests/shared/effect/particle-background-source-quality.test.ts` guard `form/index.vue`, `display/index.vue`, and `ParticleBackground.vue` against `any` and hidden numeric fallbacks. The refreshed source-quality inventory reports `0` `any` candidates, `0` `as any`, `0` `catch(error: any)`, `513` fallback candidates, and `0` direct external HTTP candidates. `docs/knowledge/admin-front-demo-any-source-quality-review-2026-06-07.md` records the decision.
-Current open frontend gaps are tracked in `docs/status/known-issues.md`. After the demo any cleanup, no open issue is tracked there; `any/as any/catch(error: any)/direct external HTTP` candidates are currently zero, and the remaining `542` fallback rows stay as review inventory.
+Current open frontend gaps are tracked in `docs/status/known-issues.md`. After the Admin AI interaction retirement, no open issue is tracked there for Admin Vue any/as-any/catch-any/direct-external rows; those candidates are currently zero, and the remaining `513` fallback rows stay as review inventory.
 
 `ADMIN-FRONT-HARDENING-012` is resolved for upload demo media-list typing: `tests/shared/upload/upload-demo-source-quality.test.ts` guards `src/views/Main/component/upload/index.vue` against `ref<any[]>`; the page and `UpMediaList.vue` now share `UploadMediaItem` from `components/media.ts`. `docs/knowledge/admin-front-upload-demo-source-quality-review-2026-06-07.md` records the decision.
 

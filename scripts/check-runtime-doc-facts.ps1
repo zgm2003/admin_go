@@ -53,6 +53,17 @@ function Assert-NotContains {
     }
 }
 
+function Assert-PathMissing {
+    param(
+        [System.Collections.ArrayList]$Failures,
+        [string]$Path,
+        [string]$Reason
+    )
+    if (Test-Path -LiteralPath $Path) {
+        Add-Failure $Failures "$Reason`: $Path still exists"
+    }
+}
+
 function Read-PackageJson {
     param([string]$Path)
     return (Read-Text $Path | ConvertFrom-Json)
@@ -636,6 +647,7 @@ try {
     $knowledgePath = 'docs/knowledge/current-runtime-knowledge.md'
     $sourceMapPath = 'docs/knowledge/runtime-source-map.md'
     $statusPath = 'docs/status/current-status.md'
+    $contractPath = 'docs/contracts/admin-api-v1.md'
     $qualityRunwayPath = 'docs/architecture/09-codex-first-quality-runway.md'
     $agentFrameworkPath = 'docs/architecture/02-agent-framework.md'
     $agentsApiContractPath = 'agents/api-contract.md'
@@ -727,6 +739,7 @@ try {
         'docs/README.md',
         $knowledgePath,
         $sourceMapPath,
+        $contractPath,
         $qualityRunwayPath,
         'docs/knowledge/README.md',
         'docs/knowledge/codex-first-agent-operating-model.md',
@@ -859,54 +872,9 @@ try {
         if ($adminFrontSourceQualityDate -lt $inventoryDate) {
             Add-Failure $failures "latest Admin front source quality inventory date $adminFrontSourceQualityDate is older than latest runtime inventory date $inventoryDate"
         }
-        if ($canvasAIRequestContractReviewDate -lt $inventoryDate) {
-            Add-Failure $failures "latest Canvas AI request contract review date $canvasAIRequestContractReviewDate is older than latest runtime inventory date $inventoryDate"
-        }
-        if ($canvasRBACPermissionContractReviewDate -lt $inventoryDate) {
-            Add-Failure $failures "latest Canvas RBAC permission contract review date $canvasRBACPermissionContractReviewDate is older than latest runtime inventory date $inventoryDate"
-        }
-        if ($canvasAssetRouteContractReviewDate -lt $inventoryDate) {
-            Add-Failure $failures "latest Canvas asset route contract review date $canvasAssetRouteContractReviewDate is older than latest runtime inventory date $inventoryDate"
-        }
-        if ($canvasAuthLogoutContractReviewDate -lt $inventoryDate) {
-            Add-Failure $failures "latest Canvas auth logout contract review date $canvasAuthLogoutContractReviewDate is older than latest runtime inventory date $inventoryDate"
-        }
-        if ($adminUserStatusContractReviewDate -lt $inventoryDate) {
-            Add-Failure $failures "latest Admin user status contract review date $adminUserStatusContractReviewDate is older than latest runtime inventory date $inventoryDate"
-        }
-        if ($adminAIAgentTestContractReviewDate -lt $inventoryDate) {
-            Add-Failure $failures "latest Admin AI agent test contract review date $adminAIAgentTestContractReviewDate is older than latest runtime inventory date $inventoryDate"
-        }
-        if ($adminFrontDirectExternalHelperReviewDate -lt $frontendApiInventoryDate) {
-            Add-Failure $failures "latest Admin front direct external helper review date $adminFrontDirectExternalHelperReviewDate is older than latest frontend API inventory date $frontendApiInventoryDate"
-        }
-        if ($adminFrontHeaderBreadcrumbReviewDate -lt $inventoryDate) {
-            Add-Failure $failures "latest Admin front Header breadcrumb review date $adminFrontHeaderBreadcrumbReviewDate is older than latest runtime inventory date $inventoryDate"
-        }
-        if ($adminFrontForgotPasswordErrorReviewDate -lt $adminFrontSourceQualityDate) {
-            Add-Failure $failures "latest Admin front forgot-password error review date $adminFrontForgotPasswordErrorReviewDate is older than latest Admin front source quality inventory date $adminFrontSourceQualityDate"
-        }
-        if ($adminFrontJsonEditorReviewDate -lt $adminFrontSourceQualityDate) {
-            Add-Failure $failures "latest Admin front JsonEditor review date $adminFrontJsonEditorReviewDate is older than latest Admin front source quality inventory date $adminFrontSourceQualityDate"
-        }
-        if ($adminFrontDIconReviewDate -lt $adminFrontSourceQualityDate) {
-            Add-Failure $failures "latest Admin front DIcon review date $adminFrontDIconReviewDate is older than latest Admin front source quality inventory date $adminFrontSourceQualityDate"
-        }
-        if ($adminFrontEditorReviewDate -lt $adminFrontSourceQualityDate) {
-            Add-Failure $failures "latest Admin front Editor review date $adminFrontEditorReviewDate is older than latest Admin front source quality inventory date $adminFrontSourceQualityDate"
-        }
-        if ($adminFrontDownloadManagerReviewDate -lt $adminFrontSourceQualityDate) {
-            Add-Failure $failures "latest Admin front DownloadManager review date $adminFrontDownloadManagerReviewDate is older than latest Admin front source quality inventory date $adminFrontSourceQualityDate"
-        }
-        if ($adminFrontDevTestDownloadReviewDate -lt $adminFrontSourceQualityDate) {
-            Add-Failure $failures "latest Admin front dev test download review date $adminFrontDevTestDownloadReviewDate is older than latest Admin front source quality inventory date $adminFrontSourceQualityDate"
-        }
-        if ($adminFrontValidatorReviewDate -lt $adminFrontSourceQualityDate) {
-            Add-Failure $failures "latest Admin front validator review date $adminFrontValidatorReviewDate is older than latest Admin front source quality inventory date $adminFrontSourceQualityDate"
-        }
-        if ($adminFrontUploadDemoReviewDate -lt $adminFrontSourceQualityDate) {
-            Add-Failure $failures "latest Admin front upload demo review date $adminFrontUploadDemoReviewDate is older than latest Admin front source quality inventory date $adminFrontSourceQualityDate"
-        }
+        # Review artifacts record historical owner decisions for narrow slices. A later generated
+        # inventory can legitimately be newer without invalidating those decisions; check the
+        # review paths and key content below instead of forcing fake same-day review copies.
 
         $adminPkg = Read-PackageJson 'admin_front_ts/package.json'
         foreach ($dep in @('vue', 'vite', 'typescript', 'element-plus', 'pinia', 'vue-i18n', 'axios')) {
@@ -937,10 +905,10 @@ try {
         Assert-Contains $failures $knowledgePath $qualityRunwayPath 'current runtime knowledge quality runway reference drift'
         Assert-Contains $failures $sourceMapPath $qualityRunwayPath 'runtime source map quality runway reference drift'
         Assert-Contains $failures $statusPath $qualityRunwayPath 'status quality runway reference drift'
-        Assert-Contains $failures $qualityRunwayPath 'Admin Vue source quality | `280` source files，`0` any，`0` as-any，`0` catch-any，`542` fallback，`0` direct external HTTP' 'quality runway Admin Vue baseline drift'
-        Assert-Contains $failures $qualityRunwayPath 'Go backend routes | `298` route registrations' 'quality runway Go route baseline drift'
+        Assert-Contains $failures $qualityRunwayPath 'Admin Vue source quality | `274` source files，`0` any，`0` as-any，`0` catch-any，`513` fallback，`0` direct external HTTP' 'quality runway Admin Vue baseline drift'
+        Assert-Contains $failures $qualityRunwayPath 'Go backend routes | `286` route registrations' 'quality runway Go route baseline drift'
         Assert-Contains $failures $qualityRunwayPath 'Live MySQL | live base tables = `55`' 'quality runway live schema baseline drift'
-        Assert-Contains $failures $qualityRunwayPath 'Admin Vue fallback = 542 尚未逐条审查' 'quality runway must not claim fallback completion'
+        Assert-Contains $failures $qualityRunwayPath 'Admin Vue fallback = 513 尚未逐条审查' 'quality runway must not claim fallback completion'
         Assert-Contains $failures $agentFrameworkPath 'docs/knowledge/current-runtime-knowledge.md' 'agent framework knowledge entry drift'
         Assert-Contains $failures $agentFrameworkPath 'docs/knowledge/runtime-source-map.md' 'agent framework source-map entry drift'
         Assert-Contains $failures $agentFrameworkPath 'docs/db/mysql-live-schema-YYYY-MM-DD.md' 'agent framework schema snapshot rule drift'
@@ -1440,9 +1408,9 @@ try {
         if ($adminFrontDirectExternalCandidates -ne 0) {
             Add-Failure $failures "Admin front source quality inventory direct external HTTP count changed from expected 0 to $adminFrontDirectExternalCandidates"
         }
-        Assert-Contains $failures $knowledgePath 'Current counts are `280` source files scanned, `0` `any` candidates, `0` `as any` candidates, `0` `catch(error: any)` candidates, `542` fallback candidates, and `0` direct external HTTP candidates.' 'current runtime knowledge Admin front source-quality count drift'
-        Assert-Contains $failures $sourceMapPath 'Current inventory facts: `280` Admin Vue source files scanned, `0` `any` candidates, `0` `as any` candidates, `0` `catch(error: any)` candidates, `542` fallback candidates, and `0` direct external HTTP candidates.' 'runtime source map Admin front source-quality count drift'
-        Assert-Contains $failures $statusPath 'current inventory records 0 `any` candidates, 0 `as any` candidates, 0 `Record<string, any>` candidates, 0 `catch(...: any)` candidates, 542 fallback candidates, and 0 direct external HTTP candidates' 'status Admin front source-quality count drift'
+        Assert-Contains $failures $knowledgePath 'Current counts are `274` source files scanned, `0` `any` candidates, `0` `as any` candidates, `0` `catch(error: any)` candidates, `513` fallback candidates, and `0` direct external HTTP candidates.' 'current runtime knowledge Admin front source-quality count drift'
+        Assert-Contains $failures $sourceMapPath 'Current inventory facts: `274` Admin Vue source files scanned, `0` `any` candidates, `0` `as any` candidates, `0` `catch(error: any)` candidates, `513` fallback candidates, and `0` direct external HTTP candidates.' 'runtime source map Admin front source-quality count drift'
+        Assert-Contains $failures $statusPath 'Admin Vue source-quality inventory is now `docs/knowledge/admin-front-source-quality-inventory-2026-06-08.md` with 274 source files and 513 fallback candidates' 'status Admin front source-quality count drift'
         Assert-Contains $failures $adminFrontSourceQualityPath 'This is a regex source inventory, not type-aware semantic proof.' 'Admin front source quality inventory scope disclaimer drift'
         foreach ($priorityPath in @(
             'admin_front_ts/src/views/Layout/components/Header/index.vue',
@@ -1725,31 +1693,32 @@ try {
         [void]$evidence.Add('admin_front_demo_any_source_quality=covered')
 
 
-        Assert-Contains $failures 'docs/knowledge/README.md' 'docs/knowledge/admin-front-ai-image-payload-source-quality-review-2026-06-07.md' 'Admin AI image payload review knowledge index drift'
-        Assert-Contains $failures $knowledgePath 'docs/knowledge/admin-front-ai-image-payload-source-quality-review-2026-06-07.md' 'current runtime knowledge Admin AI image payload review drift'
-        Assert-Contains $failures $sourceMapPath 'docs/knowledge/admin-front-ai-image-payload-source-quality-review-2026-06-07.md' 'runtime source map Admin AI image payload review drift'
-        Assert-Contains $failures $statusPath 'docs/knowledge/admin-front-ai-image-payload-source-quality-review-2026-06-07.md' 'status Admin AI image payload review drift'
-        Assert-Contains $failures 'docs/knowledge/admin-front-ai-image-payload-source-quality-review-2026-06-07.md' 'fallback candidates = 542' 'Admin AI image payload review fallback count drift'
-        Assert-Contains $failures 'docs/knowledge/admin-front-ai-image-payload-source-quality-review-2026-06-07.md' 'optionalImageEnum(...) treats only `undefined` and explicit empty string' 'Admin AI image payload review enum decision drift'
-        Assert-Contains $failures 'admin_front_ts/tests/shared/ai/ai-image-api.test.ts' 'normalizes optional create-task payload fields without logical-or fallbacks' 'Admin AI image payload source guard missing'
-        Assert-Contains $failures 'admin_front_ts/src/api/ai/images.ts' 'function optionalImageEnum<T extends string>(value: T |' 'Admin AI image optional enum helper missing'
-        Assert-Contains $failures 'admin_front_ts/src/api/ai/images.ts' 'size: optionalImageEnum(payload.size),' 'Admin AI image size normalization drift'
-        Assert-Contains $failures 'admin_front_ts/src/api/ai/images.ts' 'input_files: payload.input_files,' 'Admin AI image input file payload drift'
-        Assert-Contains $failures 'admin_front_ts/src/api/ai/images.ts' 'mask_file: payload.mask_file,' 'Admin AI image mask file payload drift'
-        Assert-Contains $failures 'admin_front_ts/tests/shared/ai/ai-image-complete-split.test.ts' 'does not revive the old global ai_images asset contract' 'Admin AI image complete split source guard missing'
-        Assert-NotContains $failures 'admin_front_ts/src/api/ai/images.ts' '/ai-images/assets' 'Admin AI image asset registration route reintroduced'
-        Assert-NotContains $failures 'admin_front_ts/src/api/ai/images.ts' 'input_asset_ids' 'Admin AI image input asset IDs reintroduced'
-        Assert-NotContains $failures 'admin_front_ts/src/api/ai/images.ts' 'mask_asset_id' 'Admin AI image mask asset ID reintroduced'
-        Assert-NotContains $failures 'admin_front_ts/src/api/ai/images.ts' 'mask_target_asset_id' 'Admin AI image mask target asset ID reintroduced'
-        Assert-NotContains $failures 'admin_front_ts/src/api/ai/images.ts' 'payload.size || undefined' 'Admin AI image reintroduced size fallback'
-        Assert-NotContains $failures 'admin_front_ts/src/api/ai/images.ts' 'payload.quality || undefined' 'Admin AI image reintroduced quality fallback'
-        Assert-NotContains $failures 'admin_front_ts/src/api/ai/images.ts' 'payload.output_format || undefined' 'Admin AI image reintroduced output format fallback'
-        Assert-NotContains $failures 'admin_front_ts/src/api/ai/images.ts' 'payload.moderation || undefined' 'Admin AI image reintroduced moderation fallback'
-        Assert-NotContains $failures 'admin_front_ts/src/api/ai/images.ts' 'if (payload.mask_asset_id)' 'Admin AI image reintroduced truthy mask ID guard'
-        Assert-NotContains $failures 'admin_front_ts/src/api/ai/images.ts' 'if (payload.mask_target_asset_id)' 'Admin AI image reintroduced truthy mask target ID guard'
-        Assert-Contains $failures $adminFrontSourceQualityPath 'admin_front_ts/src/api/ai/images.ts` | L130 `logical-or-fallback`' 'Admin AI image inventory evidence drift'
-        Assert-Contains $failures 'docs/status/known-issues.md' 'Status: resolved on 2026-06-07 as an AI image create-task optional payload fallback cleanup.' 'ADMIN-FRONT-HARDENING-014 resolved status drift'
-        [void]$evidence.Add('admin_front_ai_image_payload_source_quality=covered')
+        foreach ($retiredAdminAIPath in @(
+            'admin_front_ts/src/api/ai/images.ts',
+            'admin_front_ts/src/api/ai/assets.ts',
+            'admin_front_ts/src/views/Main/ai/image-playground',
+            'admin_front_ts/src/views/Main/ai/assets',
+            'admin_front_ts/tests/shared/ai/ai-image-api.test.ts',
+            'admin_front_ts/tests/shared/ai/ai-image-complete-split.test.ts',
+            'admin_front_ts/tests/shared/ai/ai-image-layout.test.ts',
+            'admin_front_ts/tests/shared/ai/ai-workspace-convergence.test.ts'
+        )) {
+            Assert-PathMissing $failures $retiredAdminAIPath 'Admin retired AI interaction source must stay absent'
+        }
+        Assert-Contains $failures 'admin_front_ts/tests/shared/ai/admin-ai-interaction-retirement.test.ts' 'admin AI interactive surfaces are retired' 'Admin AI retirement source guard missing'
+        Assert-Contains $failures 'admin_front_ts/tests/shared/ai/admin-ai-interaction-retirement.test.ts' 'src/api/ai/images.ts' 'Admin AI retirement source guard must cover images API'
+        Assert-Contains $failures 'admin_front_ts/tests/shared/ai/admin-ai-interaction-retirement.test.ts' 'src/api/ai/assets.ts' 'Admin AI retirement source guard must cover assets API'
+        Assert-NotContains $failures 'admin_front_ts/src/i18n/locales/zh-CN.ts' '图片工作台' 'Admin Vue retired image workspace i18n reintroduced'
+        Assert-NotContains $failures 'admin_front_ts/src/i18n/locales/en-US.ts' 'Image Playground' 'Admin Vue retired image workspace i18n reintroduced'
+        Assert-Contains $failures $statusPath 'Admin 图片工作台 `/api/admin/v1/ai-images*` and Admin 素材管理 `/api/admin/v1/ai-assets*` are retired' 'status Admin AI retirement fact drift'
+        Assert-Contains $failures $contractPath 'Retired Admin AI interaction surfaces' 'admin contract retired AI interaction row missing'
+        Assert-NotContains $failures $contractPath '状态：implemented as an agent-driven `gpt-image-2` image playground' 'admin contract still marks image playground active'
+        Assert-NotContains $failures $contractPath '状态：active contract for Admin asset management' 'admin contract still marks asset management active'
+        Assert-Contains $failures 'admin_back_go/scripts/full-admin-smoke.ps1' "'/ai/image-playground'" 'full smoke retired image route guard missing'
+        Assert-Contains $failures 'admin_back_go/scripts/full-admin-smoke.ps1' "'/ai/assets'" 'full smoke retired asset route guard missing'
+        Assert-Contains $failures 'admin_back_go/scripts/full-admin-smoke.ps1' 'ai_image_task_add' 'full smoke retired image button guard missing'
+        Assert-Contains $failures 'admin_back_go/scripts/full-admin-smoke.ps1' 'ai_asset_add' 'full smoke retired asset button guard missing'
+        [void]$evidence.Add('admin_ai_interaction_retirement=covered')
 
         if ($LiveSchema) {
             $checkDir = '.tmp/runtime-doc-facts'

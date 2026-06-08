@@ -1,33 +1,32 @@
 # Known Issues and WIP
 
-状态更新时间：2026-06-07
+状态更新时间：2026-06-08
 
 本文只记录当前已知 bug、失败测试和未闭环 WIP。这里的内容不是 verified change-log；修复完成前不得把它写成 implemented。
 
 ## Current open issues
 
-No current open issue is tracked in this file after the 2026-06-07 Admin demo any cleanup. Do not treat this as “all quality debt closed”; `any/as any/catch(error: any)/direct external HTTP` candidates are currently zero, while the remaining `542` fallback rows stay in `docs/knowledge/admin-front-source-quality-inventory-2026-06-07.md` as review inventory.
+No current open issue is tracked in this file after the 2026-06-08 Admin AI interaction retirement. Do not treat this as “all quality debt closed”; `any/as any/catch(error: any)/direct external HTTP` candidates are currently zero, while the remaining `513` fallback rows stay in `docs/knowledge/admin-front-source-quality-inventory-2026-06-08.md` as review inventory.
 
 ## Recently resolved
 
 ### ADMIN-FRONT-HARDENING-014 AI image payload source-quality debt
 
-Status: resolved on 2026-06-07 as an AI image create-task optional payload fallback cleanup.
+Status: superseded on 2026-06-08 by Admin AI interaction retirement. The 2026-06-07 AI image create-task optional payload cleanup was valid for the then-active Admin image playground, but the Admin image API/UI/test surface is now retired instead of kept as an Admin feature.
 
 Evidence:
 
 ```text
-admin_front_ts/src/api/ai/images.ts defines optionalImageEnum(...), input_files, and mask_file.
-admin_front_ts/src/api/ai/images.ts no longer contains payload.size || undefined, payload.quality || undefined, payload.output_format || undefined, payload.moderation || undefined, /ai-images/assets, input_asset_ids, mask_asset_id, or mask_target_asset_id.
-admin_front_ts/tests/shared/ai/ai-image-api.test.ts and admin_front_ts/tests/shared/ai/ai-image-complete-split.test.ts guard the source shape.
+admin_front_ts/src/api/ai/images.ts is absent.
+admin_front_ts/tests/shared/ai/admin-ai-interaction-retirement.test.ts guards the retired Admin AI interaction surface.
 docs/knowledge/admin-front-ai-image-payload-source-quality-review-2026-06-07.md records the source decision and inventory result.
-docs/knowledge/admin-front-source-quality-inventory-2026-06-07.md now reports fallback candidates = 542 and images.ts with only the positiveID validation predicate logical-or row.
+docs/knowledge/admin-front-source-quality-inventory-2026-06-08.md now reports 274 source files and 513 fallback candidates after removing Admin 图片工作台/素材管理 source.
 ```
 
 Boundary:
 
 ```text
-This closes only AI image create-task optional payload fallback debt. It does not close the remaining Admin Vue fallback inventory.
+This closes the historical Admin image create-task optional payload debt by retiring the Admin interaction surface. Canvas image generation remains under Canvas runtime ownership; this does not close the remaining Admin Vue fallback inventory.
 ```
 
 ### ADMIN-FRONT-HARDENING-013 Demo any source-quality debt

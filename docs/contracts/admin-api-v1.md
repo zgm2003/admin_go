@@ -1797,30 +1797,17 @@ Replacement: agent-scene selection + provider runtime; Canvas video task identit
 
 Payment/wallet/recharge 基础域仍保留，用于支付宝充值、钱包余额展示和未来会员/订阅模型；不要把旧 AI billing 语义塞回 payment_orders、payment_recharges、user_wallets 或 wallet_transactions。
 
-## AI Images / Image Playground
+## AI Images / Image Runtime
 
-状态：implemented as an agent-driven `gpt-image-2` image playground. It is not a provider/model configuration page.
-
-```text
-GET    /api/admin/v1/ai-images/page-init
-GET    /api/admin/v1/ai-images
-GET    /api/admin/v1/ai-images/:id
-POST   /api/admin/v1/ai-images
-PATCH  /api/admin/v1/ai-images/:id/favorite
-DELETE /api/admin/v1/ai-images/:id
-```
+状态：Admin 图片工作台已退休。Admin 不再暴露图片交互 HTTP/UI/menu surface；图片生成和历史只属于 Canvas runtime。
 
 Rules:
 
-- tables: `ai_image_tasks`, `ai_image_files`; Admin and Canvas are separated by `platform`, not by duplicated task/file tables
-- runtime selector is only `agent_id`; frontend must not ask for provider id, model id, API key, or a separate model selector
-- selected agent must be enabled, include `image_generate`, use an enabled OpenAI-compatible provider, and have `model_id = gpt-image-2`
-- `POST /ai-images` is async: it writes a pending AI image task and task-owned `input` / `mask` file rows, enqueues the AI image generation task, and returns immediately
-- worker claims `pending -> running`, calls the image adapter, persists generated `output` file rows, then finalizes `success` or `failed`
-- there is no standalone Admin image asset registration route; frontend uploads through the existing upload-token/COS runtime and sends `input_files` / `mask_file` metadata with the task create request
-- old split/global image tables are retired by the convergence migration; do not reintroduce `admin_ai_image_*`, `canvas_image_*`, or standalone image asset registration tables
-- prompt text, image URLs, base64 payloads, and provider raw response are not captured by OperationLog; image mutation route metadata uses `SkipRequestPayload` and `SkipResponsePayload`
-- `raw_response_json` stays server-side only; API list/detail return task facts and grouped task files, not raw provider payloads
+- Admin retired surface is documented only by the “Retired Admin AI interaction surfaces” row near the top of this contract. Do not add active Admin image routes back to this section.
+- `internal/module/ai/image` continues to own `ai_image_tasks` and `ai_image_files`.
+- Canvas image generation/history remains under `/api/canvas/v1/ai/images*`, with task ownership expressed by `platform = canvas` and `user_id`.
+- `ai_runs.source_type = ai_image_task` remains the unified provider-attempt monitor source type for Canvas image tasks.
+- Old split/global image tables are retired by the convergence migration; do not reintroduce `admin_ai_image_*`, `canvas_image_*`, or standalone image asset registration tables.
 
 ## AI Prompts / Prompt Library
 
@@ -1928,100 +1915,17 @@ Rules:
 - invalid route IDs, batch IDs, and status values fail explicitly
 - response `msg` uses `ai.prompt.*` i18n keys for errors and mutation success messages
 
-## AI Assets / Asset Library
+## AI Assets / Canvas My Assets
 
-状态：active contract for Admin asset management. Canvas asset browsing keeps `/api/canvas/v1/assets`; Admin owns management under `/api/admin/v1/ai-assets`.
-
-Auth requirement:
-
-```text
-All routes require bearer token.
-Read routes (`page-init`, list, detail) do not add route-level mutation permission rules.
-Mutations require route permission codes:
-POST   /api/admin/v1/ai-assets             ai_asset_add
-PUT    /api/admin/v1/ai-assets/:id         ai_asset_edit
-DELETE /api/admin/v1/ai-assets/:id         ai_asset_del
-DELETE /api/admin/v1/ai-assets             ai_asset_del
-```
-
-Routes:
-
-```text
-GET    /api/admin/v1/ai-assets/page-init
-GET    /api/admin/v1/ai-assets
-POST   /api/admin/v1/ai-assets
-GET    /api/admin/v1/ai-assets/:id
-PUT    /api/admin/v1/ai-assets/:id
-DELETE /api/admin/v1/ai-assets/:id
-DELETE /api/admin/v1/ai-assets
-```
-
-Request shapes:
-
-```ts
-type AIAssetType = 'text' | 'image' | 'video'
-
-interface AIAssetListQuery {
-  current_page?: number
-  page_size?: number
-  keyword?: string
-  type?: AIAssetType
-  status?: 1 | 2
-}
-
-interface AIAssetMutationBody {
-  slug: string
-  type: AIAssetType
-  category?: string
-  title: string
-  cover_url?: string
-  description?: string
-  content?: string
-  url?: string
-  tags_json?: string
-  status?: 0 | 1 | 2 // omitted or 0 defaults to enabled; other invalid values are rejected
-}
-```
-
-Response shapes:
-
-```ts
-interface AIAssetPageInitResponse {
-  common_status_arr: Option<1 | 2>[]
-  ai_asset_type_arr: Option<AIAssetType>[]
-}
-
-interface AIAssetItem {
-  id: number
-  slug: string
-  type: AIAssetType
-  category: string
-  title: string
-  cover_url: string
-  description: string
-  content: string
-  url: string
-  tags_json: string
-  status: 1 | 2
-  created_at: string
-  updated_at: string
-}
-
-type AIAssetListResponse = {
-  list: AIAssetItem[]
-  page: { page_size: number; current_page: number; total_page: number; total: number }
-}
-
-type AIAssetDetailResponse = AIAssetItem
-```
+状态：Admin 素材管理已退休。Canvas keeps `/api/canvas/v1/assets` as current-user “我的素材”; there is no public/shared asset library.
 
 Rules:
 
+- Admin retired surface is documented only by the “Retired Admin AI interaction surfaces” row near the top of this contract. Do not add active Admin asset routes back to this section.
 - table: `ai_assets`; legacy `canvas_assets` was retired by backend migration `20260608_ai_prompt_asset_drop_legacy.sql`
-- `slug`, `type`, and `title` are required for create/update
-- allowed `type` values are exactly `text`, `image`, and `video`
-- invalid route IDs, batch IDs, status values, and asset types fail explicitly
-- response `msg` uses `ai.asset.*` i18n keys for errors and mutation success messages
+- `ai_assets.user_id` is required for Canvas asset ownership; runtime must not use `user_id = 0` as a public/shared library convention.
+- Canvas list/create/update/delete derive `user_id` from the authenticated Canvas token and guard writes by `id + user_id + is_del`.
+- allowed `type` values remain exactly `text`, `image`, and `video`; invalid route IDs, status values, and asset types fail explicitly.
 
 ## AI Conversations
 
