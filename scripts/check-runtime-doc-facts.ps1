@@ -733,6 +733,11 @@ try {
     $adminFrontUploadDemoReviewArtifact = Get-LatestAdminFrontUploadDemoReviewArtifact
     $adminFrontUploadDemoReviewPath = $adminFrontUploadDemoReviewArtifact.Path
     $adminFrontUploadDemoReviewDate = $adminFrontUploadDemoReviewArtifact.Date
+    $backendCapabilityRunbookPath = 'docs/knowledge/backend-capability-runbook-2026-06-08.md'
+    $frontendPageRuntimeMapPath = 'docs/knowledge/frontend-page-runtime-map-2026-06-08.md'
+    $dockerEnvSmokeRunbookPath = 'docs/knowledge/docker-env-smoke-runbook-2026-06-08.md'
+    $failureTroubleshootingPlaybookPath = 'docs/knowledge/failure-troubleshooting-playbook-2026-06-08.md'
+    $adminCanvasUserFlowRuntimeMapPath = 'docs/knowledge/admin-canvas-user-flow-runtime-map-2026-06-08.md'
 
     foreach ($path in @(
         'AGENTS.md',
@@ -774,6 +779,11 @@ try {
         $dbSchemaOwnershipMapPath,
         $fullStackModuleMapPath,
         $backendCapabilityManifestPath,
+        $backendCapabilityRunbookPath,
+        $frontendPageRuntimeMapPath,
+        $dockerEnvSmokeRunbookPath,
+        $failureTroubleshootingPlaybookPath,
+        $adminCanvasUserFlowRuntimeMapPath,
         $adminFrontSourceQualityPath,
         $canvasAIRequestContractReviewPath,
         $canvasRBACPermissionContractReviewPath,
@@ -830,6 +840,7 @@ try {
         [void]$evidence.Add("latest_admin_front_dev_test_download_review_date=$adminFrontDevTestDownloadReviewDate")
         [void]$evidence.Add("latest_admin_front_validator_review_date=$adminFrontValidatorReviewDate")
         [void]$evidence.Add("latest_admin_front_upload_demo_review_date=$adminFrontUploadDemoReviewDate")
+        [void]$evidence.Add('knowledge_expansion_docs=5')
         if ($backendRouteInventoryDate -lt $inventoryDate) {
             Add-Failure $failures "latest backend route inventory date $backendRouteInventoryDate is older than latest runtime inventory date $inventoryDate"
         }
@@ -924,6 +935,11 @@ try {
         Assert-Contains $failures 'docs/knowledge/README.md' $dbSchemaOwnershipMapPath 'knowledge README DB schema ownership map entry drift'
         Assert-Contains $failures 'docs/knowledge/README.md' $fullStackModuleMapPath 'knowledge README full-stack module map entry drift'
         Assert-Contains $failures 'docs/knowledge/README.md' $backendCapabilityManifestPath 'knowledge README backend capability manifest entry drift'
+        Assert-Contains $failures 'docs/knowledge/README.md' $backendCapabilityRunbookPath 'knowledge README backend capability runbook entry drift'
+        Assert-Contains $failures 'docs/knowledge/README.md' $frontendPageRuntimeMapPath 'knowledge README frontend page runtime map entry drift'
+        Assert-Contains $failures 'docs/knowledge/README.md' $dockerEnvSmokeRunbookPath 'knowledge README Docker/env/smoke runbook entry drift'
+        Assert-Contains $failures 'docs/knowledge/README.md' $failureTroubleshootingPlaybookPath 'knowledge README failure troubleshooting playbook entry drift'
+        Assert-Contains $failures 'docs/knowledge/README.md' $adminCanvasUserFlowRuntimeMapPath 'knowledge README Admin/Canvas user flow map entry drift'
         Assert-Contains $failures 'docs/knowledge/README.md' $adminFrontSourceQualityPath 'knowledge README Admin front source quality inventory entry drift'
         Assert-Contains $failures 'docs/knowledge/README.md' $canvasRBACPermissionContractReviewPath 'knowledge README Canvas RBAC permission contract review entry drift'
         Assert-Contains $failures 'docs/knowledge/README.md' $canvasAssetRouteContractReviewPath 'knowledge README Canvas asset route contract review entry drift'
@@ -949,6 +965,11 @@ try {
         Assert-Contains $failures $knowledgePath $dbSchemaOwnershipMapPath 'current runtime knowledge DB schema ownership map reference drift'
         Assert-Contains $failures $knowledgePath $fullStackModuleMapPath 'current runtime knowledge full-stack module map reference drift'
         Assert-Contains $failures $knowledgePath $backendCapabilityManifestPath 'current runtime knowledge backend capability manifest reference drift'
+        Assert-Contains $failures $knowledgePath $backendCapabilityRunbookPath 'current runtime knowledge backend capability runbook reference drift'
+        Assert-Contains $failures $knowledgePath $frontendPageRuntimeMapPath 'current runtime knowledge frontend page runtime map reference drift'
+        Assert-Contains $failures $knowledgePath $dockerEnvSmokeRunbookPath 'current runtime knowledge Docker/env/smoke runbook reference drift'
+        Assert-Contains $failures $knowledgePath $failureTroubleshootingPlaybookPath 'current runtime knowledge failure troubleshooting playbook reference drift'
+        Assert-Contains $failures $knowledgePath $adminCanvasUserFlowRuntimeMapPath 'current runtime knowledge Admin/Canvas user flow map reference drift'
         Assert-Contains $failures $knowledgePath $adminFrontSourceQualityPath 'current runtime knowledge Admin front source quality inventory reference drift'
         Assert-Contains $failures $knowledgePath $canvasRBACPermissionContractReviewPath 'current runtime knowledge Canvas RBAC permission contract review reference drift'
         Assert-Contains $failures $knowledgePath $canvasAssetRouteContractReviewPath 'current runtime knowledge Canvas asset route contract review reference drift'
@@ -976,6 +997,11 @@ try {
         Assert-Contains $failures $sourceMapPath $dbSchemaOwnershipMapPath 'source map DB schema ownership map reference drift'
         Assert-Contains $failures $sourceMapPath $fullStackModuleMapPath 'source map full-stack module map reference drift'
         Assert-Contains $failures $sourceMapPath $backendCapabilityManifestPath 'source map backend capability manifest reference drift'
+        Assert-Contains $failures $sourceMapPath $backendCapabilityRunbookPath 'source map backend capability runbook reference drift'
+        Assert-Contains $failures $sourceMapPath $frontendPageRuntimeMapPath 'source map frontend page runtime map reference drift'
+        Assert-Contains $failures $sourceMapPath $dockerEnvSmokeRunbookPath 'source map Docker/env/smoke runbook reference drift'
+        Assert-Contains $failures $sourceMapPath $failureTroubleshootingPlaybookPath 'source map failure troubleshooting playbook reference drift'
+        Assert-Contains $failures $sourceMapPath $adminCanvasUserFlowRuntimeMapPath 'source map Admin/Canvas user flow map reference drift'
         Assert-Contains $failures $sourceMapPath $adminFrontSourceQualityPath 'source map Admin front source quality inventory reference drift'
         Assert-Contains $failures $sourceMapPath $canvasRBACPermissionContractReviewPath 'source map Canvas RBAC permission contract review reference drift'
         Assert-Contains $failures $sourceMapPath $canvasAssetRouteContractReviewPath 'source map Canvas asset route contract review reference drift'
@@ -993,6 +1019,11 @@ try {
         Assert-Contains $failures $sourceMapPath $adminFrontValidatorReviewPath 'source map Admin front validator review reference drift'
         Assert-Contains $failures $sourceMapPath $adminFrontUploadDemoReviewPath 'source map Admin front upload demo review reference drift'
         Assert-Contains $failures $statusPath $adminFrontSourceQualityPath 'status Admin front source quality inventory reference drift'
+        Assert-Contains $failures $statusPath $backendCapabilityRunbookPath 'status backend capability runbook reference drift'
+        Assert-Contains $failures $statusPath $frontendPageRuntimeMapPath 'status frontend page runtime map reference drift'
+        Assert-Contains $failures $statusPath $dockerEnvSmokeRunbookPath 'status Docker/env/smoke runbook reference drift'
+        Assert-Contains $failures $statusPath $failureTroubleshootingPlaybookPath 'status failure troubleshooting playbook reference drift'
+        Assert-Contains $failures $statusPath $adminCanvasUserFlowRuntimeMapPath 'status Admin/Canvas user flow map reference drift'
         Assert-Contains $failures $statusPath $adminAIAgentTestContractReviewPath 'status Admin AI agent test contract review drift'
         Assert-Contains $failures $statusPath $adminFrontDirectExternalHelperReviewPath 'status Admin front direct external helper review drift'
         Assert-Contains $failures $statusPath $adminFrontHeaderBreadcrumbReviewPath 'status Admin front Header breadcrumb review drift'
@@ -1004,6 +1035,47 @@ try {
         Assert-Contains $failures $statusPath $adminFrontDevTestDownloadReviewPath 'status Admin front dev test download review drift'
         Assert-Contains $failures $statusPath $adminFrontValidatorReviewPath 'status Admin front validator review drift'
         Assert-Contains $failures $statusPath $adminFrontUploadDemoReviewPath 'status Admin front upload demo review drift'
+        Assert-Contains $failures $backendCapabilityRunbookPath '| Capability rows | `37` |' 'backend capability runbook capability count drift'
+        Assert-Contains $failures $backendCapabilityRunbookPath '| `ai/agent` | `admin=10` | `admin_front_ts=10` | `ai_agents`, `ai_provider_models`, `ai_providers` |' 'backend capability runbook ai/agent drift'
+        Assert-Contains $failures $backendCapabilityRunbookPath '| `payment/wallet` | `admin=6`, `canvas=2` | `admin_front_ts=6` | `user_wallets`, `wallet_transactions` |' 'backend capability runbook payment/wallet drift'
+        Assert-Contains $failures $frontendPageRuntimeMapPath '| Admin Vue pages mapped | `32` |' 'frontend page runtime map Admin page count drift'
+        Assert-Contains $failures $frontendPageRuntimeMapPath '| Canvas Next pages mapped | `9` |' 'frontend page runtime map Canvas page count drift'
+        Assert-Contains $failures $frontendPageRuntimeMapPath '| `admin_front_ts` | `/ai/agents` | `admin_front_ts/src/views/Main/ai/agents/index.vue` | `ai/agent` |' 'frontend page runtime map Admin ai agents drift'
+        Assert-Contains $failures $frontendPageRuntimeMapPath '| `canvas_front_next` | `/assets` | `canvas_front_next/src/app/(user)/assets/page.tsx` | `ai/asset` |' 'frontend page runtime map Canvas assets drift'
+        Assert-Contains $failures $frontendPageRuntimeMapPath 'Do not reintroduce Canvas /asset-library or canvas_ai_text_generate; both are documented dead drift.' 'frontend page runtime map Canvas retired route/code guard drift'
+        Assert-Contains $failures $dockerEnvSmokeRunbookPath '| State | `admin-go-state` |' 'Docker/env/smoke runbook state split drift'
+        Assert-Contains $failures $dockerEnvSmokeRunbookPath 'docker compose -f .docker\admin-go-backend\docker-compose.yml up -d --build' 'Docker/env/smoke runbook backend compose command drift'
+        Assert-Contains $failures $dockerEnvSmokeRunbookPath 'Invoke-WebRequest -UseBasicParsing http://127.0.0.1:8080/ready' 'Docker/env/smoke runbook ready command drift'
+        Assert-Contains $failures $failureTroubleshootingPlaybookPath '| Docs checker fails | exact assertion line | docs/runtime fact owner | Do not loosen checker to pass stale docs | `scripts/check-runtime-doc-facts.ps1` |' 'failure troubleshooting docs checker row drift'
+        Assert-Contains $failures $failureTroubleshootingPlaybookPath 'user?.name || "" hiding bad data' 'failure troubleshooting bad fallback guard drift'
+        Assert-Contains $failures $adminCanvasUserFlowRuntimeMapPath 'Admin and Canvas both bootstrap through /users/me DTO' 'Admin/Canvas user flow users/me invariant drift'
+        Assert-Contains $failures $adminCanvasUserFlowRuntimeMapPath 'Canvas active BUTTON rows: canvas_access, canvas_prompt_read, canvas_asset_read, canvas_ai_image_generate, canvas_ai_video_generate.' 'Admin/Canvas user flow Canvas button invariant drift'
+        $capabilityNames = @(
+            Select-String -Path $backendCapabilityManifestPath -Pattern '^\| `([^`]+)` \|' |
+                ForEach-Object { $_.Matches[0].Groups[1].Value } |
+                Where-Object { $_ -ne 'Capability' } |
+                Sort-Object -Unique
+        )
+        foreach ($capabilityName in $capabilityNames) {
+            Assert-Contains $failures $backendCapabilityRunbookPath "| ``$capabilityName`` |" "backend capability runbook missing capability $capabilityName"
+        }
+        $adminPageFiles = @(
+            Get-ChildItem -LiteralPath 'admin_front_ts/src/views/Main' -Recurse -Filter '*.vue' |
+                Where-Object { $_.FullName -notmatch '\\(components|component|test)\\' } |
+                Sort-Object FullName
+        )
+        $canvasPageFiles = @(Get-ChildItem -LiteralPath 'canvas_front_next/src/app' -Recurse -Filter 'page.tsx' | Sort-Object FullName)
+        Assert-Contains $failures $frontendPageRuntimeMapPath "| Admin Vue pages mapped | ``$($adminPageFiles.Count)`` |" 'frontend page runtime map Admin source page count mismatch'
+        Assert-Contains $failures $frontendPageRuntimeMapPath "| Canvas Next pages mapped | ``$($canvasPageFiles.Count)`` |" 'frontend page runtime map Canvas source page count mismatch'
+        foreach ($pageFile in @($adminPageFiles + $canvasPageFiles)) {
+            $relativePagePath = Get-RelativeUnixPath -BasePath (Get-Location).Path -ChildPath $pageFile.FullName
+            Assert-Contains $failures $frontendPageRuntimeMapPath $relativePagePath "frontend page runtime map missing page source $relativePagePath"
+        }
+        [void]$evidence.Add('knowledge_expansion_backend_capability_runbook=covered')
+        [void]$evidence.Add('knowledge_expansion_frontend_page_runtime_map=covered')
+        [void]$evidence.Add('knowledge_expansion_docker_env_smoke_runbook=covered')
+        [void]$evidence.Add('knowledge_expansion_failure_playbook=covered')
+        [void]$evidence.Add('knowledge_expansion_admin_canvas_user_flow=covered')
         Assert-Contains $failures $agentFrameworkPath 'scripts/export-backend-route-inventory.ps1' 'agent framework backend route inventory exporter drift'
         Assert-Contains $failures $agentFrameworkPath 'scripts/export-backend-route-contract-drift.ps1' 'agent framework backend route contract drift exporter drift'
         Assert-Contains $failures $agentFrameworkPath 'scripts/export-frontend-api-inventory.ps1' 'agent framework frontend API inventory exporter drift'

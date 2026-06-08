@@ -25,7 +25,12 @@
 | `docs/knowledge/db-schema-ownership-map-2026-06-08.md` | live MySQL 表到当前 Go source model/reference owner 的映射 | `scripts/export-db-schema-ownership-map.ps1` + latest live schema artifact |
 | `docs/knowledge/full-stack-module-map-2026-06-08.md` | backend route / frontend API / live DB ownership 的模块级合成地图 | `scripts/export-full-stack-module-map.ps1` + generated source artifacts |
 | `docs/knowledge/backend-capability-manifest-2026-06-08.md` | Go backend capability 到 source/service/repository/model/table/transport 的 manifest | `scripts/export-backend-capability-manifest.ps1` + route/schema ownership artifacts |
+| `docs/knowledge/backend-capability-runbook-2026-06-08.md` | 每个 Go capability 的改动入口、owner 文件、DB 表和验证命令 | backend capability manifest + full-stack module map |
 | `docs/knowledge/admin-front-source-quality-inventory-2026-06-08.md` | Admin Vue `any/as any/fallback/direct external HTTP` 债务源码库存 | `scripts/export-admin-front-source-quality-inventory.ps1` + 当前 `admin_front_ts/src` |
+| `docs/knowledge/frontend-page-runtime-map-2026-06-08.md` | Admin Vue / Canvas Next 页面到 API、权限码、DB/runtime owner 的反查表 | 当前页面源码 + frontend API inventory + live permission/schema facts |
+| `docs/knowledge/docker-env-smoke-runbook-2026-06-08.md` | Docker-first 本地/生产 env、state/backend 分工和 smoke 命令 | `.docker/` compose + deployment docs + smoke scripts |
+| `docs/knowledge/failure-troubleshooting-playbook-2026-06-08.md` | 常见 runtime/API/schema/docs 失败的第一检查点、owner 和禁止兜底 | current status + generated inventories + smoke scripts |
+| `docs/knowledge/admin-canvas-user-flow-runtime-map-2026-06-08.md` | Admin 和 Canvas 登录、bootstrap、RBAC、AI/资产/退出用户流 runtime map | current-status + Admin Vue/Canvas Next source + Go transports |
 | `docs/knowledge/admin-front-direct-external-helper-review-2026-06-07.md` | Admin Vue direct external random-image helper 删除口径 | 当前 Admin Vue source search + guard test + generated inventories |
 | `docs/knowledge/admin-front-header-breadcrumb-source-quality-review-2026-06-07.md` | Admin Vue Header breadcrumb route-walk 类型/兜底清理口径 | 当前 Header source + Vitest source guard + source-quality inventory |
 | `docs/knowledge/admin-front-forgot-password-error-source-quality-review-2026-06-07.md` | Admin Vue forgot-password request-error fail-closed 清理口径 | 当前 useForgotPassword source + Vitest source/behavior guard + source-quality inventory |

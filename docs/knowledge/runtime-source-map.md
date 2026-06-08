@@ -17,6 +17,11 @@ docs/db/mysql-live-schema-2026-06-08.md
 docs/knowledge/db-schema-ownership-map-2026-06-08.md
 docs/knowledge/full-stack-module-map-2026-06-08.md
 docs/knowledge/backend-capability-manifest-2026-06-08.md
+docs/knowledge/backend-capability-runbook-2026-06-08.md
+docs/knowledge/frontend-page-runtime-map-2026-06-08.md
+docs/knowledge/docker-env-smoke-runbook-2026-06-08.md
+docs/knowledge/failure-troubleshooting-playbook-2026-06-08.md
+docs/knowledge/admin-canvas-user-flow-runtime-map-2026-06-08.md
 docs/knowledge/admin-front-source-quality-inventory-2026-06-08.md
 docs/architecture/09-codex-first-quality-runway.md
 docs/knowledge/admin-front-direct-external-helper-review-2026-06-07.md
