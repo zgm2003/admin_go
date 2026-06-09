@@ -37,7 +37,7 @@ Backend layout:  internal/module/{capability}/transport/{platform}
 
 1. **音频资源链路**
    - 来源有 Audio node、audio metadata、上传/拖拽音频、audio controls、音频生成相关入口。
-   - admin_go 当前按分阶段处理：已做 Canvas 音频资源引用基础、音频节点入口、本地音频上传/拖拽/替换、Audio prompt/config 前端参数设置和 `canvas_audio_generate` scene/settings plumbing；后端 audio generation 和 `ai_assets` audio 类型仍单独决策。
+   - admin_go 当前按分阶段处理：已做 Canvas 音频资源引用基础、音频节点入口、本地音频上传/拖拽/替换、全局默认音频参数、Audio prompt/config 前端参数设置和 `canvas_audio_generate` scene/settings plumbing；后端 audio generation 和 `ai_assets` audio 类型仍单独决策。
 
 2. **Seedance/视频高级参数**
    - 来源有 `generate_audio`、`watermark`、ratio/resolution/duration、视频/音频参考等更完整的视频参数。
@@ -73,7 +73,7 @@ Backend layout:  internal/module/{capability}/transport/{platform}
 - `@[node:<audio>]` composer token 输出为 `音频1`，并保留 stale token 行为。
 - `NodeGenerationContext` 增加 `referenceAudios` / `audioCount`。
 - 配置 composer 候选、配置面板 input summary、节点渲染表补齐 Audio，避免新增枚举后 typecheck 漏洞。
-- 已做 `<audio controls>` 基础渲染、storage-backed Audio 节点本地恢复、本地 media helper 的 audio/video `durationMs` metadata 读取、工具栏/连接菜单创建 Audio 节点、本地音频上传/拖拽/替换为空或已有节点、Audio hover upload/download、prompt/config 面板 audio mode、Canvas 配置弹窗默认音频场景选择、Audio prompt/config 前端参数设置（voice / format / speed / instructions）、`agents.audio` / `audioModel` 前端适配，以及 `canvas_audio_generate` 后端 settings/Admin agent scene plumbing。
+- 已做 `<audio controls>` 基础渲染、storage-backed Audio 节点本地恢复、本地 media helper 的 audio/video `durationMs` metadata 读取、工具栏/连接菜单创建 Audio 节点、本地音频上传/拖拽/替换为空或已有节点、Audio hover upload/download、prompt/config 面板 audio mode、Canvas 配置弹窗默认音频场景和全局默认音频参数、Audio prompt/config 前端参数设置（voice / format / speed / instructions）、`agents.audio` / `audioModel` 前端适配，以及 `canvas_audio_generate` 后端 settings/Admin agent scene plumbing。
 - 音频生成提交和 Audio 错误节点 retry 在当前后端无 `/api/canvas/v1/ai/audios` 路由时显式 fail-closed，避免 Audio 节点误走文本或图片生成。
 
 成功标准：
@@ -82,7 +82,7 @@ Backend layout:  internal/module/{capability}/transport/{platform}
 - Targeted Vitest 覆盖 storage-backed Audio hydration 和 missing blob fail-closed。
 - Targeted Vitest 覆盖本地 audio 上传读取 `durationMs`、video 上传保留尺寸并读取 `durationMs`，以及 metadata 读取失败不阻断 blob 存储。
 - Targeted Vitest 覆盖 Canvas 本地音频上传/拖拽/替换、Audio hover upload/download 和 Audio retry fail-closed。
-- Targeted Vitest 覆盖 Audio prompt/config 前端参数设置，参数只进入本地 config/metadata，不引入浏览器 provider 覆盖字段。
+- Targeted Vitest 覆盖全局默认音频参数、Audio prompt/config 前端参数设置和控件交互，参数只进入本地 config/metadata，不引入浏览器 provider 覆盖字段。
 - Targeted Vitest/Go/Admin Vue tests 覆盖 Audio toolbar、audio model group、`canvas_audio_generate` scene plumbing 和 Audio generation fail-closed。
 - `npm run typecheck` / Admin `npm run typecheck` / focused Go tests 通过。
 - 不触碰 `E:\GitDownload\infinite-canvas`。

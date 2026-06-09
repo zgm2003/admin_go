@@ -57,14 +57,14 @@
 - [x] Add audio to config input summary.
 - [x] Add storage-backed Audio node hydration through local media resolver and missing-blob fail-closed behavior.
 - [x] Add local `uploadMediaFile` audio `durationMs` metadata, preserve video dimensions while adding video duration, and keep metadata-read failures from blocking blob storage.
-- [x] Add failing tests for Audio toolbar button, connection-create option, Canvas config modal default audio scene picker, audio model group, prompt/config audio mode, audio voice/format/speed/instructions settings UI, and fail-closed audio generation routing.
+- [x] Add failing tests for Audio toolbar button, connection-create option, Canvas config modal default audio scene picker/default audio params, audio model group, prompt/config audio mode, audio voice/format/speed/instructions settings UI, and fail-closed audio generation routing.
 - [x] Add Canvas toolbar/connection menu Audio node creation.
 - [x] Add `agents.audio` / `audioModel` frontend settings, model picker grouping, and persisted config migration defaults.
 - [x] Add backend Canvas settings `canvas_audio_generate` group and Admin AI agent scene option; update Admin Vue scene union/fallback/i18n.
 - [x] Keep Audio node generation fail-closed while `/api/canvas/v1/ai/audios` is not implemented.
 - [x] Add failing tests for Audio retry fail-closed so failed Audio nodes cannot fall through to image generation.
 - [x] Add Canvas local audio upload/drop/replacement to Audio nodes, empty Audio node hover upload, audio download, and upload affordance labels for media.
-- [x] Add frontend-only Audio prompt/config settings (`audioVoice` / `audioFormat` / `audioSpeed` / `audioInstructions`) and keep them out of provider override fields.
+- [x] Add frontend-only global default and Audio prompt/config settings (`audioVoice` / `audioFormat` / `audioSpeed` / `audioInstructions`) and keep them out of provider override fields.
 
 ### Verification commands
 
@@ -74,6 +74,7 @@ npm test -- "src/app/(user)/canvas/utils/canvas-resource-references.test.ts" "sr
 npm test -- "src/app/(user)/canvas/[id]/hydrate-canvas-images.test.ts"
 npm test -- "src/services/file-storage.test.ts"
 npm test -- "src/stores/use-config-store.test.ts" "tests/shared/canvas-audio-node-scene-wiring.test.ts" "tests/shared/canvas-audio-upload-wiring.test.ts"
+npm test -- "src/components/audio-settings-panel.test.tsx"
 npm test -- "tests/shared/canvas-audio-settings-ui.test.ts"
 npm run typecheck
 ```
