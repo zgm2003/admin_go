@@ -1,175 +1,176 @@
-# Infinite Canvas Feature Extraction Design
+# Canvas Front Next Feature Backport Design
 
-状态：draft for user review  
-日期：2026-06-09  
-目标项目：`E:\GitDownload\infinite-canvas`  
-来源项目：`E:\admin_go\canvas_front_next`
+状态：corrected active design
+日期：2026-06-09
+目标项目：`E:\admin_go\canvas_front_next`
+必要联动：`E:\admin_go\admin_back_go`、`E:\admin_go\admin_front_ts`
+对照来源：`E:\GitDownload\infinite-canvas`
 
-## 背景
+## 纠偏结论
 
-用户要求把当前增强版里“多出来的功能”提取到目标项目 `E:\GitDownload\infinite-canvas`，并按 P 阶段全部落地。
+用户真实目标是：改造 `E:\admin_go\canvas_front_next`，把 `E:\GitDownload\infinite-canvas` 比 admin_go 当前项目多出来、且适合 admin_go 架构的能力挑出来移植。
 
-只读盘点结论：
+`E:\GitDownload\infinite-canvas` 只作为只读对照来源，不是本轮目标仓库；不得把它的 `/api/auth/*`、`/api/v1/*`、`/api/assets`、独立后台、JWT/session 或表结构直接搬进 admin_go。
 
-- 目标项目根目录是 Go + Gin + GORM 后端，前端在 `web/`。
-- 目标前端 API 当前使用 `/api/auth/*`、`/api/v1/images/*`、`/api/v1/videos`、`/api/assets`、`/api/prompts` 等目标项目原生契约。
-- 来源前端是 admin_go Canvas Next 适配版，依赖 `/api/canvas/v1/*`、Canvas RBAC、后端托管 AI agent、Canvas 当前用户素材和 admin_go 登录/权限模型。
-- 目标项目已经拥有一些来源项目没有的上游能力：管理后台、音频节点、蒙版编辑、公开素材库、算力点、Seedance/音频相关功能。迁移时不得用来源项目覆盖或删除这些能力。
-
-因此迁移策略不是整目录复制，而是：
+admin_go runtime 仍以这些事实为准：
 
 ```text
-提取可复用能力 -> 映射到目标项目现有 API/状态模型 -> 保留目标项目已有功能 -> 用测试锁关键边界
+Canvas frontend: E:\admin_go\canvas_front_next
+Backend:         E:\admin_go\admin_back_go
+Admin frontend:  E:\admin_go\admin_front_ts
+Canvas API:      /api/canvas/v1/*
+Admin API:       /api/admin/v1/*
+Backend layout:  internal/module/{capability}/transport/{platform}
 ```
 
-## 非目标
+## 对照审计结论
 
-本次迁移不做以下事项：
+### admin_go 已经更强或已有等价能力
 
-- 不把目标项目改成 admin_go 的 `/api/canvas/v1/*` 契约。
-- 不删除目标项目已有管理后台、音频节点、蒙版编辑、算力点、公开素材库等能力。
-- 不引入 admin_go 后端模块、数据库表或 RBAC 字典作为硬依赖。
-- 不一次性重构目标项目目录结构。
-- 不把来源项目的测试原样照搬到不适配目标契约的场景。
+- Canvas API envelope、auth event、logout 和 401/403 处理已经按 admin_go 契约存在。
+- Canvas 图片/视频生成由 Go 后端托管 provider，不允许浏览器提交 provider/model/api key/base_url。
+- Canvas assets 已经通过 `/api/canvas/v1/assets` 做当前用户持久化，不存在 public asset library / `user_id=0` shared library 语义。
+- Admin Vue 已有 prompt/provider/agent/tool/knowledge/run/chat 管理；Admin 素材库是主动退休，不是遗漏。
+- `canvas_front_next` 已有 Vitest、ZIP 导入导出、inputOrder、stale token、图片/视频/文本资源引用等基础能力。
 
-## P 阶段划分
+### 来源项目多出来且值得选择性移植
 
-### P0：安全底座与测试能力
+1. **音频资源链路**
+   - 来源有 Audio node、audio metadata、上传/拖拽音频、audio controls、音频生成相关入口。
+   - admin_go 当前缺口应分阶段处理：先做 Canvas 音频资源引用基础，再决定是否做完整音频节点 UI、后端 audio generation 和 Admin 场景配置。
 
-目标：先建立最小测试与基础防线，确保后续迁移能被验证且不破坏目标项目。
+2. **Seedance/视频高级参数**
+   - 来源有 `generate_audio`、`watermark`、ratio/resolution/duration、视频/音频参考等更完整的视频参数。
+   - admin_go 需要映射到 `/api/canvas/v1/ai/videos*` 和 Go `internal/module/ai/video/transport/canvas`，不能直接搬来源 API。
 
-范围：
+3. **参考媒体上传给 provider 可访问 URL**
+   - 来源有参考媒体上传接口思路。
+   - admin_go 应落在 Canvas `/api/canvas/v1/*` 与 COS/storage 边界，返回 provider 可访问 URL；不新增 `/api/v1/media/references`。
 
-- 给目标 `web/` 增加 Vitest 测试脚本和配置。
-- 迁入或重写与目标契约无关的纯工具测试：
-  - data URL 转文件拒绝空内容。
-  - storage fallback 不复用失效 blob URL。
-  - 图片引用提示词编号稳定。
-- 可选迁入 `scripts/dev-open-browser.mjs`，但不强制改变目标默认 dev 命令，除非单测和用户确认需要。
+4. **当前画布合并导入**
+   - 用户 Cine Make 工作流需要：先在当前画布生成人物/场景/风格主图，再把分镜/Keyframe 节点包追加到同一画布。
+   - 这不是简单“导入为新项目”，应新增 fail-closed 的 current-canvas merge import。
 
-成功标准：
+5. **导入 schema fail-closed / 素材元数据质量**
+   - admin_go 已有 ZIP 导入导出和 assets 持久化，但可以借鉴来源项目的严格校验思路。
 
-- `web` 能运行 targeted Vitest。
-- P0 不改变目标 API 行为和页面路由。
-- 目标项目现有前端文件不会被大面积重排。
+### 不适合直接迁移
 
-### P1：Canvas 文本、资源引用和高度链修复
+- `/asset-library` 公共素材库：admin_go 文档和 runtime 明确它是已删除死页，不直接恢复。
+- 来源项目独立 admin、credits/free-generation、JWT/session、DB 表结构：不覆盖 admin_go 当前 Go/Vue/RBAC/AI agent 模型。
+- 浏览器侧自定义 provider/channel：不符合 admin_go 后端托管 provider 边界。
 
-目标：迁入来源项目里独立且用户可见价值高的画布编辑体验。
+## 分阶段设计
 
-范围：
+### C1：Canvas 音频资源引用基础（本轮已落地）
 
-- 文本节点和节点底部 prompt 面板支持 `@资源` 候选与蓝色 token 高亮。
-- 资源编号稳定：`图片1`、`视频1`、`音频1`、`文本1`。
-- 生成配置节点组装提示词时，保留用户 stale token，不静默删除用户输入。
-- 修复 mention textarea 默认 wrapper 高度链，避免文本节点编辑区坍缩。
-- 目标项目已有音频节点，所以 P1 迁移时必须保留音频资源引用，而不是照搬来源项目中“不支持音频”的 guard。
-
-成功标准：
-
-- 文本节点编辑态 textarea 占满节点内容区。
-- `@` 候选和高亮不会造成 caret 偏移。
-- 配置节点引用编号按当前上游资源稳定生成。
-- 音频资源仍能参与目标项目已有视频/音频相关流程。
-
-### P4：素材后端持久化增强
-
-目标：优先改进目标已有 `/api/assets` 素材链路的数据质量与稳定性。
+目标：让音频作为 Canvas 资源类型进入引用编号、composer token、生成上下文和节点基础渲染，但不声称完整音频生成链路完成。
 
 范围：
 
-- 复用来源项目的 fail-closed 思路：坏 tags、坏媒体内容、空 bytes、浏览器临时 URL 不能进入后端保存 payload。
-- 保留目标项目已有素材导入/导出 zip 功能。
-- 映射到目标项目 `/api/assets`，不得引入 `/api/canvas/v1/assets`。
-- 可迁入分页并发拉取和完整媒体 metadata 校验。
+- `CanvasNodeType.Audio`、`CanvasGenerationMode`、audio metadata 基础字段。
+- 资源编号支持 `音频1`，并参与 `inputOrder`。
+- `@[node:<audio>]` composer token 输出为 `音频1`，并保留 stale token 行为。
+- `NodeGenerationContext` 增加 `referenceAudios` / `audioCount`。
+- 配置 composer 候选、配置面板 input summary、节点渲染表补齐 Audio，避免新增枚举后 typecheck 漏洞。
+- 只做 `<audio controls>` 基础渲染；不新增完整上传、工具栏创建入口、后端 audio generation 或 Admin 场景。
 
 成功标准：
 
-- 保存图片/视频/音频素材时携带目标项目需要的完整 metadata。
-- 导入素材时生成新的后端资产记录，不复用导出包里的旧 slug/id。
-- 目标已有素材库页面和画布插入素材路径保持可用。
+- Targeted Vitest 覆盖 audio label / composer / context。
+- `npm run typecheck` 通过。
+- 不触碰 `E:\GitDownload\infinite-canvas`。
 
-### P2：后端托管 AI 请求边界映射
+### C2：Canvas 参考媒体上传与视频高级参数
 
-目标：吸收来源项目“客户端不再直接提交 provider/API key/base_url/model override”的安全边界，但使用目标项目自己的后端模型渠道系统。
+目标：把来源项目里更强的视频/参考媒体参数映射到 admin_go Canvas 后端。
+
+当前 C2-A 第一刀状态：
+
+- 已先落地 `generate_audio` / `watermark` 请求契约和端到端透传。
+- `canvas_front_next` 视频设置、视频 API、Canvas 节点局部视频设置和视频页日志保存/恢复只暴露这两个后端允许参数。
+- Go Canvas video transport/service/OpenAI-compatible adapter 透传这两个布尔字段；浏览器仍不能提交 `model` / `provider` / `api_key` / `base_url`。
+- 当前不包含参考视频/参考音频上传，不新增 `/api/v1/media/references`，不包含完整 Seedance/火山 Agent Plan path routing，不触碰 `E:\GitDownload\infinite-canvas`。
 
 范围：
 
-- 不照搬来源项目 `agent_id` 契约；先映射目标现有 `settings.modelChannel`、公开模型和私有渠道结构。
-- 图片生成/编辑和视频生成请求统一经过目标后端代理。
-- 保留目标已有 Seedance、音频、蒙版编辑和参考素材能力。
-- 迁入错误解析、空 msg fail-closed、轮询上限、JSON blob 错误识别等防线。
+- Canvas 前端请求形状先写测试，不允许 provider/base_url/api_key/model override。
+- Go 后端在 `internal/module/ai/video/transport/canvas` 或相邻 capability 中接收明确 DTO。
+- C2-A 已支持 `generate_audio` / `watermark`；参考视频/音频上传到 storage、provider 可访问 URL、ratio/resolution/duration 策略和完整 Seedance/火山路径仍是后续 planned。
 
-成功标准：
+非目标：不直接引入来源 `/api/v1/media/references`。
 
-- 浏览器不需要保存或提交 provider API key/base_url。
-- 图片/视频/音频生成失败时显示后端返回的明确中文错误。
-- 不破坏目标已有 `/video`、画布视频、音频节点、蒙版编辑。
+### C3：当前画布合并导入
 
-### P3：登录、路由守卫和用户状态增强
-
-目标：在最后迁入更强的会话/权限体验，避免先破坏目标项目现有账号、后台和算力点体系。
+目标：支持把一个 canvas zip 的节点追加到当前画布，不覆盖用户已锁定主图。
 
 范围：
 
-- 可迁入：
-  - 401 触发跳登录。
-  - 403 显示无权限结果页。
-  - logout 先请求后端再清本地 session，失败时保留浏览器 session。
-  - localStorage 不可用时不崩溃。
-- 不直接迁入：
-  - admin_go `login-config`。
-  - slide captcha。
-  - `/api/canvas/v1/users/me`。
-  - admin_go Canvas RBAC route 字典。
+- 保留画布库“导入画布 = 新建项目”的现有行为。
+- 编辑页新增“合并/导入到当前画布”。
+- ID remap、连接 remap、右侧放置、文件 restore fail-closed。
+- 支持稳定 anchor metadata：人物/场景/风格主图能被分镜/Keyframe 节点复用。
+- 缺锚点时不乱连，给用户可见提示。
+
+当前第一刀状态：
+
+- 已先落地 `canvas_front_next` 编辑页 current-canvas merge import wiring。
+- 该路径用于把 canvas ZIP 节点包追加到当前画布；画布库导入仍保持“导入 = 新建项目”。
+- 已有 targeted tests 覆盖 ZIP parse fail-closed、asset restore、ID/connection remap、右侧放置、anchor 复用、缺锚点 warning，以及编辑页不调用 `importProject(` 的 merge wiring。
+- 当前只按测试证据声明第一刀前端行为，不把 C3 写成整体完成。
 
 成功标准：
 
-- 目标原有 `/api/auth/login`、`/api/auth/register`、`/api/auth/me` 保持可用。
-- 目标后台和算力点显示不被移除。
-- 登录失败、会话过期、后端 logout 失败都有明确 UI 行为。
+- 画布库导入新建项目行为不被编辑页 merge import 改写。
+- 编辑页 merge import 只更新当前项目。
+- ID remap、connection remap、右侧放置、anchor 复用、缺锚点提示、坏包 fail-closed 分别有 targeted tests。
+- `npm run typecheck` 通过。
 
-## 推荐执行顺序
+### C4：素材/导入严格校验
 
-```text
-P0 -> P1 -> P4 -> P2 -> P3
-```
+目标：借鉴来源项目 fail-closed 思路，增强 admin_go Canvas assets 和 ZIP 导入质量。
 
-理由：
+当前 C4-A / C4-B 第一刀状态：
 
-1. P0 建测试和安全底座，不改业务。
-2. P1 是画布局部 UI/引用能力，收益高、风险低。
-3. P4 改素材数据质量，目标已有 API 可映射。
-4. P2 涉及 AI 后端代理与模型渠道，风险较高。
-5. P3 涉及登录、权限、后台和算力点，最后做。
+- 已先落地 `canvas_front_next` 素材 ZIP 导入/导出 fail-closed hardening。
+- `readAssetPackage` 现在校验 `assets.json` root schema、text/image/video asset shape、image/video `storageKey`/`mimeType`/`bytes`/`width`/`height`、file manifest 与 asset metadata 一致性、声明 blob 存在性和 ZIP entry size；所有校验通过后才写入 image/media blob store。
+- `exportAssets` 现在只把 text asset 和实际打包成功的 media asset 写入 manifest，避免生成“asset 有声明但 ZIP 缺 blob”的坏包。
+- 素材页导入仍走 backend-backed `addAsset(withoutImportedAssetSlug(...))`，不直接塞本地 store，不复用导出包旧 `id` / `createdAt` / `updatedAt` / `metadata.slug`。
+- 已落地 `admin_back_go` Canvas `/api/canvas/v1/assets` image/video create/update service 校验：`url` 必须非空，`content` 必须是严格 JSON media metadata，包含 storage-backed `storageKey`、正数 `width` / `height` / `bytes` 和匹配 `mimeType`。
+- 后端 `storageKey` 兼容当前 COS object key（如 `ai-images/...`）和带路径 typed key（如 `image:task/...` / `video:task/...`），拒绝浏览器本地短 key（如 `image:localBrowserOnly`）和类型错配 key。
+- 当前不包含 audio backend asset type，不新增 DB metadata columns，不恢复 public asset library 或 Admin 素材库。
 
-## 主要风险
+范围：
 
-- 来源项目和目标项目 API 前缀不同，硬拷会导致所有生成、登录、素材请求失败。
-- 目标项目有音频节点，来源项目部分 guard 明确“不支持音频”，迁移时必须改写。
-- 目标项目已有管理后台和算力点，来源项目的 free-generation 逻辑不能直接覆盖。
-- 目标项目 AGENTS 要求简单直接，避免为了迁移引入多层抽象。
+- C4-A 已覆盖：素材 ZIP `assets.json` schema、image/video mime/bytes/width/height、storageKey/file/blob 一致性，以及坏包不部分污染浏览器本地 blob store。
+- C4-B 已覆盖：`/api/canvas/v1/assets` image/video payload 严格 media metadata 校验，拒绝未知顶层 media metadata 字段和浏览器本地短 key。
+- 后续仍待契约确认：audio asset 的后端类型、mime/bytes/duration 规则和 Canvas UI；如要把 media metadata 变成 DB 一等字段，需要单独 migration/spec。
+
+非目标：不恢复 public asset library，不恢复 Admin 素材库。
+
+### C5：Admin 管理补齐（仅在产品契约确认后）
+
+可能需要：
+
+- 若做完整音频生成：新增 `canvas_audio_generate` 场景、Admin agent/provider 配置、后端 i18n catalog。
+- 若做视频高级参数：Admin agent/provider 策略只做后端管理，不让浏览器自定义渠道。
 
 ## 验证策略
 
-每个 P 阶段至少包含：
+每个代码切片至少：
 
-- targeted Vitest 或 Go test，优先覆盖迁移行为。
-- TypeScript typecheck。
-- `git diff --check`。
-- 若修改目标后端，运行对应 Go 包测试。
-- 若修改目标文档，更新 `docs/content/docs/progress/pending-test.mdx` 或 `todo.mdx`，不把未人工确认的功能写进正式说明。
-
-## 交付策略
-
-每个 P 阶段独立提交，提交信息建议：
-
-```text
-feat(web): add canvas safety test baseline
-feat(canvas): port resource mention editing
-feat(assets): harden backend asset persistence
-feat(ai): route generation through backend channel boundary
-feat(auth): harden session guard behavior
+```powershell
+cd E:\admin_go\canvas_front_next
+npm test -- <targeted tests>
+npm run typecheck
 ```
 
-每个阶段完成后，只把“已实现但需人工验证”的内容移入目标项目 `docs/content/docs/progress/pending-test.mdx`。
+跨仓或文档收口：
+
+```powershell
+cd E:\admin_go
+git diff --check
+powershell -ExecutionPolicy Bypass -File .\scripts\check-agent-governance.ps1 -Mode working
+```
+
+触碰 backend route/schema/contracts 时，再加对应 Go test、contract drift、runtime doc fact check。

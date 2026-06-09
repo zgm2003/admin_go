@@ -69,7 +69,7 @@ system/systemlog/systemsetting/uploadconfig/uploadtoken/user
 
 - Admin/app/canvas current-user bootstrap uses `GET /api/{admin,app,canvas}/v1/users/me`.
 - Canvas auth routes live under `/api/canvas/v1/auth/*` and force platform `canvas`.
-- Canvas AI text/image/video uses backend-managed agent/provider selection. Canvas frontend sends `agent_id`, not provider/model billing metadata. Chat/video backend transports reject client `model` / `provider` / `api_key` / `base_url` overrides instead of ignoring them.
+- Canvas AI text/image/video uses backend-managed agent/provider selection. Canvas frontend sends `agent_id` plus contract-approved user content/generation params, not provider/model billing metadata. Chat/video backend transports reject client `model` / `provider` / `api_key` / `base_url` overrides instead of ignoring them.
 - Queue and scheduler are single-monolith multi-process: `cmd/admin-api` serves HTTP; `cmd/admin-worker` consumes queue and schedules work.
 - Permission and operation logs are explicit route metadata, not reflection or handler annotations.
 
@@ -215,7 +215,7 @@ Canvas route registry currently exposes:
 
 Canvas `buttonCodes` do not include a separate active text-generation permission. `canvas_ai_text_generate` was verified as a soft-deleted live MySQL orphan and removed from the Canvas Next canonical permission type; active generation BUTTON codes remain `canvas_ai_image_generate` and `canvas_ai_video_generate`. `docs/knowledge/canvas-rbac-permission-contract-review-2026-06-07.md` records the live DB/source evidence.
 
-Canvas asset top-level route is `/assets` only. `/asset-library` was verified as a dead page and removed; the public-library API remains `GET /api/canvas/v1/assets`, with active frontend use in the in-canvas asset picker gated by `canvas_asset_read`. `docs/knowledge/canvas-asset-route-contract-review-2026-06-07.md` records the live DB/source evidence.
+Canvas asset top-level route is `/assets` only. `/asset-library` was verified as a dead page and removed; the public-library API remains `GET /api/canvas/v1/assets`, with active frontend use in the in-canvas asset picker gated by `canvas_asset_read`. `canvas_front_next` asset ZIP import/export now fails closed on malformed `assets.json`, invalid image/video metadata, storageKey/mime/bytes mismatch, missing declared blobs, ZIP entry size mismatch, orphan file entries, and media assets whose blobs cannot be packaged. Backend Canvas asset create/update now also fails closed for image/video media assets unless `content` is strict JSON metadata with storage-backed `storageKey`, positive `width`/`height`/`bytes`, and matching `mimeType`; `audio` asset support is still not active. `docs/knowledge/canvas-asset-route-contract-review-2026-06-07.md` records the live DB/source evidence for the route boundary.
 
 Canvas logout is an active frontend contract call, not a backend-only route. `useUserStore.logout()` calls `POST /api/canvas/v1/auth/logout` with the current bearer token before clearing token/user/RBAC state; backend failure preserves the browser session instead of hiding the failure behind local cleanup. `docs/knowledge/canvas-auth-logout-contract-review-2026-06-07.md` records the source evidence.
 

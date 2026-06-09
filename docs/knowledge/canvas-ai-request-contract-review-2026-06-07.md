@@ -26,8 +26,8 @@ Frontend source/test evidence:
 ```text
 canvas_front_next/src/services/api/image.ts sends chat { agent_id, message } and image { agent_id, prompt, ...params }.
 canvas_front_next/src/services/api/image.test.ts asserts chat/image requests do not invent a model override.
-canvas_front_next/src/services/api/video.ts sends video FormData with agent_id, prompt, duration_seconds, size, and resolution_name.
-canvas_front_next/src/services/api/video.test.ts asserts video FormData has no model field.
+canvas_front_next/src/services/api/video.ts sends video FormData with agent_id, prompt, duration_seconds, size, resolution_name, and contract-approved generate_audio/watermark.
+canvas_front_next/src/services/api/video.test.ts asserts video FormData has no model field and preserves explicit generate_audio/watermark booleans.
 ```
 
 Backend source/test evidence:

@@ -302,6 +302,8 @@ interface CanvasVideoGenerationBody {
   duration_seconds?: number
   size?: string
   resolution_name?: string
+  generate_audio?: boolean
+  watermark?: boolean
 }
 
 interface CanvasVideoCreateResponse {
@@ -309,6 +311,8 @@ interface CanvasVideoCreateResponse {
   status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled'
 }
 ```
+
+`generate_audio` / `watermark` are backend-allowed video generation params; they do not allow client provider/model/api_key/base_url override, and providers may ignore unsupported fields.
 
 Canvas profile response reuses the profile service shape:
 
@@ -361,7 +365,7 @@ canvas profile 只暴露当前用户基础资料读取/保存；安全修改邮�
 Canvas PAGE 授权只通过 `permissions` + `router` 表达，供前端菜单/路由过滤；BUTTON 授权只通过 `buttonCodes` 表达，供按钮和动作 `can(code)` 判断。前端不得把 PAGE code 塞进 `buttonCodes`，也不得用 `permissionCodes` 合并 PAGE/BUTTON。
 Canvas free-generation surface does not expose wallet/recharge routes, menus, dialogs, balance display, recharge action, unit price, billing rule, debit, or refund concepts. Payment/wallet基础域仍可用于 admin/payment 合同，但不是 Canvas AI 生成依赖。
 prompts are shared/public read lists where configured; assets are not public. Canvas `/api/canvas/v1/assets` is “我的素材” only and every list/create/update/delete is scoped to the current Canvas user through `ai_assets.user_id`. Admin Vue does not manage assets in the active contract.
-AI text/image/video 统一使用后端托管 provider；Canvas 前端只能提交 `agent_id`，不能提交或覆盖 provider model；客户端提交 `model`、`provider`、`api_key`、`base_url` 必须返回 bad request，不能静默忽略；模型来自已启用的 `ai_agents.model_id` 与 Canvas 专属场景。
+AI text/image/video 统一使用后端托管 provider；Canvas 前端只能提交 `agent_id`、用户内容和 contract 明确允许的生成参数；视频 C2-A 仅新增 `generate_audio` / `watermark`，`model`、`provider`、`api_key`、`base_url` 仍必须 fail-closed，不能静默忽略；模型来自已启用的 `ai_agents.model_id` 与 Canvas 专属场景。
 AI generation is free in this slice: 不查余额、不扣款、不退款、不写 `ai_billing_records`，也不要求 `/api/admin/v1/ai-billing-rules`。
 视频使用 `canvas_video_tasks.id` 作为 canvas task id，provider_task_id 绑定在 `canvas_video_tasks.provider_task_id`；status/content 读取必须按 `id + user_id + is_del=2` 校验 ownership。
 ```
@@ -1735,6 +1739,7 @@ Rules:
 - `engine_type` is the canonical provider type field; first slice supports only `openai`
 - `driver` / `driver_name` are not accepted or returned as `engine_type` aliases
 - empty `base_url` means `https://api.openai.com/v1`
+- non-empty OpenAI `base_url` may be submitted as an origin-only URL such as `http://host.docker.internal:8317`; backend normalizes that shape to `/v1` before saving, previewing models, testing, syncing, or calling OpenAI-compatible runtime clients
 - model discovery calls `GET {effective_base_url}/models` with `Authorization: Bearer <api_key>`
 - create/edit preview `POST /model-options` requires `engine_type` and uses the request API key; edit preview `POST /:id/model-options` uses the saved encrypted API key and does not write sync/health state
 - provider models are persisted in `ai_provider_models`; selected model ids, display names, and model status are first-class columns, not JSON blobs
@@ -1926,6 +1931,8 @@ Rules:
 - `ai_assets.user_id` is required for Canvas asset ownership; runtime must not use `user_id = 0` as a public/shared library convention.
 - Canvas list/create/update/delete derive `user_id` from the authenticated Canvas token and guard writes by `id + user_id + is_del`.
 - allowed `type` values remain exactly `text`, `image`, and `video`; invalid route IDs, status values, and asset types fail explicitly.
+- For `type=image` and `type=video`, Canvas create/update payloads must send a non-empty storage-backed `url`, and `content` must be strict JSON media metadata with `storageKey`, positive `width`, positive `height`, positive `bytes`, and matching `mimeType` (`image/*` or `video/*`). `storageKey` may be a backend COS object key such as `ai-images/...` or a typed key with a path such as `image:task/...` / `video:task/...`; browser-local short keys such as `image:localBrowserOnly`, wrong typed prefixes, malformed JSON, unknown top-level media metadata fields, or non-positive dimensions/bytes fail closed.
+- `audio` is not an active `ai_assets` type in this contract.
 
 ## AI Conversations
 
