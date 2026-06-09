@@ -453,6 +453,7 @@ try {
     $subrepoWorkingDirtyPaths = @(
         Get-SubrepoWorkingChangedPaths -Path 'admin_back_go' -Prefix 'admin_back_go'
         Get-SubrepoWorkingChangedPaths -Path 'admin_front_ts' -Prefix 'admin_front_ts'
+        Get-SubrepoWorkingChangedPaths -Path 'canvas_front_next' -Prefix 'canvas_front_next'
     )
     $workingDirtyPaths = @(Merge-UniquePaths @($rootWorkingDirtyPaths, $subrepoWorkingDirtyPaths))
     if ($Mode -eq 'range') {
@@ -465,6 +466,7 @@ try {
             $subrepoRangeResults = @(
                 Get-SubrepoRangeChangedPaths -Path 'admin_back_go' -Prefix 'admin_back_go' -ResolvedBase $resolvedBase
                 Get-SubrepoRangeChangedPaths -Path 'admin_front_ts' -Prefix 'admin_front_ts' -ResolvedBase $resolvedBase
+                Get-SubrepoRangeChangedPaths -Path 'canvas_front_next' -Prefix 'canvas_front_next' -ResolvedBase $resolvedBase
             )
             $subrepoRangeChangedPaths = New-Object System.Collections.ArrayList
             foreach ($result in $subrepoRangeResults) {
@@ -510,6 +512,7 @@ try {
         foreach ($subrepoDiffCheck in @(
             Invoke-SubrepoRangeDiffCheck -Path 'admin_back_go' -Prefix 'admin_back_go' -ResolvedBase $resolvedBase
             Invoke-SubrepoRangeDiffCheck -Path 'admin_front_ts' -Prefix 'admin_front_ts' -ResolvedBase $resolvedBase
+            Invoke-SubrepoRangeDiffCheck -Path 'canvas_front_next' -Prefix 'canvas_front_next' -ResolvedBase $resolvedBase
         )) {
             if ($subrepoDiffCheck.Warning) { Add-Unique $evidence $subrepoDiffCheck.Warning }
             if ($subrepoDiffCheck.Skipped) { continue }
@@ -583,7 +586,8 @@ try {
         '^admin_front_ts/src/api/',
         '^admin_front_ts/src/views/',
         '^admin_front_ts/src/router/',
-        '^admin_front_ts/src/stores/'
+        '^admin_front_ts/src/stores/',
+        '^canvas_front_next/src/'
     )
     $dbPatterns = @(
         '^admin_back_go/database/migrations/',
@@ -676,7 +680,7 @@ try {
 
     Write-Section 'Key evidence'
     foreach ($item in $evidence) { Write-Host "- $item" }
-    foreach ($item in @(Get-StatusSummary 'root' $repoRoot; Get-StatusSummary 'admin_back_go' (Join-Path $repoRoot 'admin_back_go'); Get-StatusSummary 'admin_front_ts' (Join-Path $repoRoot 'admin_front_ts'))) {
+    foreach ($item in @(Get-StatusSummary 'root' $repoRoot; Get-StatusSummary 'admin_back_go' (Join-Path $repoRoot 'admin_back_go'); Get-StatusSummary 'admin_front_ts' (Join-Path $repoRoot 'admin_front_ts'); Get-StatusSummary 'canvas_front_next' (Join-Path $repoRoot 'canvas_front_next'))) {
         Write-Host "- $item"
     }
     foreach ($item in $reminders) { Write-Host "- reminder: $item" }

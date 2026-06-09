@@ -55,12 +55,14 @@
 - [x] Add audio to config composer labels and preview icon.
 - [x] Add audio default node spec and node renderer coverage for typecheck completeness.
 - [x] Add audio to config input summary.
+- [x] Add storage-backed Audio node hydration through local media resolver and missing-blob fail-closed behavior.
 
 ### Verification commands
 
 ```powershell
 cd E:\admin_go\canvas_front_next
 npm test -- "src/app/(user)/canvas/utils/canvas-resource-references.test.ts" "src/app/(user)/canvas/components/canvas-node-generation.test.ts" "src/app/(user)/canvas/components/canvas-config-composer.test.tsx" tests/shared/canvas-reference-feature-parity.test.ts
+npm test -- "src/app/(user)/canvas/[id]/hydrate-canvas-images.test.ts"
 npm run typecheck
 ```
 
@@ -71,7 +73,7 @@ npm run typecheck
 - 不新增后端 audio generation。
 - 不新增 Admin `canvas_audio_generate` 场景。
 
-## C2：Canvas 参考媒体上传与视频高级参数（部分落地：C2-A 第一刀）
+## C2：Canvas 参考媒体上传与视频高级参数（部分落地：C2-A + C2-B + C2-C）
 
 ### 目标
 
@@ -83,6 +85,20 @@ npm run typecheck
 - `canvas_front_next` 视频设置、视频 API、Canvas 节点局部视频设置、视频页日志保存/恢复已接入这两个开关。
 - Go Canvas video transport/service/OpenAI-compatible adapter 只做显式字段透传；未把字段写入 DB，也未新增 provider/model/API key/base URL 浏览器覆盖能力。
 - 不包含参考视频/参考音频上传，不新增 `/api/v1/media/references`，不包含完整 Seedance/火山 Agent Plan path routing，不改 `E:\GitDownload\infinite-canvas`。
+
+### C2-B 前端 fail-closed 已落地边界
+
+- 只覆盖 `canvas_front_next`，不改 Go 后端契约。
+- Canvas 生成上下文已有 `referenceVideos` / `referenceAudios` 时，视频 API client 会在请求 `/api/canvas/v1/ai/videos` 前显式拒绝，避免 UI 已展示参考视频/音频但实际生成静默丢弃。
+- 视频节点 metadata 的 `references` 通过共享 helper 记录 image/video/audio 引用来源，便于后续契约和问题排查。
+- 不新增 `/api/canvas/v1/media/references`，不新增 Seedance content-role payload，不新增 Admin provider/agent 策略 UI。
+
+### C2-C 上游错误详情已落地边界
+
+- 只覆盖 `admin_back_go/internal/infra/ai/openaicompat` 的错误消息解析。
+- OpenAI-compatible 上游非 2xx JSON 错误会优先提取可读 message，避免把整段 JSON 原样暴露给业务错误。
+- API key 仍脱敏；reference-video privacy 类错误增加中文友好提示。
+- 不新增 Seedance/Ark Plan 路由，不新增参考媒体上传，不改变 Canvas `/api/canvas/v1/ai/videos` 请求字段。
 
 ### 前置决策
 
@@ -101,9 +117,12 @@ npm run typecheck
 - [x] `canvas_front_next` targeted Vitest：`src/services/api/video.test.ts`、`tests/shared/canvas-video-advanced-settings.test.ts`。
 - [x] `canvas_front_next` `npm run typecheck`。
 - [x] `admin_back_go` focused Go tests：`./internal/module/ai/video`、`./internal/module/ai/video/transport/canvas`、`./internal/infra/ai/openaicompat`。
+- [x] C2-B targeted Vitest：`src/services/api/video.test.ts`、`src/app/(user)/canvas/components/canvas-node-generation.test.ts`。
+- [x] C2-B `canvas_front_next` `npm run typecheck`。
+- [x] C2-C focused Go tests：`go test ./internal/infra/ai/openaicompat -count=1 -p=1`。
 - [ ] 参考视频/参考音频上传、完整 Seedance 参数策略和 live provider 成功 smoke 仍是后续切片。
 
-## C3：当前画布合并导入（部分落地：第一刀）
+## C3：当前画布合并导入（部分落地：第一刀 + C3-B）
 
 ### 目标
 
@@ -114,7 +133,9 @@ npm run typecheck
 - `canvas_front_next` 编辑页已接入“合并画布”入口：ZIP 节点包导入后追加到当前项目，不把来源包作为新项目打开。
 - 画布库导入路径不在本切片改动，仍保持“导入画布 = 新建项目”的既有行为。
 - 第一刀只覆盖前端本地 ZIP parse/asset restore/current-project merge/store wiring；不触碰 `E:\GitDownload\infinite-canvas`，不新增 backend/Admin/API/schema 迁移。
-- 仍不把 C3 写成整体完成：浏览器手工 Cine Make 全流程、云端项目同步、素材 ownership remap、C4 级素材/导入产品化校验都留给后续切片。
+- C3-B 已让 merge import 恢复导出包 blob 时生成本次导入的新 storageKey，并在合并前重写 imported project 内所有命中的 storage-key 字符串引用，避免旧包 `image:*` / `video:*` key 覆盖或污染当前用户本地存储。
+- 画布库导入路径已复用共享 ZIP parser / restore / storage-key remap，但仍保持“导入画布 = 新建项目”的既有产品语义。
+- 仍不把 C3 写成整体完成：浏览器手工 Cine Make 全流程、云端项目同步、backend asset ownership remap、C4 级素材/导入产品化校验都留给后续切片。
 
 ### 关键要求
 
@@ -124,12 +145,17 @@ npm run typecheck
 - 已锁定人物/场景/风格主图不被覆盖。
 - 稳定 anchor metadata 优先；缺锚点不乱连。
 - 坏 zip/缺文件 fail-closed。
+- 导入包 storageKey 必须 remap 到本次导入的新 key；anchorKey / requiredAnchorKeys 不是 storage key，不应误改。
+- 画布库导入不能直接 `readZip` + `setImageBlob/setMediaBlob` 写旧 key，必须走共享 fail-closed parser。
 
 ### 验证状态
 
 - [x] Pure merge util tests：重复 ID、连接 remap、右侧放置、锚点复用、缺锚点 warning。
 - [x] Import parse tests：缺 `projects.json`、缺 blob、坏 schema、size mismatch。
 - [x] Targeted wiring guard：编辑页 merge import 走当前项目追加路径，不调用 `importProject(`。
+- [x] C3-B storage-key remap：导入 blob 写入新 key，imported project 的 node/chat/session storageKey 和 references 被重写，原 parsed export 不被原地污染。
+- [x] 画布库导入 wiring：复用 `parseCanvasExportZip` / `restoreCanvasExportAssets`，保持 `importProject(item.project)` 新建项目行为。
+- [x] ZIP duplicate guard：重复 exported storageKey/path 会 fail-closed，避免 remap/write 语义含糊。
 - [x] `npm run typecheck`。
 - [ ] 浏览器手工验证完整 Cine Make 分阶段导入体验。
 

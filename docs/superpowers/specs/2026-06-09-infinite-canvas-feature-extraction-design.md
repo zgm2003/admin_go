@@ -73,11 +73,12 @@ Backend layout:  internal/module/{capability}/transport/{platform}
 - `@[node:<audio>]` composer token 输出为 `音频1`，并保留 stale token 行为。
 - `NodeGenerationContext` 增加 `referenceAudios` / `audioCount`。
 - 配置 composer 候选、配置面板 input summary、节点渲染表补齐 Audio，避免新增枚举后 typecheck 漏洞。
-- 只做 `<audio controls>` 基础渲染；不新增完整上传、工具栏创建入口、后端 audio generation 或 Admin 场景。
+- 只做 `<audio controls>` 基础渲染和 storage-backed Audio 节点本地恢复；不新增完整上传、工具栏创建入口、后端 audio generation 或 Admin 场景。
 
 成功标准：
 
 - Targeted Vitest 覆盖 audio label / composer / context。
+- Targeted Vitest 覆盖 storage-backed Audio hydration 和 missing blob fail-closed。
 - `npm run typecheck` 通过。
 - 不触碰 `E:\GitDownload\infinite-canvas`。
 
@@ -92,11 +93,25 @@ Backend layout:  internal/module/{capability}/transport/{platform}
 - Go Canvas video transport/service/OpenAI-compatible adapter 透传这两个布尔字段；浏览器仍不能提交 `model` / `provider` / `api_key` / `base_url`。
 - 当前不包含参考视频/参考音频上传，不新增 `/api/v1/media/references`，不包含完整 Seedance/火山 Agent Plan path routing，不触碰 `E:\GitDownload\infinite-canvas`。
 
+当前 C2-B 状态：
+
+- `canvas_front_next` 已把 `referenceVideos` / `referenceAudios` 从生成上下文传到视频 API client，但 client 在当前后端契约未支持前显式 fail-closed，不再静默丢弃这些引用后继续调用 `/api/canvas/v1/ai/videos`。
+- 视频节点 metadata 的 `references` 现在通过共享 helper 记录 image/video/audio 引用来源，便于 UI/后续契约排查；这不是 provider 可访问 URL 上传链路。
+- 当前仍不新增参考媒体上传、Seedance content-role payload、Admin provider 策略 UI 或后端 contract 字段。
+
+当前 C2-C 状态：
+
+- `admin_back_go/internal/infra/ai/openaicompat` 已提取上游非 2xx JSON 错误里的可读 message，并保持 API key 脱敏。
+- reference video privacy 类错误会返回更明确的中文提示，便于用户理解“参考视频受限/隐私风险”类失败。
+- 这只是错误信息 hardening，不代表当前 Canvas 已支持参考视频上传或 Seedance 专属协议。
+
 范围：
 
 - Canvas 前端请求形状先写测试，不允许 provider/base_url/api_key/model override。
 - Go 后端在 `internal/module/ai/video/transport/canvas` 或相邻 capability 中接收明确 DTO。
 - C2-A 已支持 `generate_audio` / `watermark`；参考视频/音频上传到 storage、provider 可访问 URL、ratio/resolution/duration 策略和完整 Seedance/火山路径仍是后续 planned。
+- C2-B 已支持参考视频/音频输入的前端显式拒绝和 metadata 记录；不改变后端 DTO。
+- C2-C 已支持 OpenAI-compatible 上游错误详情提取和 reference video privacy 友好提示；不改变请求/响应契约。
 
 非目标：不直接引入来源 `/api/v1/media/references`。
 
@@ -117,13 +132,17 @@ Backend layout:  internal/module/{capability}/transport/{platform}
 - 已先落地 `canvas_front_next` 编辑页 current-canvas merge import wiring。
 - 该路径用于把 canvas ZIP 节点包追加到当前画布；画布库导入仍保持“导入 = 新建项目”。
 - 已有 targeted tests 覆盖 ZIP parse fail-closed、asset restore、ID/connection remap、右侧放置、anchor 复用、缺锚点 warning，以及编辑页不调用 `importProject(` 的 merge wiring。
-- 当前只按测试证据声明第一刀前端行为，不把 C3 写成整体完成。
+- C3-B 已补齐当前画布合并导入的本地 storage-key remap：恢复导出包 blob 时生成新导入 key，并在 merge 前重写 imported project 内的 storage-key 引用，降低旧 ZIP key 冲突和污染当前画布的风险。
+- 画布库“导入画布 = 新建项目”路径已改用同一套 `parseCanvasExportZip` / `restoreCanvasExportAssets`，因此新建项目导入也获得 ZIP fail-closed 校验和 fresh storage-key remap。
+- 当前仍只按测试证据声明前端行为，不把 C3 写成整体完成；浏览器手工 Cine Make、云端项目同步、backend asset ownership remap 仍是后续切片。
 
 成功标准：
 
 - 画布库导入新建项目行为不被编辑页 merge import 改写。
+- 画布库导入虽保持新建项目语义，但必须复用共享 parser/remap，不能绕回直接 `readZip` 写旧 storageKey。
 - 编辑页 merge import 只更新当前项目。
 - ID remap、connection remap、右侧放置、anchor 复用、缺锚点提示、坏包 fail-closed 分别有 targeted tests。
+- imported project 的 storage-key 引用在合并前被重写为本次导入的新 key，anchorKey / requiredAnchorKeys 不被当成 storage key 修改。
 - `npm run typecheck` 通过。
 
 ### C4：素材/导入严格校验
@@ -143,6 +162,7 @@ Backend layout:  internal/module/{capability}/transport/{platform}
 范围：
 
 - C4-A 已覆盖：素材 ZIP `assets.json` schema、image/video mime/bytes/width/height、storageKey/file/blob 一致性，以及坏包不部分污染浏览器本地 blob store。
+- Canvas project ZIP import 额外拒绝重复 exported storageKey/path，避免 remap 和 blob restore 语义含糊。
 - C4-B 已覆盖：`/api/canvas/v1/assets` image/video payload 严格 media metadata 校验，拒绝未知顶层 media metadata 字段和浏览器本地短 key。
 - 后续仍待契约确认：audio asset 的后端类型、mime/bytes/duration 规则和 Canvas UI；如要把 media metadata 变成 DB 一等字段，需要单独 migration/spec。
 

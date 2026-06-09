@@ -85,6 +85,7 @@ docs/
 ```text
 admin_back_go/    # Go 后端，独立 Git 仓库
 admin_front_ts/   # Vue 前端，独立 Git 仓库
+canvas_front_next/ # Canvas Next 前端，独立 Git 仓库
 .tmp*/            # 本地 smoke / runtime scratch
 ```
 
@@ -123,8 +124,9 @@ live runtime behavior > smoke output > served assets/API > process config > docs
 当前 active runtime 是：
 
 ```text
-admin_back_go    # Go backend runtime
-admin_front_ts   # Vue frontend runtime
+admin_back_go       # Go backend runtime
+admin_front_ts      # Admin Vue frontend runtime
+canvas_front_next   # Canvas Next frontend runtime
 ```
 
 历史项目默认不是冷启动事实源。只有用户明确要求考古，或当前 Go/Vue 运行时证据缺失且必须追溯来源时，才允许作为辅助输入：
@@ -152,7 +154,7 @@ admin_front_ts/docs/deployment/github-actions-scp.md   # 旧链接 stub，真实
 
 ```text
 后端：Go + Gin modular monolith
-前端：Vue 3 + TypeScript
+前端：admin_front_ts = Vue 3 + TypeScript；canvas_front_next = Next.js + TypeScript
 API：/api/admin/v1/...、/api/app/v1/...、/api/canvas/v1/...
 Realtime：WebSocket-only，不新增 SSE
 异步：admin-worker + Asynq + gocron/v2；队列监控优先用官方 asynqmon 只读 UI

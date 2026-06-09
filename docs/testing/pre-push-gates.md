@@ -8,7 +8,7 @@ The default pre-push gate is intentionally light:
 
 ```text
 1. run the agent governance checker in `-Mode range`
-2. collect committed range paths from the root repo plus `admin_back_go` and `admin_front_ts`
+2. collect committed range paths from the root repo plus `admin_back_go`, `admin_front_ts`, and `canvas_front_next`
 3. inside the checker, run root/subrepo range `git diff --check`, plus root working and cached `git diff --check`
 4. run non-live runtime documentation fact checks for selected manifests/routes/schema artifacts
 5. print changed files, evidence, risks, and next step
@@ -104,7 +104,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-runtime-doc-facts.ps1
 powershell -ExecutionPolicy Bypass -File .\scripts\check-runtime-doc-facts.ps1 -LiveSchema
 ```
 
-Run the governance checker for the committed diff from the resolved base to `HEAD`. The committed diff includes root plus `admin_back_go` and `admin_front_ts` when those subrepos exist and have the resolved base. Dirty/staged files are reported separately; cached and working whitespace is still checked:
+Run the governance checker for the committed diff from the resolved base to `HEAD`. The committed diff includes root plus `admin_back_go`, `admin_front_ts`, and `canvas_front_next` when those subrepos exist and have the resolved base. Dirty/staged files are reported separately; cached and working whitespace is still checked:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\check-agent-governance.ps1 -Mode range
@@ -120,7 +120,7 @@ Mode meanings:
 
 ```text
 working = current workspace
-range = committed diff from resolved base to HEAD across root plus known subrepos; dirty/staged files are reported separately, and cached/working whitespace is still checked
+range = committed diff from resolved base to HEAD across root plus known subrepos (`admin_back_go`, `admin_front_ts`, `canvas_front_next`); dirty/staged files are reported separately, and cached/working whitespace is still checked
 Strict = blocking mode for release or module completion
 ```
 

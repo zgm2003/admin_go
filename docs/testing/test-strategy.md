@@ -151,6 +151,14 @@ npx vue-tsc -b --pretty false
 npm run build
 ```
 
+如果本阶段触碰 Canvas 前端，还必须补：
+
+```powershell
+cd E:/admin_go/canvas_front_next
+npm run typecheck
+npm run build
+```
+
 如果 touched code 包含并发/queue/session/realtime/WebSocket/AI streaming，还要补 race gate；缺 gcc 时报告阻塞，不准写 “race passed”。
 
 ## Reporting format

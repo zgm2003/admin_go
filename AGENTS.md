@@ -2,7 +2,7 @@
 
 ## 核心判断
 
-这是一个 **open-source-first / new-system-first / multi-platform-first Go/Vue workspace**。当前事实源是 Go 后端、Vue 前端、契约文档、smoke 和运行时行为；不要再把本项目当成旧系统收尾半成品，也不要把旧 PHP/Webman 设计当成新 Go 项目的兼容包袱。
+这是一个 **open-source-first / new-system-first / multi-platform-first Go/Vue/Next workspace**。当前事实源是 Go 后端、Admin Vue 前端、Canvas Next 前端、契约文档、smoke 和运行时行为；不要再把本项目当成旧系统收尾半成品，也不要把旧 PHP/Webman 设计当成新 Go 项目的兼容包袱。
 
 后端长期目标是：
 
@@ -174,6 +174,7 @@ Phase 7: 后续按 Go/Vue runtime 做模块演进、产品补齐和质量 harden
 
 ```text
 E:\admin_go\admin_front_ts # current Vue frontend workspace
+E:\admin_go\canvas_front_next # current Canvas Next frontend workspace
 ```
 
 历史系统的路由风格、分层、命名、兼容逻辑，不自动成为 Go 新项目规则；不得把历史系统当成 active runtime 依赖。
