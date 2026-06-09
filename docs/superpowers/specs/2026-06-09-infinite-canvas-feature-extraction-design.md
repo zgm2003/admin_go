@@ -37,7 +37,7 @@ Backend layout:  internal/module/{capability}/transport/{platform}
 
 1. **音频资源链路**
    - 来源有 Audio node、audio metadata、上传/拖拽音频、audio controls、音频生成相关入口。
-   - admin_go 当前缺口应分阶段处理：先做 Canvas 音频资源引用基础，再决定是否做完整音频节点 UI、后端 audio generation 和 Admin 场景配置。
+   - admin_go 当前按分阶段处理：已做 Canvas 音频资源引用基础、音频节点入口、本地音频上传/拖拽/替换、Audio prompt/config 前端参数设置和 `canvas_audio_generate` scene/settings plumbing；后端 audio generation 和 `ai_assets` audio 类型仍单独决策。
 
 2. **Seedance/视频高级参数**
    - 来源有 `generate_audio`、`watermark`、ratio/resolution/duration、视频/音频参考等更完整的视频参数。
@@ -62,9 +62,9 @@ Backend layout:  internal/module/{capability}/transport/{platform}
 
 ## 分阶段设计
 
-### C1：Canvas 音频资源引用基础（本轮已落地）
+### C1：Canvas 音频资源引用基础与节点入口（本轮已落地）
 
-目标：让音频作为 Canvas 资源类型进入引用编号、composer token、生成上下文和节点基础渲染，但不声称完整音频生成链路完成。
+目标：让音频作为 Canvas 资源类型进入引用编号、composer token、生成上下文、节点基础渲染、工具栏创建入口、本地音频上传/拖拽/替换和 agent scene/model selection，但不声称完整音频生成链路完成。
 
 范围：
 
@@ -73,13 +73,18 @@ Backend layout:  internal/module/{capability}/transport/{platform}
 - `@[node:<audio>]` composer token 输出为 `音频1`，并保留 stale token 行为。
 - `NodeGenerationContext` 增加 `referenceAudios` / `audioCount`。
 - 配置 composer 候选、配置面板 input summary、节点渲染表补齐 Audio，避免新增枚举后 typecheck 漏洞。
-- 只做 `<audio controls>` 基础渲染和 storage-backed Audio 节点本地恢复；不新增完整上传、工具栏创建入口、后端 audio generation 或 Admin 场景。
+- 已做 `<audio controls>` 基础渲染、storage-backed Audio 节点本地恢复、本地 media helper 的 audio/video `durationMs` metadata 读取、工具栏/连接菜单创建 Audio 节点、本地音频上传/拖拽/替换为空或已有节点、Audio hover upload/download、prompt/config 面板 audio mode、Canvas 配置弹窗默认音频场景选择、Audio prompt/config 前端参数设置（voice / format / speed / instructions）、`agents.audio` / `audioModel` 前端适配，以及 `canvas_audio_generate` 后端 settings/Admin agent scene plumbing。
+- 音频生成提交和 Audio 错误节点 retry 在当前后端无 `/api/canvas/v1/ai/audios` 路由时显式 fail-closed，避免 Audio 节点误走文本或图片生成。
 
 成功标准：
 
 - Targeted Vitest 覆盖 audio label / composer / context。
 - Targeted Vitest 覆盖 storage-backed Audio hydration 和 missing blob fail-closed。
-- `npm run typecheck` 通过。
+- Targeted Vitest 覆盖本地 audio 上传读取 `durationMs`、video 上传保留尺寸并读取 `durationMs`，以及 metadata 读取失败不阻断 blob 存储。
+- Targeted Vitest 覆盖 Canvas 本地音频上传/拖拽/替换、Audio hover upload/download 和 Audio retry fail-closed。
+- Targeted Vitest 覆盖 Audio prompt/config 前端参数设置，参数只进入本地 config/metadata，不引入浏览器 provider 覆盖字段。
+- Targeted Vitest/Go/Admin Vue tests 覆盖 Audio toolbar、audio model group、`canvas_audio_generate` scene plumbing 和 Audio generation fail-closed。
+- `npm run typecheck` / Admin `npm run typecheck` / focused Go tests 通过。
 - 不触碰 `E:\GitDownload\infinite-canvas`。
 
 ### C2：Canvas 参考媒体上传与视频高级参数
@@ -154,7 +159,7 @@ Backend layout:  internal/module/{capability}/transport/{platform}
 - 已先落地 `canvas_front_next` 素材 ZIP 导入/导出 fail-closed hardening。
 - `readAssetPackage` 现在校验 `assets.json` root schema、text/image/video asset shape、image/video `storageKey`/`mimeType`/`bytes`/`width`/`height`、file manifest 与 asset metadata 一致性、声明 blob 存在性和 ZIP entry size；所有校验通过后才写入 image/media blob store。
 - `exportAssets` 现在只把 text asset 和实际打包成功的 media asset 写入 manifest，避免生成“asset 有声明但 ZIP 缺 blob”的坏包。
-- 素材页导入仍走 backend-backed `addAsset(withoutImportedAssetSlug(...))`，不直接塞本地 store，不复用导出包旧 `id` / `createdAt` / `updatedAt` / `metadata.slug`。
+- 素材页导入仍走 backend-backed `addAsset(withoutImportedAssetSlug(...))`，不直接塞本地 store，不复用导出包旧 `id` / `createdAt` / `updatedAt` / `metadata.slug`；当前页面导入只接受 text-only ZIP，media ZIP 在没有 storage-backed upload/remap 契约前显式拒绝，且拒绝发生在本地 blob 写入前。
 - 已落地 `admin_back_go` Canvas `/api/canvas/v1/assets` image/video create/update service 校验：`url` 必须非空，`content` 必须是严格 JSON media metadata，包含 storage-backed `storageKey`、正数 `width` / `height` / `bytes` 和匹配 `mimeType`。
 - 后端 `storageKey` 兼容当前 COS object key（如 `ai-images/...`）和带路径 typed key（如 `image:task/...` / `video:task/...`），拒绝浏览器本地短 key（如 `image:localBrowserOnly`）和类型错配 key。
 - 当前不包含 audio backend asset type，不新增 DB metadata columns，不恢复 public asset library 或 Admin 素材库。
@@ -162,17 +167,18 @@ Backend layout:  internal/module/{capability}/transport/{platform}
 范围：
 
 - C4-A 已覆盖：素材 ZIP `assets.json` schema、image/video mime/bytes/width/height、storageKey/file/blob 一致性，以及坏包不部分污染浏览器本地 blob store。
+- C4-A 已覆盖：backend-backed 素材页导入 text-only guard；media ZIP 只保留低层 parser/export 校验能力，不在页面上假装能持久化到后端。
 - Canvas project ZIP import 额外拒绝重复 exported storageKey/path，避免 remap 和 blob restore 语义含糊。
 - C4-B 已覆盖：`/api/canvas/v1/assets` image/video payload 严格 media metadata 校验，拒绝未知顶层 media metadata 字段和浏览器本地短 key。
-- 后续仍待契约确认：audio asset 的后端类型、mime/bytes/duration 规则和 Canvas UI；如要把 media metadata 变成 DB 一等字段，需要单独 migration/spec。
+- 后续仍待契约确认：audio asset 的后端类型、mime/bytes/duration 规则和后端持久化 UI；如要把 media metadata 变成 DB 一等字段，需要单独 migration/spec。
 
 非目标：不恢复 public asset library，不恢复 Admin 素材库。
 
-### C5：Admin 管理补齐（仅在产品契约确认后）
+### C5：Admin/后端产品化补齐（仅在产品契约确认后）
 
 可能需要：
 
-- 若做完整音频生成：新增 `canvas_audio_generate` 场景、Admin agent/provider 配置、后端 i18n catalog。
+- 若做完整音频生成：新增 `/api/canvas/v1/ai/audios` 后端能力、provider 参数/i18n catalog、`ai_assets` audio 类型或专用任务表，以及 Canvas 音频生成设置 UI。
 - 若做视频高级参数：Admin agent/provider 策略只做后端管理，不让浏览器自定义渠道。
 
 ## 验证策略

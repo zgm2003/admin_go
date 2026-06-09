@@ -27,7 +27,7 @@
 
 ### 目标
 
-让 `canvas_front_next` 识别音频为 Canvas 资源引用类型：编号、composer token、生成上下文、配置摘要和基础节点渲染都完整；不做完整音频生成/上传/后端联动。
+让 `canvas_front_next` 识别音频为 Canvas 资源引用类型：编号、composer token、生成上下文、配置摘要、基础节点渲染、工具栏入口、本地音频上传/拖拽/替换和 audio agent selection 都完整；本地 media helper 可读取 audio/video `durationMs` metadata；后端/Admin 只补 `canvas_audio_generate` scene/settings plumbing，不做完整音频生成。
 
 ### 文件
 
@@ -56,6 +56,15 @@
 - [x] Add audio default node spec and node renderer coverage for typecheck completeness.
 - [x] Add audio to config input summary.
 - [x] Add storage-backed Audio node hydration through local media resolver and missing-blob fail-closed behavior.
+- [x] Add local `uploadMediaFile` audio `durationMs` metadata, preserve video dimensions while adding video duration, and keep metadata-read failures from blocking blob storage.
+- [x] Add failing tests for Audio toolbar button, connection-create option, Canvas config modal default audio scene picker, audio model group, prompt/config audio mode, audio voice/format/speed/instructions settings UI, and fail-closed audio generation routing.
+- [x] Add Canvas toolbar/connection menu Audio node creation.
+- [x] Add `agents.audio` / `audioModel` frontend settings, model picker grouping, and persisted config migration defaults.
+- [x] Add backend Canvas settings `canvas_audio_generate` group and Admin AI agent scene option; update Admin Vue scene union/fallback/i18n.
+- [x] Keep Audio node generation fail-closed while `/api/canvas/v1/ai/audios` is not implemented.
+- [x] Add failing tests for Audio retry fail-closed so failed Audio nodes cannot fall through to image generation.
+- [x] Add Canvas local audio upload/drop/replacement to Audio nodes, empty Audio node hover upload, audio download, and upload affordance labels for media.
+- [x] Add frontend-only Audio prompt/config settings (`audioVoice` / `audioFormat` / `audioSpeed` / `audioInstructions`) and keep them out of provider override fields.
 
 ### Verification commands
 
@@ -63,15 +72,16 @@
 cd E:\admin_go\canvas_front_next
 npm test -- "src/app/(user)/canvas/utils/canvas-resource-references.test.ts" "src/app/(user)/canvas/components/canvas-node-generation.test.ts" "src/app/(user)/canvas/components/canvas-config-composer.test.tsx" tests/shared/canvas-reference-feature-parity.test.ts
 npm test -- "src/app/(user)/canvas/[id]/hydrate-canvas-images.test.ts"
+npm test -- "src/services/file-storage.test.ts"
+npm test -- "src/stores/use-config-store.test.ts" "tests/shared/canvas-audio-node-scene-wiring.test.ts" "tests/shared/canvas-audio-upload-wiring.test.ts"
+npm test -- "tests/shared/canvas-audio-settings-ui.test.ts"
 npm run typecheck
 ```
 
 ### Non-goals for C1
 
-- 不新增工具栏创建音频入口。
-- 不新增音频上传/拖拽恢复链路。
-- 不新增后端 audio generation。
-- 不新增 Admin `canvas_audio_generate` 场景。
+- 不新增后端 audio generation 或 `/api/canvas/v1/ai/audios`。
+- 不新增 `ai_assets` audio 类型、音频任务表或 provider reference-media upload。
 
 ## C2：Canvas 参考媒体上传与视频高级参数（部分落地：C2-A + C2-B + C2-C）
 
@@ -171,6 +181,7 @@ npm run typecheck
 - `readAssetPackage` 现在先完整校验 `assets.json` schema、image/video metadata、storageKey/mime/bytes 一致性、声明 blob 存在性、ZIP entry size，再写入 localforage。
 - `exportAssets` 现在只把 text asset 和实际打包到 ZIP 的 media asset 写入 manifest，避免导出“资产声明存在但 blob 缺失”的不自洽包。
 - 仍保留素材页导入走 `addAsset(withoutImportedAssetSlug(...))`，导入后通过 Canvas backend create 新资产，不复用导出包旧 id/createdAt/updatedAt/metadata.slug。
+- 当前 `/assets` 页面 backend-backed import 只接受 text-only ZIP；image/video media ZIP 在没有 storage-backed upload/remap 契约前 fail-closed，且拒绝发生在本地 blob 写入前。低层 `readAssetPackage` 仍保留给 parser/export 校验和后续 media 导入契约复用。
 - 不包含后端 `/api/canvas/v1/assets` payload metadata 强校验，不包含 audio backend asset type，不恢复 public asset library / Admin 素材库。
 
 ### C4-B 第一刀已落地边界
@@ -192,6 +203,7 @@ npm run typecheck
 - [x] RED：素材 ZIP 测试先证明旧 parser 对坏 schema、缺 blob、bytes mismatch、metadata mismatch、孤儿 file 不 fail-closed。
 - [x] `readAssetPackage` fail-closed：缺 `assets.json`、坏 schema、缺 blob、blob size mismatch、media asset 无声明 file、孤儿 file、image/video metadata/mime/storageKey 不合法均拒绝，且坏包不部分写入 blob store。
 - [x] `exportAssets` 自洽 manifest：缺 blob 的 media asset 不进入导出 manifest。
+- [x] 素材页 backend-backed import 使用 text-only reader；media ZIP 在写 local blob 前拒绝，避免把浏览器本地短 storageKey 送进 `/api/canvas/v1/assets`。
 - [x] `npm test -- "src/app/(user)/assets/asset-transfer.test.ts" "tests/shared/ai-asset-backend-persistence.test.ts" "src/app/(user)/canvas/utils/canvas-import.test.ts"`。
 - [x] `npm run typecheck`。
 
@@ -206,7 +218,7 @@ npm run typecheck
 
 仅在产品契约确认后做：
 
-- 完整音频生成：后端 `ai_assets` audio 类型、`canvas_audio_generate` agent scene、Admin Vue agent/provider 配置、Canvas UI。
+- 完整音频生成：后端 `/api/canvas/v1/ai/audios`、provider 参数/i18n、`ai_assets` audio 类型或音频任务表、Canvas 音频生成设置 UI。
 - 视频高级参数：Admin provider/agent 策略管理，Canvas 仅提交后端允许字段。
 
 ## 收口验证

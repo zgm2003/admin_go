@@ -221,11 +221,12 @@ Canvas settings response exposes runtime agent selection only; old billing metad
 ```ts
 interface CanvasSettingsResponse {
   allow_register: boolean
-  scenes: Array<'canvas_text_generate' | 'canvas_image_generate' | 'canvas_video_generate'>
+  scenes: Array<'canvas_text_generate' | 'canvas_image_generate' | 'canvas_video_generate' | 'canvas_audio_generate'>
   agents: {
     text: CanvasAgentOption[]  // ai_agents.scenes_json contains "canvas_text_generate"
     image: CanvasAgentOption[] // ai_agents.scenes_json contains "canvas_image_generate"
     video: CanvasAgentOption[] // ai_agents.scenes_json contains "canvas_video_generate"
+    audio: CanvasAgentOption[] // ai_agents.scenes_json contains "canvas_audio_generate"
   }
 }
 
@@ -235,7 +236,7 @@ interface CanvasAgentOption {
   avatar: string
   model_id: string
   model_display_name: string
-  scene: 'canvas_text_generate' | 'canvas_image_generate' | 'canvas_video_generate'
+  scene: 'canvas_text_generate' | 'canvas_image_generate' | 'canvas_video_generate' | 'canvas_audio_generate'
 }
 ```
 
@@ -1777,12 +1778,12 @@ Rules:
 - `provider_id` points to the local provider row
 - create/update require a concrete `model_id` selected from enabled `ai_provider_models` under the selected provider
 - `model_display_name` is denormalized from the selected provider model for list display
-- list query supports `scene=chat`, `scene=agent_generate`, `scene=canvas_text_generate`, `scene=canvas_image_generate`, and `scene=canvas_video_generate`; there is no agent code or agent type filter in the MVP
-- MVP scene field is `scenes`; current allowed values are `chat`, `agent_generate`, `canvas_text_generate`, `canvas_image_generate`, and `canvas_video_generate`; empty internal input normalizes to `["chat"]`
+- list query supports `scene=chat`, `scene=agent_generate`, `scene=canvas_text_generate`, `scene=canvas_image_generate`, `scene=canvas_video_generate`, and `scene=canvas_audio_generate`; there is no agent code or agent type filter in the MVP
+- MVP scene field is `scenes`; current allowed values are `chat`, `agent_generate`, `canvas_text_generate`, `canvas_image_generate`, `canvas_video_generate`, and `canvas_audio_generate`; empty internal input normalizes to `["chat"]`
 - MVP form fields are name, model cascader, scenes, status, optional system prompt, and optional avatar
 - `ai_agents` deliberately does not store agent code, agent type, per-agent external app ids, per-agent API keys, response mode, runtime config JSON, model snapshot JSON, `created_by`, or `updated_by`; those are future contracts, not MVP columns
 - runtime uses the selected agent plus its provider credentials; per-agent credential override is not part of this slice
-- `GET /ai-agents/options` feeds runtime selectors and accepts optional `scene`; blank defaults to enabled `chat` scene agents; the non-Canvas image scene is retired, and Canvas uses only `canvas_text_generate` / `canvas_image_generate` / `canvas_video_generate`
+- `GET /ai-agents/options` feeds runtime selectors and accepts optional `scene`; blank defaults to enabled `chat` scene agents; the non-Canvas image scene is retired, and Canvas uses only `canvas_text_generate` / `canvas_image_generate` / `canvas_video_generate` / `canvas_audio_generate`
 - `GET /ai-agents/page-init` returns `scene_arr` and `provider_model_options`; `GET /ai-agents/provider-models/:id` refreshes enabled models for a provider
 - `agent_id` / `agent_name` are the canonical AI runtime selector fields; old app aliases must not drive new DB queries or new Vue state
 
@@ -1790,7 +1791,7 @@ Rules:
 
 状态：retired/deleted from the active contract. The old global AI billing system is not a compatibility surface.
 
-用途：旧 `/api/admin/v1/ai-billing-rules*`、`ai_billing_rules`、`ai_billing_records`、`ai_billing_rule_edit`、Admin Vue billing dialog/API 和 AI generation wallet debit/refund runtime are retired in this slice. Canvas text/image/video generation is free: it does not check balance, does not require billing rules, does not debit `wallet_transactions`, and does not write `ai_billing_records`. Admin image generation is retired rather than a free Admin runtime caller.
+用途：旧 `/api/admin/v1/ai-billing-rules*`、`ai_billing_rules`、`ai_billing_records`、`ai_billing_rule_edit`、Admin Vue billing dialog/API 和 AI generation wallet debit/refund runtime are retired in this slice. Canvas text/image/video generation is free; Canvas audio generation is not implemented yet and fails closed while no `/api/canvas/v1/ai/audios` route exists. Canvas AI generation does not check balance, does not require billing rules, does not debit `wallet_transactions`, and does not write `ai_billing_records`. Admin image generation is retired rather than a free Admin runtime caller.
 
 ```text
 Retired routes: /api/admin/v1/ai-billing-rules*
