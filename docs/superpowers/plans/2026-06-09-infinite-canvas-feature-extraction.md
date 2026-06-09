@@ -21,13 +21,13 @@
 - `canvas_front_next` 已有 Vitest、ZIP 导入导出、Canvas assets 持久化、auth/logout、strict API envelope、inputOrder/stale token、图片/视频/文本资源引用。
 - 来源项目值得借鉴的主要是：音频资源链路、Seedance 视频高级参数、参考媒体上传、当前画布合并导入、导入/素材 fail-closed。
 - `admin_back_go` 需要后续考虑：参考媒体上传 provider URL、`ai_assets` audio 类型、asset tags 聚合/筛选、Seedance/火山方舟 Agent Plan 视频路径、上游错误友好化。
-- `admin_front_ts` 不恢复 Admin 素材库；完整音频生成若做，需要新增 Admin agent scene / provider 管理契约。
+- `admin_front_ts` 不恢复 Admin 素材库；音频生成只使用已配置的 `canvas_audio_generate` agent scene，浏览器不得提交 provider/model/API key/base_url。
 
 ## C1：Canvas 音频资源引用基础（本轮切片）
 
 ### 目标
 
-让 `canvas_front_next` 识别音频为 Canvas 资源引用类型：编号、composer token、生成上下文、配置摘要、基础节点渲染、工具栏入口、本地音频上传/拖拽/替换和 audio agent selection 都完整；本地 media helper 可读取 audio/video `durationMs` metadata；后端/Admin 只补 `canvas_audio_generate` scene/settings plumbing，不做完整音频生成。
+让 `canvas_front_next` 识别音频为 Canvas 资源引用类型：编号、composer token、生成上下文、配置摘要、基础节点渲染、工具栏入口、本地音频上传/拖拽/替换和 audio agent selection 都完整；本地 media helper 可读取 audio/video `durationMs` metadata；后端/Admin 已补 `canvas_audio_generate` scene/settings plumbing。该 C1 目标已完成；后端音频生成已作为 C5 第一刀单独推进。
 
 ### 文件
 
@@ -57,12 +57,12 @@
 - [x] Add audio to config input summary.
 - [x] Add storage-backed Audio node hydration through local media resolver and missing-blob fail-closed behavior.
 - [x] Add local `uploadMediaFile` audio `durationMs` metadata, preserve video dimensions while adding video duration, and keep metadata-read failures from blocking blob storage.
-- [x] Add failing tests for Audio toolbar button, connection-create option, Canvas config modal default audio scene picker/default audio params, audio model group, prompt/config audio mode, audio voice/format/speed/instructions settings UI, and fail-closed audio generation routing.
+- [x] Add failing tests for Audio toolbar button, connection-create option, Canvas config modal default audio scene picker/default audio params, audio model group, prompt/config audio mode, audio voice/format/speed/instructions settings UI, and the initial fail-closed audio generation routing.
 - [x] Add Canvas toolbar/connection menu Audio node creation.
 - [x] Add `agents.audio` / `audioModel` frontend settings, model picker grouping, and persisted config migration defaults.
 - [x] Add backend Canvas settings `canvas_audio_generate` group and Admin AI agent scene option; update Admin Vue scene union/fallback/i18n.
-- [x] Keep Audio node generation fail-closed while `/api/canvas/v1/ai/audios` is not implemented.
-- [x] Add failing tests for Audio retry fail-closed so failed Audio nodes cannot fall through to image generation.
+- [x] Keep Audio node generation fail-closed while `/api/canvas/v1/ai/audios` was not implemented.
+- [x] Add failing tests for Audio retry fail-closed so failed Audio nodes cannot fall through to image generation; this guard was later updated in C5 to assert audio retry calls the audio API.
 - [x] Add Canvas local audio upload/drop/replacement to Audio nodes, empty Audio node hover upload, audio download, and upload affordance labels for media.
 - [x] Add frontend-only global default and Audio prompt/config settings (`audioVoice` / `audioFormat` / `audioSpeed` / `audioInstructions`) and keep them out of provider override fields.
 
@@ -81,7 +81,7 @@ npm run typecheck
 
 ### Non-goals for C1
 
-- 不新增后端 audio generation 或 `/api/canvas/v1/ai/audios`。
+- C1 不新增后端 audio generation 或 `/api/canvas/v1/ai/audios`；C5 第一刀已新增该 route。
 - 不新增 `ai_assets` audio 类型、音频任务表或 provider reference-media upload。
 
 ## C2：Canvas 参考媒体上传与视频高级参数（部分落地：C2-A + C2-B + C2-C）
@@ -215,11 +215,22 @@ npm run typecheck
 - [x] 保持合法 media asset 可创建；Canvas transport 测试样例更新为带完整 media `content`。
 - [x] `go test ./internal/module/ai/asset ./internal/module/ai/asset/transport/canvas -count=1 -p=1`。
 
-## C5：Admin/后端产品化补齐（待做）
+## C5：Admin/后端产品化补齐（第一刀已落地，剩余待做）
 
-仅在产品契约确认后做：
+### 已落地第一刀
 
-- 完整音频生成：后端 `/api/canvas/v1/ai/audios`、provider 参数/i18n、`ai_assets` audio 类型或音频任务表、Canvas 音频生成设置 UI。
+- [x] Go 后端新增 `POST /api/canvas/v1/ai/audios`，返回 raw `audio/*` blob。
+- [x] Audio route owner 是 `internal/module/ai/audio/transport/canvas`；provider/model/API key 由 `canvas_audio_generate` agent 决定。
+- [x] 请求只允许 `agent_id`、`prompt`、`voice`、`response_format`、`speed`、`instructions`；`model/provider/api_key/base_url` 继续 fail-closed。
+- [x] OpenAI-compatible adapter 调用 `/audio/speech`，后端记录 `ai_runs` provider attempt。
+- [x] `canvas_front_next` Audio initial generation 和 retry 调用 `requestAudioGeneration`，成功后上传 blob 到本地 media storage 并回写 Audio 节点 metadata。
+- [x] Targeted tests：Canvas audio API/wiring Vitest、focused Go audio/transport/openaicompat/bootstrap/server/canvas/agent tests、backend architecture guard。
+
+### 仍待做
+
+- `ai_assets` audio 类型或专用音频任务表/history。
+- reference media upload 到 provider 可访问 URL。
+- live provider-success smoke（需要有效音频 agent/provider/model fixture）。
 - 视频高级参数：Admin provider/agent 策略管理，Canvas 仅提交后端允许字段。
 
 ## 收口验证

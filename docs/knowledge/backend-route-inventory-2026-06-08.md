@@ -1,6 +1,6 @@
 # Backend Route Inventory Snapshot
 
-Generated at: 2026-06-08 11:48:50 +08:00
+Generated at: 2026-06-09 19:24:58 +08:00
 
 This artifact is generated from current Go route source files and `admin_back_go/internal/bootstrap/route_meta.go`. It is a source inventory for navigation and contract drift checks, not proof that every route is currently served by a running process. Runtime behavior, smoke output, and captured traffic still outrank this file.
 
@@ -10,9 +10,9 @@ Path inference rule: only literal strings, same-file string constants, and simpl
 
 | Fact | Value |
 | --- | --- |
-| Route source files with registrations | `47` |
-| Route registrations found | `286` |
-| Inferred full paths | `286` |
+| Route source files with registrations | `48` |
+| Route registrations found | `287` |
+| Inferred full paths | `287` |
 | Unresolved registrations | `0` |
 | Callback exception registrations | `1` |
 | Permission route_meta matches | `124` |
@@ -29,7 +29,7 @@ Path inference rule: only literal strings, same-file string constants, and simpl
 | `admin` | `246` |
 | `app` | `9` |
 | `callback` | `1` |
-| `canvas` | `30` |
+| `canvas` | `31` |
 
 ## Route inventory
 
@@ -49,6 +49,7 @@ Path inference rule: only literal strings, same-file string constants, and simpl
 | `ai/asset` | `canvas` | `admin_back_go/internal/module/ai/asset/transport/canvas/route.go` | `14` | `POST` | `/api/canvas/v1` | `"/assets"` | `/assets` | `/api/canvas/v1/assets` | `group-fragment` |  |  |  |
 | `ai/asset` | `canvas` | `admin_back_go/internal/module/ai/asset/transport/canvas/route.go` | `15` | `PUT` | `/api/canvas/v1` | `"/assets/:id"` | `/assets/:id` | `/api/canvas/v1/assets/:id` | `group-fragment` |  |  |  |
 | `ai/asset` | `canvas` | `admin_back_go/internal/module/ai/asset/transport/canvas/route.go` | `16` | `DELETE` | `/api/canvas/v1` | `"/assets/:id"` | `/assets/:id` | `/api/canvas/v1/assets/:id` | `group-fragment` |  |  |  |
+| `ai/audio` | `canvas` | `admin_back_go/internal/module/ai/audio/transport/canvas/route.go` | `15` | `POST` | `/api/canvas/v1/ai/audios` | `""` |  | `/api/canvas/v1/ai/audios` | `group-fragment` |  |  |  |
 | `ai/chat` | `canvas` | `admin_back_go/internal/module/ai/chat/transport/canvas/route.go` | `14` | `POST` | `/api/canvas/v1/ai/chat` | `"/completions"` | `/completions` | `/api/canvas/v1/ai/chat/completions` | `group-fragment` |  |  |  |
 | `ai/conversation` | `admin` | `admin_back_go/internal/module/ai/conversation/transport/admin/route.go` | `14` | `GET` | `/api/admin/v1/ai-conversations` | `""` |  | `/api/admin/v1/ai-conversations` | `group-fragment` |  |  |  |
 | `ai/conversation` | `admin` | `admin_back_go/internal/module/ai/conversation/transport/admin/route.go` | `15` | `GET` | `/api/admin/v1/ai-conversations` | `"/:id"` | `/:id` | `/api/admin/v1/ai-conversations/:id` | `group-fragment` |  |  |  |

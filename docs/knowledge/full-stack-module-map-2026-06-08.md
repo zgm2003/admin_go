@@ -1,6 +1,6 @@
 # Full-stack Module Map Snapshot
 
-Generated at: 2026-06-08 14:56:05 +08:00
+Generated at: 2026-06-09 19:25:05 +08:00
 
 Backend route inventory: `docs/knowledge/backend-route-inventory-2026-06-08.md`
 Frontend API inventory: `docs/knowledge/frontend-api-inventory-2026-06-08.md`
@@ -18,14 +18,14 @@ This artifact joins current source inventories into a module-level navigation ma
 | Frontend API inventory artifact | `docs/knowledge/frontend-api-inventory-2026-06-08.md` |
 | DB schema ownership artifact | `docs/knowledge/db-schema-ownership-map-2026-06-08.md` |
 | API source-only review artifact | `docs/knowledge/api-source-only-route-review-2026-06-08.md` |
-| Backend route registrations joined | `286` |
-| Frontend exact backend API calls assigned | `265` |
+| Backend route registrations joined | `287` |
+| Frontend exact backend API calls assigned | `266` |
 | Unassigned frontend exact backend API calls | `0` |
 | Live DB tables mapped | `55` |
 | Live schema-only tables | `0` |
 | Source-only routes reviewed | `19` |
 | Owner-decision-required routes | `0` |
-| Capabilities in joined map | `37` |
+| Capabilities in joined map | `38` |
 
 ## Platform route and frontend-call summary
 
@@ -34,9 +34,9 @@ This artifact joins current source inventories into a module-level navigation ma
 | backend surface `admin` routes | `246` |
 | backend surface `app` routes | `9` |
 | backend surface `callback` routes | `1` |
-| backend surface `canvas` routes | `30` |
+| backend surface `canvas` routes | `31` |
 | frontend `admin_front_ts` exact backend calls | `240` |
-| frontend `canvas_front_next` exact backend calls | `25` |
+| frontend `canvas_front_next` exact backend calls | `26` |
 
 ## Module map
 
@@ -44,6 +44,7 @@ This artifact joins current source inventories into a module-level navigation ma
 | --- | --- | --- | --- | --- | --- |
 | `ai/agent` | `admin=10` | `admin_front_ts=10` | `ai_agents`, `ai_provider_models`, `ai_providers` |  |  |
 | `ai/asset` | `canvas=4` | `canvas_front_next=4` | `ai_assets` |  |  |
+| `ai/audio` | `canvas=1` | `canvas_front_next=1` |  |  | no live DB model-owner table |
 | `ai/chat` | `canvas=1` | `canvas_front_next=1` | `ai_agents`, `ai_conversations`, `ai_messages`, `ai_providers`, `ai_run_events`, `ai_runs` |  |  |
 | `ai/conversation` | `admin=5` | `admin_front_ts=5` | `ai_conversations` |  |  |
 | `ai/image` | `canvas=5` | `canvas_front_next=6` | `ai_image_files`, `ai_image_tasks` |  |  |
@@ -85,8 +86,8 @@ This artifact joins current source inventories into a module-level navigation ma
 Every `admin-prefix` / `canvas-prefix` frontend call from the frontend API inventory must map to a backend route inventory row by method and normalized path parameters. This prevents hidden `unknown capability` fallback.
 
 ```text
-exact frontend backend calls = 265
-assigned frontend backend calls = 265
+exact frontend backend calls = 266
+assigned frontend backend calls = 266
 unassigned frontend backend calls = 0
 ```
 

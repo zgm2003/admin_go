@@ -37,7 +37,7 @@ Backend layout:  internal/module/{capability}/transport/{platform}
 
 1. **音频资源链路**
    - 来源有 Audio node、audio metadata、上传/拖拽音频、audio controls、音频生成相关入口。
-   - admin_go 当前按分阶段处理：已做 Canvas 音频资源引用基础、音频节点入口、本地音频上传/拖拽/替换、全局默认音频参数、Audio prompt/config 前端参数设置和 `canvas_audio_generate` scene/settings plumbing；后端 audio generation 和 `ai_assets` audio 类型仍单独决策。
+   - admin_go 当前按分阶段处理：已做 Canvas 音频资源引用基础、音频节点入口、本地音频上传/拖拽/替换、全局默认音频参数、Audio prompt/config 前端参数设置和 `canvas_audio_generate` scene/settings plumbing；C5 第一刀已接入 `/api/canvas/v1/ai/audios` raw blob 生成，`ai_assets` audio 类型、专用音频任务表和参考媒体上传仍单独决策。
 
 2. **Seedance/视频高级参数**
    - 来源有 `generate_audio`、`watermark`、ratio/resolution/duration、视频/音频参考等更完整的视频参数。
@@ -64,7 +64,7 @@ Backend layout:  internal/module/{capability}/transport/{platform}
 
 ### C1：Canvas 音频资源引用基础与节点入口（本轮已落地）
 
-目标：让音频作为 Canvas 资源类型进入引用编号、composer token、生成上下文、节点基础渲染、工具栏创建入口、本地音频上传/拖拽/替换和 agent scene/model selection，但不声称完整音频生成链路完成。
+目标：让音频作为 Canvas 资源类型进入引用编号、composer token、生成上下文、节点基础渲染、工具栏创建入口、本地音频上传/拖拽/替换和 agent scene/model selection。该 C1 目标已完成；音频生成本身已升级为 C5 第一刀，不回写到 C1 声称完整产品化。
 
 范围：
 
@@ -74,16 +74,16 @@ Backend layout:  internal/module/{capability}/transport/{platform}
 - `NodeGenerationContext` 增加 `referenceAudios` / `audioCount`。
 - 配置 composer 候选、配置面板 input summary、节点渲染表补齐 Audio，避免新增枚举后 typecheck 漏洞。
 - 已做 `<audio controls>` 基础渲染、storage-backed Audio 节点本地恢复、本地 media helper 的 audio/video `durationMs` metadata 读取、工具栏/连接菜单创建 Audio 节点、本地音频上传/拖拽/替换为空或已有节点、Audio hover upload/download、prompt/config 面板 audio mode、Canvas 配置弹窗默认音频场景和全局默认音频参数、Audio prompt/config 前端参数设置（voice / format / speed / instructions）、`agents.audio` / `audioModel` 前端适配，以及 `canvas_audio_generate` 后端 settings/Admin agent scene plumbing。
-- 音频生成提交和 Audio 错误节点 retry 在当前后端无 `/api/canvas/v1/ai/audios` 路由时显式 fail-closed，避免 Audio 节点误走文本或图片生成。
+- C1 时音频生成提交和 Audio 错误节点 retry 曾在无 `/api/canvas/v1/ai/audios` 路由时显式 fail-closed，避免 Audio 节点误走文本或图片生成；C5 第一刀已将这两个入口改为调用后端音频接口。
 
 成功标准：
 
 - Targeted Vitest 覆盖 audio label / composer / context。
 - Targeted Vitest 覆盖 storage-backed Audio hydration 和 missing blob fail-closed。
 - Targeted Vitest 覆盖本地 audio 上传读取 `durationMs`、video 上传保留尺寸并读取 `durationMs`，以及 metadata 读取失败不阻断 blob 存储。
-- Targeted Vitest 覆盖 Canvas 本地音频上传/拖拽/替换、Audio hover upload/download 和 Audio retry fail-closed。
+- Targeted Vitest 覆盖 Canvas 本地音频上传/拖拽/替换、Audio hover upload/download；C5 targeted Vitest 覆盖 Audio initial generation/retry 改走 audio API。
 - Targeted Vitest 覆盖全局默认音频参数、Audio prompt/config 前端参数设置和控件交互，参数只进入本地 config/metadata，不引入浏览器 provider 覆盖字段。
-- Targeted Vitest/Go/Admin Vue tests 覆盖 Audio toolbar、audio model group、`canvas_audio_generate` scene plumbing 和 Audio generation fail-closed。
+- Targeted Vitest/Go/Admin Vue tests 覆盖 Audio toolbar、audio model group、`canvas_audio_generate` scene plumbing；C5 focused Go/Canvas tests 覆盖 `/api/canvas/v1/ai/audios`、forbidden provider override 和 raw audio blob。
 - `npm run typecheck` / Admin `npm run typecheck` / focused Go tests 通过。
 - 不触碰 `E:\GitDownload\infinite-canvas`。
 
@@ -174,11 +174,19 @@ Backend layout:  internal/module/{capability}/transport/{platform}
 
 非目标：不恢复 public asset library，不恢复 Admin 素材库。
 
-### C5：Admin/后端产品化补齐（仅在产品契约确认后）
+### C5：Admin/后端产品化补齐（第一刀已落地，剩余产品化待确认）
 
-可能需要：
+已落地：
 
-- 若做完整音频生成：新增 `/api/canvas/v1/ai/audios` 后端能力、provider 参数/i18n catalog、`ai_assets` audio 类型或专用任务表，以及 Canvas 音频生成设置 UI。
+- 后端 `POST /api/canvas/v1/ai/audios`，由 `internal/module/ai/audio/transport/canvas` 拥有。
+- 请求只允许 `agent_id`、`prompt`、`voice`、`response_format`、`speed`、`instructions`；浏览器提交 `model/provider/api_key/base_url` 仍 fail-closed。
+- 后端按 `canvas_audio_generate` 智能体解析 provider/model/API key，调用 OpenAI-compatible `/audio/speech`，记录 `ai_runs`，返回 raw `audio/*` blob。
+- `canvas_front_next` initial generation 和 retry 写入 Audio 节点，返回 blob 只进本地 Canvas media storage。
+
+仍待确认：
+
+- `ai_assets` audio 类型或专用音频任务表/history。
+- provider reference-media upload、云端音频资产持久化和 live provider success smoke。
 - 若做视频高级参数：Admin agent/provider 策略只做后端管理，不让浏览器自定义渠道。
 
 ## 验证策略

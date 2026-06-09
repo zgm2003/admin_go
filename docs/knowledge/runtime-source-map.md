@@ -69,7 +69,7 @@ docs/knowledge/admin-ai-agent-test-contract-review-2026-06-07.md
 
 | Capability | Current HTTP surfaces |
 | --- | --- |
-| `ai` | `agent/transport/admin`, `asset/transport/admin`, `asset/transport/canvas`, `chat/transport/admin`, `chat/transport/canvas`, `conversation/transport/admin`, `image/transport/admin`, `image/transport/canvas`, `knowledge/transport/admin`, `message/transport/admin`, `prompt/transport/admin`, `prompt/transport/canvas`, `provider/transport/admin`, `run/transport/admin`, `tool/transport/admin`, `video/transport/canvas` |
+| `ai` | `agent/transport/admin`, `asset/transport/admin`, `asset/transport/canvas`, `audio/transport/canvas`, `chat/transport/admin`, `chat/transport/canvas`, `conversation/transport/admin`, `image/transport/admin`, `image/transport/canvas`, `knowledge/transport/admin`, `message/transport/admin`, `prompt/transport/admin`, `prompt/transport/canvas`, `provider/transport/admin`, `run/transport/admin`, `tool/transport/admin`, `video/transport/canvas` |
 | `auth` | `transport/admin`, `transport/app`, `transport/canvas` |
 | `auth_platform` | `transport/admin` |
 | `canvas` | `transport/canvas` |
@@ -176,7 +176,7 @@ Admin dev test download error handling is resolved for the remaining catch-any r
 | Request client | `canvas_front_next/src/services/api/request.ts` |
 | Settings service | `canvas_front_next/src/services/api/settings.ts` |
 | Prompt / asset services | `canvas_front_next/src/services/api/prompts.ts`, `assets.ts` |
-| Image / video services | `canvas_front_next/src/services/api/image.ts`, `video.ts` |
+| Image / video / audio services | `canvas_front_next/src/services/api/image.ts`, `video.ts`, `audio.ts` |
 | Profile service | `canvas_front_next/src/services/api/profile.ts` |
 | RBAC feature | `canvas_front_next/src/features/rbac` |
 | User/config stores | `canvas_front_next/src/stores/use-user-store.ts`, `use-config-store.ts` |
@@ -187,7 +187,7 @@ Canvas AI request contract review:
 docs/knowledge/canvas-ai-request-contract-review-2026-06-07.md
 ```
 
-The review records that chat/image/video generation submits `agent_id` plus user content/params, while backend chat/video transports reject client `model`, `provider`, `api_key`, and `base_url` overrides before service invocation. Video creation accepts the active Canvas Next FormData shape as well as JSON.
+The review records that chat/image/video/audio generation submits `agent_id` plus user content/params, while backend chat/video/audio transports reject client `model`, `provider`, `api_key`, and `base_url` overrides before service invocation. Video creation accepts the active Canvas Next FormData shape as well as JSON; audio creation returns a raw `audio/*` blob.
 
 Canvas RBAC permission contract review:
 
@@ -275,8 +275,8 @@ docs/knowledge/admin-ai-agent-test-contract-review-2026-06-07.md
 
 Verified table count in the snapshot: `55`.
 The DB schema ownership map is derived from the live schema artifact plus current Go source references. It records `55` live tables reviewed, `55` `go-model` tables, and `0` `live-schema-only` tables after `canvas_prompts` / `canvas_assets` were retired by the 2026-06-08 cleanup migration.
-The full-stack module map joins route inventory, frontend API inventory, DB ownership, and source-only review at capability level. It records `286` backend route registrations joined, `265` frontend exact backend calls assigned, `0` unassigned exact frontend calls, and `55` live DB tables mapped.
-The backend capability manifest records `37` Go capabilities, `286` backend route registrations covered, and `4` helper packages that are not promoted to capability: `ai/internal/canvasrequest`, `auth/verifycode`, `payment/serialno`, and `queuemonitor/asynqmonui`.
+The full-stack module map joins route inventory, frontend API inventory, DB ownership, and source-only review at capability level. It records `287` backend route registrations joined, `265` frontend exact backend calls assigned, `0` unassigned exact frontend calls, and `55` live DB tables mapped.
+The backend capability manifest records `37` Go capabilities, `287` backend route registrations covered, and `4` helper packages that are not promoted to capability: `ai/internal/canvasrequest`, `auth/verifycode`, `payment/serialno`, and `queuemonitor/asynqmonui`.
 
 Key active tables present in the DDL artifact:
 

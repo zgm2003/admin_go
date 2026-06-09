@@ -158,7 +158,7 @@ interface AppSendCodeBody {
 
 状态：implemented and verified in Go backend + `canvas_front_next`; live DB/full smoke baseline passed on 2026-05-31. Old Canvas wallet/recharge UI and old AI billing are retired from the active Canvas contract.
 
-Route ownership：`/api/canvas/v1/auth/*` -> `internal/module/auth/transport/canvas`；`/api/canvas/v1/users/me` -> `internal/module/user/transport/canvas`；`/api/canvas/v1/profile` -> `internal/module/profile/transport/canvas`；`/api/canvas/v1/prompts` -> `internal/module/ai/prompt/transport/canvas`；`/api/canvas/v1/assets` -> current-user-owned `internal/module/ai/asset/transport/canvas`；`/api/canvas/v1/settings` -> `internal/module/canvas/transport/canvas`；`/api/canvas/v1/ai/chat/*` -> `internal/module/ai/chat/transport/canvas`；`/api/canvas/v1/ai/images/*` -> `internal/module/ai/image/transport/canvas`；`/api/canvas/v1/ai/videos*` -> `internal/module/ai/video/transport/canvas`。Canvas AI URLs 保持不变；运行时 owner 不再回落到 `internal/module/canvas`。
+Route ownership：`/api/canvas/v1/auth/*` -> `internal/module/auth/transport/canvas`；`/api/canvas/v1/users/me` -> `internal/module/user/transport/canvas`；`/api/canvas/v1/profile` -> `internal/module/profile/transport/canvas`；`/api/canvas/v1/prompts` -> `internal/module/ai/prompt/transport/canvas`；`/api/canvas/v1/assets` -> current-user-owned `internal/module/ai/asset/transport/canvas`；`/api/canvas/v1/settings` -> `internal/module/canvas/transport/canvas`；`/api/canvas/v1/ai/chat/*` -> `internal/module/ai/chat/transport/canvas`；`/api/canvas/v1/ai/images/*` -> `internal/module/ai/image/transport/canvas`；`/api/canvas/v1/ai/videos*` -> `internal/module/ai/video/transport/canvas`；`/api/canvas/v1/ai/audios` -> `internal/module/ai/audio/transport/canvas`。Canvas AI URLs 保持不变；运行时 owner 不再回落到 `internal/module/canvas`。
 
 `canvas_front_next` 是独立 Next.js 前端，所有安全、provider 和公共库数据都通过 Go 后端 `/api/canvas/v1/*`。Next 前端不保存 provider API key/base_url，不调用旧 `infinite-canvas` 后端。旧 AI billing 已从 Canvas 生成链路退休；payment/wallet 基础充值域保留给非本切片能力，但 AI 生成不扣余额。
 
@@ -187,6 +187,7 @@ GET  /api/canvas/v1/ai/images/:id
 POST /api/canvas/v1/ai/videos
 GET  /api/canvas/v1/ai/videos/:id
 GET  /api/canvas/v1/ai/videos/:id/content
+POST /api/canvas/v1/ai/audios
 ```
 
 Retained Canvas payment/wallet基础域 routes, source-backed but not a Canvas AI free-generation dependency:
@@ -315,6 +316,23 @@ interface CanvasVideoCreateResponse {
 
 `generate_audio` / `watermark` are backend-allowed video generation params; they do not allow client provider/model/api_key/base_url override, and providers may ignore unsupported fields.
 
+Canvas audio generation is a backend-owned speech request and returns a raw audio blob instead of a JSON envelope.
+
+```ts
+interface CanvasAudioGenerationBody {
+  agent_id: number
+  prompt: string
+  voice?: 'alloy' | 'ash' | 'ballad' | 'coral' | 'echo' | 'fable' | 'nova' | 'onyx' | 'sage' | 'shimmer' | 'verse' | 'marin' | 'cedar'
+  response_format?: 'mp3' | 'wav' | 'opus' | 'aac' | 'flac' | 'pcm'
+  speed?: number // 0.25..4
+  instructions?: string // max 4000 chars
+}
+
+type CanvasAudioGenerationResponse = Blob // HTTP 200 body is audio/*
+```
+
+`POST /api/canvas/v1/ai/audios` uses the selected `agent_id` to resolve provider/model/API key on the Go backend, validates that the agent has `canvas_audio_generate`, records an `ai_runs` provider attempt, and calls the OpenAI-compatible speech endpoint (`/audio/speech`). The request must not include `model`, `provider`, `api_key`, or `base_url`; those fields fail closed through the Canvas agent-owned request binder rather than being silently ignored.
+
 Canvas profile response reuses the profile service shape:
 
 ```ts
@@ -366,7 +384,7 @@ canvas profile 只暴露当前用户基础资料读取/保存；安全修改邮�
 Canvas PAGE 授权只通过 `permissions` + `router` 表达，供前端菜单/路由过滤；BUTTON 授权只通过 `buttonCodes` 表达，供按钮和动作 `can(code)` 判断。前端不得把 PAGE code 塞进 `buttonCodes`，也不得用 `permissionCodes` 合并 PAGE/BUTTON。
 Canvas free-generation surface does not expose wallet/recharge routes, menus, dialogs, balance display, recharge action, unit price, billing rule, debit, or refund concepts. Payment/wallet基础域仍可用于 admin/payment 合同，但不是 Canvas AI 生成依赖。
 prompts are shared/public read lists where configured; assets are not public. Canvas `/api/canvas/v1/assets` is “我的素材” only and every list/create/update/delete is scoped to the current Canvas user through `ai_assets.user_id`. Admin Vue does not manage assets in the active contract.
-AI text/image/video 统一使用后端托管 provider；Canvas 前端只能提交 `agent_id`、用户内容和 contract 明确允许的生成参数；视频 C2-A 仅新增 `generate_audio` / `watermark`，`model`、`provider`、`api_key`、`base_url` 仍必须 fail-closed，不能静默忽略；模型来自已启用的 `ai_agents.model_id` 与 Canvas 专属场景。
+AI text/image/video/audio 统一使用后端托管 provider；Canvas 前端只能提交 `agent_id`、用户内容和 contract 明确允许的生成参数；视频 C2-A 仅新增 `generate_audio` / `watermark`，音频仅允许 `voice` / `response_format` / `speed` / `instructions`，`model`、`provider`、`api_key`、`base_url` 仍必须 fail-closed，不能静默忽略；模型来自已启用的 `ai_agents.model_id` 与 Canvas 专属场景。
 AI generation is free in this slice: 不查余额、不扣款、不退款、不写 `ai_billing_records`，也不要求 `/api/admin/v1/ai-billing-rules`。
 视频使用 `canvas_video_tasks.id` 作为 canvas task id，provider_task_id 绑定在 `canvas_video_tasks.provider_task_id`；status/content 读取必须按 `id + user_id + is_del=2` 校验 ownership。
 ```
@@ -379,6 +397,7 @@ ai_assets        # current-user-owned Canvas assets; no public library / no user
 ai_image_tasks
 ai_image_files
 canvas_video_tasks
+ai_runs          # provider-attempt monitor only; no polymorphic source fields
 ```
 
 Canvas free-generation RBAC target after old AI billing retirement:
@@ -1791,7 +1810,7 @@ Rules:
 
 状态：retired/deleted from the active contract. The old global AI billing system is not a compatibility surface.
 
-用途：旧 `/api/admin/v1/ai-billing-rules*`、`ai_billing_rules`、`ai_billing_records`、`ai_billing_rule_edit`、Admin Vue billing dialog/API 和 AI generation wallet debit/refund runtime are retired in this slice. Canvas text/image/video generation is free; Canvas audio generation is not implemented yet and fails closed while no `/api/canvas/v1/ai/audios` route exists. Canvas AI generation does not check balance, does not require billing rules, does not debit `wallet_transactions`, and does not write `ai_billing_records`. Admin image generation is retired rather than a free Admin runtime caller.
+用途：旧 `/api/admin/v1/ai-billing-rules*`、`ai_billing_rules`、`ai_billing_records`、`ai_billing_rule_edit`、Admin Vue billing dialog/API 和 AI generation wallet debit/refund runtime are retired in this slice. Canvas text/image/video/audio generation is free; Canvas audio generation is implemented as `/api/canvas/v1/ai/audios` and records only an `ai_runs` provider attempt. Canvas AI generation does not check balance, does not require billing rules, does not debit `wallet_transactions`, and does not write `ai_billing_records`. Admin image generation is retired rather than a free Admin runtime caller.
 
 ```text
 Retired routes: /api/admin/v1/ai-billing-rules*
@@ -2018,7 +2037,7 @@ Runtime rules:
 
 ## AI Runs Monitor
 
-状态：implemented provider-attempt monitor for chat/text/image/video. `ai_runs` is intentionally narrow; it does not own domain task identity.
+状态：implemented provider-attempt monitor for chat/text/image/video/audio. `ai_runs` is intentionally narrow; it does not own domain task identity.
 
 ```text
 GET /api/admin/v1/ai-runs/page-init
@@ -2034,7 +2053,7 @@ Rules:
 
 - lifecycle tables: `ai_runs`, `ai_run_events`; there is no daily aggregate table in this MVP
 - tool execution audit is owned by `ai_tool_calls` and appears only on run detail as `tool_calls`; lifecycle events stay in `ai_run_events`
-- one `ai_runs` row represents one provider attempt across Admin chat, Canvas text, Canvas image, or Canvas video
+- one `ai_runs` row represents one provider attempt across Admin chat, Canvas text, Canvas image, Canvas video, or Canvas audio
 - `ai_runs` stores only provider-attempt facts: `platform`, `request_id`, user/agent/provider/model snapshots, `input_snapshot`, status, token counts, duration, error, timestamps, and nullable chat message links
 - `ai_runs` must not contain `modality`, `source_type`, `source_id`, or `usage_status`; task identity belongs to the owning domain task table
 - Canvas video stores the run binding on `canvas_video_tasks.run_id`; image/text tasks are task-domain data and do not need polymorphic source fields in `ai_runs`

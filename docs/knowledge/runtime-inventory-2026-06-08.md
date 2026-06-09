@@ -32,7 +32,7 @@ Rule: `callback` is an external callback HTTP surface exception, not a business 
 
 | Capability | HTTP surfaces from source tree |
 | --- | --- |
-| `ai` | `agent/transport/admin`, `asset/transport/admin`, `asset/transport/canvas`, `chat/transport/admin`, `chat/transport/canvas`, `conversation/transport/admin`, `image/transport/admin`, `image/transport/canvas`, `knowledge/transport/admin`, `message/transport/admin`, `prompt/transport/admin`, `prompt/transport/canvas`, `provider/transport/admin`, `run/transport/admin`, `tool/transport/admin`, `video/transport/canvas` |
+| `ai` | `agent/transport/admin`, `asset/transport/admin`, `asset/transport/canvas`, `audio/transport/canvas`, `chat/transport/admin`, `chat/transport/canvas`, `conversation/transport/admin`, `image/transport/admin`, `image/transport/canvas`, `knowledge/transport/admin`, `message/transport/admin`, `prompt/transport/admin`, `prompt/transport/canvas`, `provider/transport/admin`, `run/transport/admin`, `tool/transport/admin`, `video/transport/canvas` |
 | `auth` | `transport/admin`, `transport/app`, `transport/canvas` |
 | `auth_platform` | `transport/admin` |
 | `canvas` | `transport/canvas` |
@@ -64,6 +64,7 @@ These are route fragments found in module transport route files. They are useful
 | --- | --- |
 | `admin_back_go/internal/module/ai/agent/transport/admin/route.go` | `DELETE /:id`<br>`GET /`<br>`GET /:id`<br>`GET /options`<br>`GET /page-init`<br>`GET /provider-models/:id`<br>`PATCH /:id/status`<br>`POST /`<br>`POST /:id/test`<br>`PUT /:id` |
 | `admin_back_go/internal/module/ai/asset/transport/canvas/route.go` | `DELETE /assets/:id`<br>`GET /assets`<br>`POST /assets`<br>`PUT /assets/:id` |
+| `admin_back_go/internal/module/ai/audio/transport/canvas/route.go` | `POST /` |
 | `admin_back_go/internal/module/ai/chat/transport/canvas/route.go` | `POST /completions` |
 | `admin_back_go/internal/module/ai/conversation/transport/admin/route.go` | `DELETE /:id`<br>`GET /`<br>`GET /:id`<br>`POST /`<br>`PUT /:id` |
 | `admin_back_go/internal/module/ai/image/transport/canvas/route.go` | `DELETE /:id`<br>`GET /`<br>`GET /:id`<br>`POST /edits`<br>`POST /generations` |

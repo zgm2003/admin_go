@@ -1,6 +1,6 @@
 # Frontend Backend API Drift Snapshot
 
-Generated at: 2026-06-08 11:48:55 +08:00
+Generated at: 2026-06-09 19:25:03 +08:00
 
 Backend route inventory: `docs/knowledge/backend-route-inventory-2026-06-08.md`
 Frontend API inventory: `docs/knowledge/frontend-api-inventory-2026-06-08.md`
@@ -13,11 +13,11 @@ This artifact compares frontend source API calls with backend route source inven
 | --- | --- |
 | Backend route inventory artifact | `docs/knowledge/backend-route-inventory-2026-06-08.md` |
 | Frontend API inventory artifact | `docs/knowledge/frontend-api-inventory-2026-06-08.md` |
-| Backend route registrations available | `286` |
-| Active backend admin/canvas routes | `276` |
-| Frontend exact backend API calls compared | `265` |
-| Distinct frontend exact method/path keys | `257` |
-| frontend-route-match | `265` |
+| Backend route registrations available | `287` |
+| Active backend admin/canvas routes | `277` |
+| Frontend exact backend API calls compared | `266` |
+| Distinct frontend exact method/path keys | `258` |
+| frontend-route-match | `266` |
 | frontend-method-mismatch | `0` |
 | frontend-no-backend-route | `0` |
 | Backend admin/canvas routes not referenced by exact frontend calls | `19` |

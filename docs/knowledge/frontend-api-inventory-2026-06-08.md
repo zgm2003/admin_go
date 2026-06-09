@@ -1,6 +1,6 @@
 # Frontend API Inventory Snapshot
 
-Generated at: 2026-06-08 23:25:01 +08:00
+Generated at: 2026-06-09 19:25:02 +08:00
 
 This artifact is generated from current frontend source. It is a source inventory, not served-route smoke and not browser runtime proof. It intentionally resolves only literal strings, same-file constants, simple string/template concatenation, and the shared admin API prefix. Computed URLs are classified instead of guessed.
 
@@ -8,17 +8,17 @@ This artifact is generated from current frontend source. It is a source inventor
 
 | Fact | Count |
 | --- | --- |
-| Source files scanned | `318` |
-| Frontend API calls found | `280` |
+| Source files scanned | `322` |
+| Frontend API calls found | `281` |
 | Admin frontend backend API calls | `240` |
-| Canvas frontend backend API calls | `25` |
+| Canvas frontend backend API calls | `26` |
 | App backend API calls | `0` |
 | External HTTP helper calls | `3` |
 | Dynamic blob/download URL calls | `3` |
 | Wrapper/proxy infrastructure calls | `7` |
 | Parametric backend admin helper calls | `2` |
 | Calls under /api/admin/v1 | `240` |
-| Calls under /api/canvas/v1 | `25` |
+| Calls under /api/canvas/v1 | `26` |
 | Backend /api calls outside known prefixes | `0` |
 | Frontend calls outside known backend prefixes | `15` |
 | Unresolved frontend API expressions | `0` |
@@ -271,6 +271,7 @@ This artifact is generated from current frontend source. It is a source inventor
 | `canvas_front_next` | `canvas_front_next/src/services/api/assets.ts` | `52` | `apiPost` | `POST /api/canvas/v1/assets` | `CANVAS_ASSETS_URL` | `canvas-prefix` |
 | `canvas_front_next` | `canvas_front_next/src/services/api/assets.ts` | `56` | `apiPut` | `PUT /api/canvas/v1/assets/:param` | ``/api/canvas/v1/assets/${id}`` | `canvas-prefix` |
 | `canvas_front_next` | `canvas_front_next/src/services/api/assets.ts` | `60` | `apiDelete` | `DELETE /api/canvas/v1/assets/:param` | ``/api/canvas/v1/assets/${id}`` | `canvas-prefix` |
+| `canvas_front_next` | `canvas_front_next/src/services/api/audio.ts` | `45` | `axios.post` | `POST /api/canvas/v1/ai/audios` | `CANVAS_AUDIO_URL` | `canvas-prefix` |
 | `canvas_front_next` | `canvas_front_next/src/services/api/auth.ts` | `107` | `apiPost` | `POST /api/canvas/v1/auth/login` | `"/api/canvas/v1/auth/login"` | `canvas-prefix` |
 | `canvas_front_next` | `canvas_front_next/src/services/api/auth.ts` | `112` | `apiPost` | `POST /api/canvas/v1/auth/refresh` | `"/api/canvas/v1/auth/refresh"` | `canvas-prefix` |
 | `canvas_front_next` | `canvas_front_next/src/services/api/auth.ts` | `117` | `apiPost` | `POST /api/canvas/v1/auth/logout` | `"/api/canvas/v1/auth/logout"` | `canvas-prefix` |
@@ -288,10 +289,10 @@ This artifact is generated from current frontend source. It is a source inventor
 | `canvas_front_next` | `canvas_front_next/src/services/api/profile.ts` | `53` | `apiGet` | `GET /api/canvas/v1/profile` | `"/api/canvas/v1/profile"` | `canvas-prefix` |
 | `canvas_front_next` | `canvas_front_next/src/services/api/profile.ts` | `57` | `apiPut` | `PUT /api/canvas/v1/profile` | `"/api/canvas/v1/profile"` | `canvas-prefix` |
 | `canvas_front_next` | `canvas_front_next/src/services/api/prompts.ts` | `44` | `apiGet` | `GET /api/canvas/v1/prompts` | `"/api/canvas/v1/prompts"` | `canvas-prefix` |
-| `canvas_front_next` | `canvas_front_next/src/services/api/settings.ts` | `24` | `apiGet` | `GET /api/canvas/v1/settings` | `"/api/canvas/v1/settings"` | `canvas-prefix` |
-| `canvas_front_next` | `canvas_front_next/src/services/api/video.ts` | `41` | `axios.post` | `POST /api/canvas/v1/ai/videos` | `CANVAS_VIDEO_URL` | `canvas-prefix` |
-| `canvas_front_next` | `canvas_front_next/src/services/api/video.ts` | `45` | `axios.get` | `GET /api/canvas/v1/ai/videos/:param` | ``${CANVAS_VIDEO_URL}/${created.id}`` | `canvas-prefix` |
-| `canvas_front_next` | `canvas_front_next/src/services/api/video.ts` | `51` | `axios.get` | `GET /api/canvas/v1/ai/videos/:param/content` | ``${CANVAS_VIDEO_URL}/${created.id}/content`` | `canvas-prefix` |
+| `canvas_front_next` | `canvas_front_next/src/services/api/settings.ts` | `25` | `apiGet` | `GET /api/canvas/v1/settings` | `"/api/canvas/v1/settings"` | `canvas-prefix` |
+| `canvas_front_next` | `canvas_front_next/src/services/api/video.ts` | `49` | `axios.post` | `POST /api/canvas/v1/ai/videos` | `CANVAS_VIDEO_URL` | `canvas-prefix` |
+| `canvas_front_next` | `canvas_front_next/src/services/api/video.ts` | `53` | `axios.get` | `GET /api/canvas/v1/ai/videos/:param` | ``${CANVAS_VIDEO_URL}/${created.id}`` | `canvas-prefix` |
+| `canvas_front_next` | `canvas_front_next/src/services/api/video.ts` | `59` | `axios.get` | `GET /api/canvas/v1/ai/videos/:param/content` | ``${CANVAS_VIDEO_URL}/${created.id}/content`` | `canvas-prefix` |
 
 ## Non-backend and infrastructure calls
 
@@ -302,7 +303,7 @@ External/blob/dynamic/proxy/parametric rows are kept separate so they do not bec
 | `admin_front_ts` | `admin_front_ts/src/api/system/uploadConfig.ts` | `275` | `request.delete` | `DELETE :param/:param` | ``${base}/${ids[0]}`` | `backend-admin-parametric` |
 | `admin_front_ts` | `admin_front_ts/src/api/system/uploadConfig.ts` | `279` | `request.delete` | `DELETE` | `base` | `backend-admin-parametric` |
 | `admin_front_ts` | `admin_front_ts/src/components/DownloadManager/src/download.ts` | `283` | `fetch` | `GET` | `url` | `blob/download` |
-| `canvas_front_next` | `canvas_front_next/src/services/file-storage.ts` | `83` | `axios.get` | `GET` | `url` | `blob/download` |
+| `canvas_front_next` | `canvas_front_next/src/services/file-storage.ts` | `97` | `axios.get` | `GET` | `url` | `blob/download` |
 | `canvas_front_next` | `canvas_front_next/src/services/image-storage.ts` | `97` | `axios.get` | `GET` | `url` | `blob/download` |
 | `canvas_front_next` | `canvas_front_next/src/hooks/use-version-check.ts` | `42` | `axios.get` | `GET https://raw.githubusercontent.com/basketikun/infinite-canvas/main/VERSION` | `latestVersionUrl` | `external` |
 | `canvas_front_next` | `canvas_front_next/src/hooks/use-version-check.ts` | `55` | `axios.get` | `GET https://raw.githubusercontent.com/basketikun/infinite-canvas/main/VERSION` | `latestVersionUrl` | `external` |
