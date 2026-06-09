@@ -797,11 +797,12 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
   - Canvas image history is read/deleted through backend `GET/DELETE /api/canvas/v1/ai/images`; browser cache is not used as business persistence.
   - Canvas image settings expose/request backend-supported 1:1 / 3:2 / 2:3 / 16:9 / 9:16 sizes (`1024x1024`, `1536x1024`, `1024x1536`, `1792x1024`, `1024x1792`, or `auto`); 2K/4K/custom ratio values are not active until the Go backend/provider contract explicitly supports them.
   - Canvas image reference metadata now records local browser image references as `image:*` keys but records backend COS images by real public URL, not by raw object keys such as `ai-images/...`; raw object keys are rejected before browser Axios can request them as relative 404 URLs.
+  - Canvas image reference hydration now rewrites saved `data:application/octet-stream` references and fetched octet-stream blobs back to supported `image/*` data URLs using reference MIME metadata or image URL extension before sending OpenAI `image_url` / image-edit references.
 - Tests:
   - `internal/module/ai/image`, `internal/bootstrap`, `internal/server`, `internal/architecture`, plus Canvas Next image/asset boundary tests.
   - 2026-06-09 Canvas image size-config fix covered by `npm run test -- src/services/api/image.test.ts tests/shared/canvas-image-settings-options.test.ts`, focused `go test ./internal/module/ai/image`, targeted Canvas image suite, and `npm run typecheck`.
   - 2026-06-09 image edit multipart MIME hotfix covered by focused `go test ./internal/infra/ai/imagecompat ./internal/module/ai/image/... -count=1` and `go test ./internal/infra/ai/... -count=1`.
-  - 2026-06-09 Canvas image reference 404/timeout hotfix covered by `npm run test -- src/services/image-storage.test.ts src/app/(user)/canvas/components/canvas-node-generation.test.ts src/services/api/image.test.ts tests/shared/canvas-image-settings-options.test.ts`, `npm run typecheck`, and `go test ./internal/infra/storage/cos ./internal/module/ai/image -count=1 -p=1`.
+  - 2026-06-09 Canvas image reference 404/timeout/MIME hotfix covered by `npm run test -- src/services/image-storage.test.ts src/app/(user)/canvas/components/canvas-node-generation.test.ts src/services/api/image.test.ts`, `npm run typecheck`, and `go test ./internal/infra/ai/imagecompat ./internal/infra/storage/cos ./internal/module/ai/image -count=1 -p=1`.
 - Smoke:
   - Admin smoke no longer probes `ai-images*`; Canvas image live generation still requires configured agent + worker + COS/provider fixtures.
   - 2026-06-09 Docker-first backend was rebuilt/restarted, `/ready` passed, and the worker container downloaded a persisted failed-task reference image from COS with HTTP 200.
