@@ -18,8 +18,8 @@ This runbook expands `backend-capability-manifest-2026-06-08.md` into an operato
 
 | Fact | Value |
 | --- | ---: |
-| Capability rows | `37` |
-| Backend route registrations covered | `286` |
+| Capability rows | `38` |
+| Backend route registrations covered | `287` |
 | Live DB base tables | `55` |
 | Helper packages not promoted | `4` |
 
@@ -29,6 +29,7 @@ This runbook expands `backend-capability-manifest-2026-06-08.md` into an operato
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `ai/agent` | `admin=10` | `admin_front_ts=10` | `ai_agents`, `ai_provider_models`, `ai_providers` | `admin_back_go/internal/module/ai/agent/service.go`, `admin_back_go/internal/module/ai/agent/repository.go`, `admin_back_go/internal/module/ai/agent/model.go` | `admin_back_go/internal/module/ai/agent/service_test.go` | `go test ./internal/module/ai/agent/... -count=1` |  |
 | `ai/asset` | `canvas=4` | `canvas_front_next=4` | `ai_assets` | `admin_back_go/internal/module/ai/asset/service.go`, `admin_back_go/internal/module/ai/asset/repository.go`, `admin_back_go/internal/module/ai/asset/model.go` | `admin_back_go/internal/module/ai/asset/repository_test.go`, `admin_back_go/internal/module/ai/asset/service_test.go` | `go test ./internal/module/ai/asset/... -count=1` |  |
+| `ai/audio` | `canvas=1` | `canvas_front_next=1` | `ai_runs` | `admin_back_go/internal/module/ai/audio/service.go`, `admin_back_go/internal/module/ai/audio/repository.go` | `admin_back_go/internal/module/ai/audio/service_test.go` | `go test ./internal/module/ai/audio/... -count=1` | no direct model file; returns raw audio blob and records provider attempts through `ai_runs` |
 | `ai/chat` | `canvas=1` | `canvas_front_next=1` | `ai_agents`, `ai_conversations`, `ai_messages`, `ai_providers`, `ai_run_events`, `ai_runs` | `admin_back_go/internal/module/ai/chat/service.go`, `admin_back_go/internal/module/ai/chat/repository.go`, `admin_back_go/internal/module/ai/chat/model.go` | `admin_back_go/internal/module/ai/chat/events_test.go`, `admin_back_go/internal/module/ai/chat/repository_test.go`, `admin_back_go/internal/module/ai/chat/service_test.go` | `go test ./internal/module/ai/chat/... -count=1` |  |
 | `ai/conversation` | `admin=5` | `admin_front_ts=5` | `ai_conversations` | `admin_back_go/internal/module/ai/conversation/service.go`, `admin_back_go/internal/module/ai/conversation/repository.go`, `admin_back_go/internal/module/ai/conversation/model.go` | `admin_back_go/internal/module/ai/conversation/service_test.go` | `go test ./internal/module/ai/conversation/... -count=1` |  |
 | `ai/image` | `canvas=5` | `canvas_front_next=6` | `ai_image_files`, `ai_image_tasks` | `admin_back_go/internal/module/ai/image/service.go`, `admin_back_go/internal/module/ai/image/repository.go`, `admin_back_go/internal/module/ai/image/model.go` | `admin_back_go/internal/module/ai/image/jobs_test.go`, `admin_back_go/internal/module/ai/image/model_split_test.go`, `admin_back_go/internal/module/ai/image/service_test.go` | `go test ./internal/module/ai/image/... -count=1` |  |

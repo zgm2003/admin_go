@@ -275,8 +275,8 @@ docs/knowledge/admin-ai-agent-test-contract-review-2026-06-07.md
 
 Verified table count in the snapshot: `55`.
 The DB schema ownership map is derived from the live schema artifact plus current Go source references. It records `55` live tables reviewed, `55` `go-model` tables, and `0` `live-schema-only` tables after `canvas_prompts` / `canvas_assets` were retired by the 2026-06-08 cleanup migration.
-The full-stack module map joins route inventory, frontend API inventory, DB ownership, and source-only review at capability level. It records `287` backend route registrations joined, `265` frontend exact backend calls assigned, `0` unassigned exact frontend calls, and `55` live DB tables mapped.
-The backend capability manifest records `37` Go capabilities, `287` backend route registrations covered, and `4` helper packages that are not promoted to capability: `ai/internal/canvasrequest`, `auth/verifycode`, `payment/serialno`, and `queuemonitor/asynqmonui`.
+The full-stack module map joins route inventory, frontend API inventory, DB ownership, and source-only review at capability level. It records `287` backend route registrations joined, `266` frontend exact backend calls assigned, `0` unassigned exact frontend calls, and `55` live DB tables mapped.
+The backend capability manifest records `38` Go capabilities, `287` backend route registrations covered, and `4` helper packages that are not promoted to capability: `ai/internal/canvasrequest`, `auth/verifycode`, `payment/serialno`, and `queuemonitor/asynqmonui`.
 
 Key active tables present in the DDL artifact:
 

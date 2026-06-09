@@ -33,8 +33,8 @@ scripts/check-runtime-doc-facts.ps1
 
 | 面 | 当前事实 | 证据 |
 | --- | --- | --- |
-| Go backend routes | `286` route registrations，contract drift 当前无 undocumented/source-docs-only 阻断 | `docs/knowledge/backend-route-inventory-2026-06-08.md`, `docs/knowledge/backend-route-contract-drift-2026-06-08.md` |
-| Frontend/backend API drift | `265` exact frontend backend calls compared，`265` route-match，owner-decision-required = `0` | `docs/knowledge/frontend-backend-api-drift-2026-06-08.md`, `docs/knowledge/api-source-only-route-review-2026-06-08.md` |
+| Go backend routes | `287` route registrations，contract drift 当前无 undocumented/source-docs-only 阻断 | `docs/knowledge/backend-route-inventory-2026-06-08.md`, `docs/knowledge/backend-route-contract-drift-2026-06-08.md` |
+| Frontend/backend API drift | `266` exact frontend backend calls compared，`266` route-match，owner-decision-required = `0` | `docs/knowledge/frontend-backend-api-drift-2026-06-08.md`, `docs/knowledge/api-source-only-route-review-2026-06-08.md` |
 | Live MySQL | live base tables = `55`，schema artifact 来自 MySQL live 查验 | `docs/db/mysql-live-schema-2026-06-08.md`, `docs/db/mysql-live-schema-2026-06-08.sql` |
 | DB ownership | `55` live tables reviewed，`55` go-model，`0` live-schema-only tables | `docs/knowledge/db-schema-ownership-map-2026-06-08.md` |
 | Admin Vue source quality | `274` source files，`0` any，`0` as-any，`0` catch-any，`511` fallback，`0` direct external HTTP | `docs/knowledge/admin-front-source-quality-inventory-2026-06-08.md` |
