@@ -794,8 +794,10 @@ Backend 与 Frontend 写当前事实；Tests 与 Smoke 写验证边界；Docs �
 - Frontend:
   - Admin Vue 图片工作台 page/API/tests are removed; Admin is a management console, not an interaction studio.
   - Canvas image history is read/deleted through backend `GET/DELETE /api/canvas/v1/ai/images`; browser cache is not used as business persistence.
+  - Canvas image settings expose/request backend-supported 1:1 / 3:2 / 2:3 / 16:9 / 9:16 sizes (`1024x1024`, `1536x1024`, `1024x1536`, `1792x1024`, `1024x1792`, or `auto`); 2K/4K/custom ratio values are not active until the Go backend/provider contract explicitly supports them.
 - Tests:
   - `internal/module/ai/image`, `internal/bootstrap`, `internal/server`, `internal/architecture`, plus Canvas Next image/asset boundary tests.
+  - 2026-06-09 Canvas image size-config fix covered by `npm run test -- src/services/api/image.test.ts tests/shared/canvas-image-settings-options.test.ts`, focused `go test ./internal/module/ai/image`, targeted Canvas image suite, and `npm run typecheck`.
   - 2026-06-09 image edit multipart MIME hotfix covered by focused `go test ./internal/infra/ai/imagecompat ./internal/module/ai/image/... -count=1` and `go test ./internal/infra/ai/... -count=1`.
 - Smoke:
   - Admin smoke no longer probes `ai-images*`; Canvas image live generation still requires configured agent + worker + COS/provider fixtures.
