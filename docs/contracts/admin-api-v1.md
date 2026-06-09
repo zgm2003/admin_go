@@ -185,6 +185,7 @@ POST /api/canvas/v1/ai/images/generations
 POST /api/canvas/v1/ai/images/edits
 GET  /api/canvas/v1/ai/images/:id
 POST /api/canvas/v1/ai/videos
+POST /api/canvas/v1/ai/videos/reference-media
 GET  /api/canvas/v1/ai/videos/:id
 GET  /api/canvas/v1/ai/videos/:id/content
 POST /api/canvas/v1/ai/audios
@@ -315,6 +316,29 @@ interface CanvasVideoCreateResponse {
 ```
 
 `generate_audio` / `watermark` are backend-allowed video generation params; they do not allow client provider/model/api_key/base_url override, and providers may ignore unsupported fields.
+
+Canvas video reference media upload is a first storage slice for provider-accessible reference URLs. It is scoped to the video capability and does not change `CanvasVideoGenerationBody`; Canvas video generation with `referenceVideos` / `referenceAudios` remains fail-closed until a later contract explicitly wires uploaded references into provider payloads.
+
+```ts
+// multipart/form-data
+interface CanvasVideoReferenceMediaUploadBody {
+  file: File
+  media_kind: 'image' | 'video' | 'audio'
+}
+
+interface CanvasVideoReferenceMediaUploadResponse {
+  id: string
+  url: string
+  storage_provider: 'cos'
+  storage_key: string // ai-video-references/{media_kind}/yyyy/mm/dd/...
+  mime_type: string
+  media_kind: 'image' | 'video' | 'audio'
+  bytes: number
+  expires_at: string | null
+}
+```
+
+`POST /api/canvas/v1/ai/videos/reference-media` rejects `model` / `provider` / `api_key` / `base_url`; COS credentials stay backend-owned. This endpoint does not restore legacy `/api/v1/media/references`, does not create `ai_assets`, and does not add public/Admin asset-library semantics.
 
 Canvas audio generation is a backend-owned speech request and returns a raw audio blob instead of a JSON envelope.
 

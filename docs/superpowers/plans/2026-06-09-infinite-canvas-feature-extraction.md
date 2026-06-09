@@ -84,7 +84,7 @@ npm run typecheck
 - C1 不新增后端 audio generation 或 `/api/canvas/v1/ai/audios`；C5 第一刀已新增该 route。
 - 不新增 `ai_assets` audio 类型、音频任务表或 provider reference-media upload。
 
-## C2：Canvas 参考媒体上传与视频高级参数（部分落地：C2-A + C2-B + C2-C）
+## C2：Canvas 参考媒体上传与视频高级参数（部分落地：C2-A + C2-B + C2-C + reference-media storage first slice）
 
 ### 目标
 
@@ -111,9 +111,18 @@ npm run typecheck
 - API key 仍脱敏；reference-video privacy 类错误增加中文友好提示。
 - 不新增 Seedance/Ark Plan 路由，不新增参考媒体上传，不改变 Canvas `/api/canvas/v1/ai/videos` 请求字段。
 
+### C2-D 参考媒体上传 storage 第一刀已落地边界
+
+- 只新增 video-scoped Canvas storage helper：`POST /api/canvas/v1/ai/videos/reference-media`。
+- Go route owner 是 `internal/module/ai/video/transport/canvas`；请求为 multipart `file` + `media_kind=image|video|audio`，浏览器提交 `model/provider/api_key/base_url` 继续 fail-closed。
+- 后端通过当前 COS upload config 写入 `ai-video-references/{kind}/yyyy/mm/dd/...`，返回 provider 可访问 URL、`storage_provider`、`storage_key`、`mime_type`、`media_kind`、`bytes`。
+- `canvas_front_next` 只新增 `uploadVideoReferenceMedia()` API helper 和 boundary guard。
+- 第一刀不把 uploaded reference media 接入 `/api/canvas/v1/ai/videos` 生成请求；已有 `referenceVideos` / `referenceAudios` 生成输入仍 fail-closed。
+- 不迁移来源 `/api/v1/media/references`，不新增 `ai_assets`，不恢复 public/Admin asset library，不新增 Seedance content-role payload。
+
 ### 前置决策
 
-- 明确后端 DTO：参考视频/音频如何上传、返回什么 provider 可访问 URL。
+- 已明确第一刀后端 DTO：参考媒体上传返回 provider 可访问 URL；完整 Seedance 参考媒体 payload 仍待后续合同。
 - 明确 Seedance 参数：`generate_audio` / `watermark` 已完成 C2-A 最小透传；ratio/resolution/duration 策略、参考媒体和完整 Seedance/火山路径仍待产品化决策。
 - 明确上游错误映射：敏感内容、privacy reference video 等错误如何进入 i18n catalog。
 
@@ -131,7 +140,9 @@ npm run typecheck
 - [x] C2-B targeted Vitest：`src/services/api/video.test.ts`、`src/app/(user)/canvas/components/canvas-node-generation.test.ts`。
 - [x] C2-B `canvas_front_next` `npm run typecheck`。
 - [x] C2-C focused Go tests：`go test ./internal/infra/ai/openaicompat -count=1 -p=1`。
-- [ ] 参考视频/参考音频上传、完整 Seedance 参数策略和 live provider 成功 smoke 仍是后续切片。
+- [x] C2-D focused Go tests：`go test ./internal/module/ai/video ./internal/module/ai/video/transport/canvas ./internal/architecture ./internal/bootstrap ./internal/server -count=1 -p=1`。
+- [x] C2-D targeted Canvas Vitest/typecheck：`npm test -- "src/services/api/video.test.ts" "tests/shared/canvas-api-boundary.test.ts"` and `npm run typecheck`。
+- [ ] 将 uploaded reference media 接入视频生成 payload、完整 Seedance 参数策略和 live provider 成功 smoke 仍是后续切片。
 
 ## C3：当前画布合并导入（部分落地：第一刀 + C3-B）
 
@@ -229,7 +240,7 @@ npm run typecheck
 ### 仍待做
 
 - `ai_assets` audio 类型或专用音频任务表/history。
-- reference media upload 到 provider 可访问 URL。
+- uploaded reference media 接入视频/音频生成 payload（video-scoped storage helper 已在 C2-D 落地）。
 - live provider-success smoke（需要有效音频 agent/provider/model fixture）。
 - 视频高级参数：Admin provider/agent 策略管理，Canvas 仅提交后端允许字段。
 

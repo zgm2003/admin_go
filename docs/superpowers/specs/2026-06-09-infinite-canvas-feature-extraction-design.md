@@ -37,7 +37,7 @@ Backend layout:  internal/module/{capability}/transport/{platform}
 
 1. **音频资源链路**
    - 来源有 Audio node、audio metadata、上传/拖拽音频、audio controls、音频生成相关入口。
-   - admin_go 当前按分阶段处理：已做 Canvas 音频资源引用基础、音频节点入口、本地音频上传/拖拽/替换、全局默认音频参数、Audio prompt/config 前端参数设置和 `canvas_audio_generate` scene/settings plumbing；C5 第一刀已接入 `/api/canvas/v1/ai/audios` raw blob 生成，`ai_assets` audio 类型、专用音频任务表和参考媒体上传仍单独决策。
+   - admin_go 当前按分阶段处理：已做 Canvas 音频资源引用基础、音频节点入口、本地音频上传/拖拽/替换、全局默认音频参数、Audio prompt/config 前端参数设置和 `canvas_audio_generate` scene/settings plumbing；C5 第一刀已接入 `/api/canvas/v1/ai/audios` raw blob 生成；C2-D 已新增 video-scoped 参考媒体上传 storage helper，但 `ai_assets` audio 类型、专用音频任务表和 audio/reference payload 生成接入仍单独决策。
 
 2. **Seedance/视频高级参数**
    - 来源有 `generate_audio`、`watermark`、ratio/resolution/duration、视频/音频参考等更完整的视频参数。
@@ -96,7 +96,7 @@ Backend layout:  internal/module/{capability}/transport/{platform}
 - 已先落地 `generate_audio` / `watermark` 请求契约和端到端透传。
 - `canvas_front_next` 视频设置、视频 API、Canvas 节点局部视频设置和视频页日志保存/恢复只暴露这两个后端允许参数。
 - Go Canvas video transport/service/OpenAI-compatible adapter 透传这两个布尔字段；浏览器仍不能提交 `model` / `provider` / `api_key` / `base_url`。
-- 当前不包含参考视频/参考音频上传，不新增 `/api/v1/media/references`，不包含完整 Seedance/火山 Agent Plan path routing，不触碰 `E:\GitDownload\infinite-canvas`。
+- C2-A 不包含参考视频/参考音频上传，不新增 `/api/v1/media/references`，不包含完整 Seedance/火山 Agent Plan path routing，不触碰 `E:\GitDownload\infinite-canvas`。
 
 当前 C2-B 状态：
 
@@ -110,13 +110,23 @@ Backend layout:  internal/module/{capability}/transport/{platform}
 - reference video privacy 类错误会返回更明确的中文提示，便于用户理解“参考视频受限/隐私风险”类失败。
 - 这只是错误信息 hardening，不代表当前 Canvas 已支持参考视频上传或 Seedance 专属协议。
 
+当前 C2-D 状态：
+
+- `admin_back_go` 已新增 `POST /api/canvas/v1/ai/videos/reference-media`，由 `internal/module/ai/video/transport/canvas` 拥有。
+- 请求只接受 multipart `file` 与 `media_kind=image|video|audio`；`model/provider/api_key/base_url` 在 Canvas HTTP 边界 fail-closed。
+- 后端使用 COS upload config 存储到 `ai-video-references/{kind}/...`，返回 provider 可访问 URL 和 storage metadata。
+- `canvas_front_next` 只新增 `uploadVideoReferenceMedia()` helper；source guard 禁止回到来源项目 `/api/v1/media/references` 或浏览器 provider override。
+- C2-D 仍不把 uploaded reference media 接入 `/api/canvas/v1/ai/videos` 生成 payload；现有 `referenceVideos` / `referenceAudios` 输入继续 fail-closed，直到后续 Seedance/Ark payload contract 明确。
+- C2-D 不新增 `ai_assets`、不恢复 public/Admin asset library、不触碰 `E:\GitDownload\infinite-canvas`。
+
 范围：
 
 - Canvas 前端请求形状先写测试，不允许 provider/base_url/api_key/model override。
 - Go 后端在 `internal/module/ai/video/transport/canvas` 或相邻 capability 中接收明确 DTO。
-- C2-A 已支持 `generate_audio` / `watermark`；参考视频/音频上传到 storage、provider 可访问 URL、ratio/resolution/duration 策略和完整 Seedance/火山路径仍是后续 planned。
+- C2-A 已支持 `generate_audio` / `watermark`；C2-D 已支持 video-scoped 参考媒体上传到 storage 并返回 provider 可访问 URL；ratio/resolution/duration 策略、uploaded reference media 生成接入和完整 Seedance/火山路径仍是后续 planned。
 - C2-B 已支持参考视频/音频输入的前端显式拒绝和 metadata 记录；不改变后端 DTO。
-- C2-C 已支持 OpenAI-compatible 上游错误详情提取和 reference video privacy 友好提示；不改变请求/响应契约。
+- C2-C 已支持 OpenAI-compatible 上游错误详情提取和 reference video privacy 友好提示；不改变生成请求/响应契约。
+- C2-D 已新增 `CanvasVideoReferenceMediaUploadBody/Response` storage 契约；不改变 `CanvasVideoGenerationBody`。
 
 非目标：不直接引入来源 `/api/v1/media/references`。
 
@@ -186,7 +196,7 @@ Backend layout:  internal/module/{capability}/transport/{platform}
 仍待确认：
 
 - `ai_assets` audio 类型或专用音频任务表/history。
-- provider reference-media upload、云端音频资产持久化和 live provider success smoke。
+- uploaded reference media 接入生成 payload、云端音频资产持久化和 live provider success smoke。
 - 若做视频高级参数：Admin agent/provider 策略只做后端管理，不让浏览器自定义渠道。
 
 ## 验证策略
