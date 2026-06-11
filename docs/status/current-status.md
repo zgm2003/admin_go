@@ -9,6 +9,7 @@
 ## Current status layers
 
 ```text
+2026-06-11 Canvas stale provider-error display hotfix verified locally: `canvas_front_next` now sanitizes persisted Canvas node `errorDetails` on project load and renders node/Info-modal failures through a provider-neutral formatter, so old failed nodes no longer keep showing stale upstream URLs such as `code.hahacode.top` after the active image agent has moved to LingSuan. Live MySQL evidence showed the latest post-fix Canvas image task `1067` used `agent_id=6` / `AI生图模型` / provider `灵算` / `https://lingsuan.top/v1`; targeted Canvas node-error/generation-config/agent/image API Vitest and Canvas typecheck passed.
 2026-06-11 Canvas node-selected image-agent hotfix verified locally: `canvas_front_next` now builds node/config image generation requests through a shared generation-config helper that writes the active picker model back into the mode-specific field (`imageModel` / `textModel` / `videoModel` / `audioModel`) before calling the Canvas AI API clients, so a node showing/selecting `AI生图模型` / LingSuan cannot be shadowed by a stale global `imageModel` that still points at `agent_id=8` / `code.hahacode.top`. The same helper normalizes stale node-level and saved retry labels by current display name before falling back to raw id. Targeted Canvas generation-config / agent / image API / panel Vitest and Canvas typecheck passed.
 2026-06-11 Canvas manual image mention context hotfix verified locally: `canvas_front_next` now merges manually mentioned image labels such as `图片3` from a normal image-node prompt into the connected image-generation context, so a node with two connected reference images plus a manually selected third reference image shows and sends three reference images instead of only the two connected ones. Connected inputs still apply automatically, Config composer `inputOrder` behavior remains unchanged, and duplicate references are still de-duplicated. Targeted Canvas node-generation/context-summary/panel/source-guard Vitest and Canvas typecheck passed.
 2026-06-11 Canvas stale image-agent label hotfix verified locally: `canvas_front_next` now resolves persisted Canvas agent selections by current display label before falling back to raw `agent_id`, so an old node/global value such as `agent:8 · AI生图模型 - gpt-image-2` will migrate to the current `AI生图模型` agent instead of silently sending requests to a renamed/rebound `agent_id=8` provider such as `code.hahacode.top`. Live MySQL evidence showed recent failed Canvas image tasks 1049-1053 used `agent_id=8` / provider `中杰` / `https://code.hahacode.top/v1`, while the current LingSuan image agent is `agent_id=6` / `AI生图模型` / `https://lingsuan.top/v1`. Targeted `canvas-agent`, image API, Canvas audio scene wiring tests and Canvas typecheck passed. This does not expose provider API keys/base_url to the browser and does not change `/api/canvas/v1/ai/images*` request fields.
@@ -84,7 +85,8 @@ docs/status/archive/2026-05-runtime-change-log.md     # 历史证据：2026-05 v
 
 详细变更记录看 `docs/status/archive/2026-05-runtime-change-log.md`。近期关键批次：
 
-```text
+`	ext
+2026-06-11 Canvas stale provider-error display hotfix verified locally: `canvas_front_next` now sanitizes persisted Canvas node `errorDetails` on project load and renders node/Info-modal failures through a provider-neutral formatter, so old failed nodes no longer keep showing stale upstream URLs such as `code.hahacode.top` after the active image agent has moved to LingSuan. Live MySQL evidence showed the latest post-fix Canvas image task `1067` used `agent_id=6` / `AI生图模型` / provider `灵算` / `https://lingsuan.top/v1`; targeted Canvas node-error/generation-config/agent/image API Vitest and Canvas typecheck passed.
 2026-06-07 Admin Vue upload demo source-quality cleanup verified: `src/views/Main/component/upload/index.vue` now imports `UploadMediaItem` and uses `ref<UploadMediaItem[]>([])`, while `UpMediaList.vue` shares the same model through `components/media.ts`; `tests/shared/upload/upload-demo-source-quality.test.ts` guards the slice, and source-quality inventory now reports 280 source files, 7 `any` candidates, 0 `catch(...: any)` candidates, 562 fallback candidates, and 0 direct external HTTP candidates; this closes only upload demo media-list any debt
 2026-06-07 Admin Vue useValidator source-quality cleanup verified: `src/hooks/web/useValidator.ts` now types validator values as `ValidatorValue = string`, keeps `LengthRange` explicit, and uses `resolveValidatorMessage(message, fallback)` instead of `message || fallback`; `tests/shared/validator/use-validator-source-quality.test.ts` guards the slice, and source-quality inventory now reports 7 `any` candidates, 0 `catch(...: any)` candidates, 562 fallback candidates, and 0 direct external HTTP candidates; this closes only useValidator validator input/message fallback debt
 2026-06-07 Admin AI agent test owner decision closed: Admin Vue now calls `POST /api/admin/v1/ai-agents/:id/test` through `AiAgentApi.test`, the AI agent list exposes the test action only under `ai_agent_test` for enabled rows, `tests/shared/ai/ai-agent-api.test.ts` guards the API/page wiring, generated API drift artifacts now report 277 exact frontend backend calls, 19 backend source-only rows, and 0 owner-decision-required routes; this closes API-DRIFT-001
@@ -149,7 +151,8 @@ docs/status/archive/2026-05-runtime-change-log.md     # 历史证据：2026-05 v
 
 详细 per-module 状态看：
 
-```text
+`	ext
+2026-06-11 Canvas stale provider-error display hotfix verified locally: `canvas_front_next` now sanitizes persisted Canvas node `errorDetails` on project load and renders node/Info-modal failures through a provider-neutral formatter, so old failed nodes no longer keep showing stale upstream URLs such as `code.hahacode.top` after the active image agent has moved to LingSuan. Live MySQL evidence showed the latest post-fix Canvas image task `1067` used `agent_id=6` / `AI生图模型` / provider `灵算` / `https://lingsuan.top/v1`; targeted Canvas node-error/generation-config/agent/image API Vitest and Canvas typecheck passed.
 docs/status/module-matrix.md
 ```
 
@@ -157,13 +160,15 @@ docs/status/module-matrix.md
 
 当前未闭环 bug / WIP 看：
 
-```text
+`	ext
+2026-06-11 Canvas stale provider-error display hotfix verified locally: `canvas_front_next` now sanitizes persisted Canvas node `errorDetails` on project load and renders node/Info-modal failures through a provider-neutral formatter, so old failed nodes no longer keep showing stale upstream URLs such as `code.hahacode.top` after the active image agent has moved to LingSuan. Live MySQL evidence showed the latest post-fix Canvas image task `1067` used `agent_id=6` / `AI生图模型` / provider `灵算` / `https://lingsuan.top/v1`; targeted Canvas node-error/generation-config/agent/image API Vitest and Canvas typecheck passed.
 docs/status/known-issues.md
 ```
 
 ## Current verified RBAC loop
 
-```text
+`	ext
+2026-06-11 Canvas stale provider-error display hotfix verified locally: `canvas_front_next` now sanitizes persisted Canvas node `errorDetails` on project load and renders node/Info-modal failures through a provider-neutral formatter, so old failed nodes no longer keep showing stale upstream URLs such as `code.hahacode.top` after the active image agent has moved to LingSuan. Live MySQL evidence showed the latest post-fix Canvas image task `1067` used `agent_id=6` / `AI生图模型` / provider `灵算` / `https://lingsuan.top/v1`; targeted Canvas node-error/generation-config/agent/image API Vitest and Canvas typecheck passed.
 login -> AuthToken -> users/me
 permission create DIR/PAGE/BUTTON
 role update grants PAGE/BUTTON
