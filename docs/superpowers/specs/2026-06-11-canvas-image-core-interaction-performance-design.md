@@ -1,7 +1,7 @@
 # Canvas 生图核心交互与性能极限化设计
 
 日期：2026-06-11
-状态：spec written for user review；尚未实现
+状态：implemented and verified locally；实现证据见 `docs/status/current-status.md`
 主角色：frontend-adapter（Canvas Next 前端交互/性能窄切片）
 目标工作区：`E:/admin_go/canvas_front_next`
 
